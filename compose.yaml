@@ -1,0 +1,66 @@
+name: tanstack-employee-tracker
+
+services:
+  db:
+    image: postgis/postgis:18-3.6
+    restart: unless-stopped
+    command: [postgres, -p, '${POSTGRES_PORT:-5433}']
+    environment:
+      PGPORT: ${POSTGRES_PORT:-5433}
+      POSTGRES_DB: ${POSTGRES_DB:-employee_tracking}
+      POSTGRES_USER: ${POSTGRES_USER:-employee_tracking}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.docker}
+    volumes:
+      # PostgreSQL 18+ uses the parent path, unlike older PostgreSQL images.
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test:
+        [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [backend]
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    profiles: [dev]
+    restart: unless-stopped
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: '1000'
+    ports:
+      - '127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025'
+      - '127.0.0.1:${MAILPIT_UI_PORT:-8026}:8025'
+    volumes:
+      - mailpit_data:/data
+    networks: [backend]
+    logging: *logging
+
+  redis:
+    image: redis:8.2-alpine
+    profiles: [cache]
+    restart: unless-stopped
+    command: [redis-server, --appendonly, 'yes', --maxmemory-policy, noeviction]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [backend]
+    logging: *logging
+
+volumes:
+  postgres_data:
+  mailpit_data:
+  redis_data:
+
+networks:
+  backend:

@@ -1,0 +1,8 @@
+# Run TanStack Start on your host with pnpm dev; Docker runs supporting services.
+services:
+  db:
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5433}:${POSTGRES_PORT:-5433}'
+  redis:
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
