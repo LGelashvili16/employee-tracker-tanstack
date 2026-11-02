@@ -19,6 +19,8 @@
     "db:introspect": "drizzle-kit introspect",
     "db:export": "drizzle-kit export",
     "db:up": "drizzle-kit up",
+    "auth:generate": "pnpm dlx auth@latest generate --config ./src/lib/auth/auth.ts --output ./src/db/schema/auth-schema-new.ts",
+    "auth:generate:exact": "pnpm dlx auth@1.7.15 generate --config ./src/lib/auth/auth.ts --output ./src/db/schema/auth-schema-new.ts",
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check ."
@@ -29,6 +31,7 @@
     "@tabler/icons-react": "^3.50.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-devtools": "0.10.14",
+    "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-router": "1.170.46",
     "@tanstack/react-router-devtools": "1.167.2",
     "@tanstack/react-start": "1.169.4",
