@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Button } from '#/components/ui/button'
+import { PageSkeleton } from './page-skeleton'
 import { FeaturePage } from './feature-page'
 
 export function RouteError() {
@@ -27,9 +28,5 @@ export function RouteNotFound() {
   )
 }
 export function RoutePending() {
-  return (
-    <p role="status" className="p-6 text-sm text-muted-foreground">
-      გვერდი იტვირთება…
-    </p>
-  )
+  return <PageSkeleton />
 }

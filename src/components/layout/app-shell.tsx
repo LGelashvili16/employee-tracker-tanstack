@@ -1,3 +1,4 @@
+import { APP_NAME } from '#/lib/app'
 import { useState } from 'react'
 import { Outlet, useRouter } from '@tanstack/react-router'
 import { IconLogout } from '@tabler/icons-react'
@@ -7,6 +8,7 @@ import {
   SidebarTrigger,
 } from '#/components/ui/sidebar'
 import { Button } from '#/components/ui/button'
+import { Spinner } from '#/components/ui/spinner'
 import { Badge } from '#/components/ui/badge'
 import ThemeToggle from '#/components/ThemeToggle'
 import { authClient } from '#/lib/auth/auth-client'
@@ -41,7 +43,7 @@ export function AppShell({ actor }: { actor: Actor }) {
       <SidebarInset>
         <header className="flex min-h-16 flex-wrap items-center gap-3 border-b p-4">
           <SidebarTrigger aria-label="მენიუს გახსნა ან დახურვა" />
-          <span className="text-sm font-medium">თანამშრომლების მართვა</span>
+          <span className="text-sm font-medium">{APP_NAME}</span>
           <Badge variant="outline" className="hidden md:inline-flex">
             დროის აღრიცხვა ჯერ არ არის გააქტიურებული
           </Badge>
@@ -50,10 +52,15 @@ export function AppShell({ actor }: { actor: Actor }) {
             <Button
               variant="ghost"
               disabled={signingOut}
+              aria-busy={signingOut}
               onClick={signOut}
               aria-label="ანგარიშიდან გამოსვლა"
             >
-              <IconLogout aria-hidden="true" />
+              {signingOut ? (
+                <Spinner aria-hidden="true" />
+              ) : (
+                <IconLogout aria-hidden="true" />
+              )}
               <span className="hidden sm:inline">გამოსვლა</span>
             </Button>
           </div>

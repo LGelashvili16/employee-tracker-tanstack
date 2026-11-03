@@ -1,5 +1,10 @@
+import { APP_NAME } from '#/lib/app'
+
 export const authContent = {
-  login: { title: 'შესვლა', description: 'შედით კომპანიის სამუშაო სივრცეში.' },
+  login: {
+    title: 'შესვლა',
+    description: `შედით თქვენს ${APP_NAME} ანგარიშში.`,
+  },
   register: {
     title: 'ანგარიშის შექმნა',
     description: 'რეგისტრაცია ხელმისაწვდომია მხოლოდ კომპანიის მოწვევით.',

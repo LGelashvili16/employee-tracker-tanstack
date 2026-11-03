@@ -1,3 +1,4 @@
+import { APP_NAME } from '#/lib/app'
 import { Link, useLocation } from '@tanstack/react-router'
 import { IconBuildingCommunity, IconLayoutDashboard } from '@tabler/icons-react'
 import {
@@ -42,7 +43,7 @@ export function AppSidebar({ actor }: { actor: Actor }) {
           <SidebarMenuItem>
             <SidebarMenuButton render={<Link to="/dashboard" />} size="lg">
               <IconBuildingCommunity aria-hidden="true" />
-              <span className="font-semibold">სამუშაო სივრცე</span>
+              <span className="font-semibold">{APP_NAME}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
