@@ -1,4 +1,10 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import {
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRoute,
+  useRouterState,
+} from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import Footer from '../components/Footer'
@@ -29,8 +35,24 @@ export const Route = createRootRoute({
       },
     ],
   }),
+  component: RootLayout,
   shellComponent: RootDocument,
 })
+
+function RootLayout() {
+  const isDashboard = useRouterState({
+    select: (state) =>
+      state.matches.some((match) => match.routeId === '/dashboard'),
+  })
+
+  return (
+    <>
+      {!isDashboard && <Header />}
+      <Outlet />
+      {!isDashboard && <Footer />}
+    </>
+  )
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
@@ -39,10 +61,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(82,122,163,0.24)]">
-        <Header />
+      <body className="font-sans antialiased wrap-anywhere selection:bg-[rgba(117,144,120,0.24)]">
         {children}
-        <Footer />
         <TanStackDevtools
           config={{
             position: 'bottom-right',

@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
+import { IconDeviceDesktop, IconMoon, IconSun } from '@tabler/icons-react'
+import { Button } from '@/components/ui/button'
 
 type ThemeMode = 'light' | 'dark' | 'auto'
+
+const themeOptions = [
+  { mode: 'light', label: 'Light', icon: IconSun },
+  { mode: 'dark', label: 'Dark', icon: IconMoon },
+  { mode: 'auto', label: 'System', icon: IconDeviceDesktop },
+] as const
 
 function getInitialMode(): ThemeMode {
   if (typeof window === 'undefined') {
@@ -54,28 +62,33 @@ export default function ThemeToggle() {
     }
   }, [mode])
 
-  function toggleMode() {
-    const nextMode: ThemeMode =
-      mode === 'light' ? 'dark' : mode === 'dark' ? 'auto' : 'light'
+  function selectMode(nextMode: ThemeMode) {
     setMode(nextMode)
     applyThemeMode(nextMode)
     window.localStorage.setItem('theme', nextMode)
   }
 
-  const label =
-    mode === 'auto'
-      ? 'Theme mode: auto (system). Click to switch to light mode.'
-      : `Theme mode: ${mode}. Click to switch mode.`
-
   return (
-    <button
-      type="button"
-      onClick={toggleMode}
-      aria-label={label}
-      title={label}
-      className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] shadow-[0_8px_22px_rgba(25,43,64,0.08)] transition hover:-translate-y-0.5"
+    <div
+      role="group"
+      aria-label="Color theme"
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-xl border border-border bg-muted/60 p-1"
     >
-      {mode === 'auto' ? 'Auto' : mode === 'dark' ? 'Dark' : 'Light'}
-    </button>
+      {themeOptions.map(({ mode: option, label, icon: Icon }) => (
+        <Button
+          key={option}
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={`${label} theme`}
+          aria-pressed={mode === option}
+          title={`${label} theme`}
+          onClick={() => selectMode(option)}
+          className="rounded-lg text-muted-foreground hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-sm"
+        >
+          <Icon className="size-4" stroke={1.75} aria-hidden="true" />
+        </Button>
+      ))}
+    </div>
   )
 }
