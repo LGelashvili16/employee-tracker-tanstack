@@ -13,6 +13,7 @@ import {
 } from '#/components/common/route-feedback'
 
 import { APP_NAME } from '#/lib/app'
+import { PwaProvider } from '#/components/common/pwa-provider'
 
 import appCss from '../styles.css?url'
 
@@ -31,12 +32,18 @@ export const Route = createRootRoute({
       {
         title: APP_NAME,
       },
+      { name: 'application-name', content: APP_NAME },
+      { name: 'theme-color', content: '#1c1c1c' },
+      { name: 'apple-mobile-web-app-title', content: APP_NAME },
     ],
     links: [
       {
         rel: 'stylesheet',
         href: appCss,
       },
+      { rel: 'manifest', href: '/manifest.webmanifest' },
+      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+      { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png' },
     ],
   }),
   component: Outlet,
@@ -54,7 +61,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="font-sans antialiased wrap-anywhere selection:bg-[rgba(115,115,115,0.24)]">
-        {children}
+        <PwaProvider>{children}</PwaProvider>
         {import.meta.env.DEV && (
           <TanStackDevtools
             config={{

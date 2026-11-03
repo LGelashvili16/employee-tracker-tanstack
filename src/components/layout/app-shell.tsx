@@ -11,6 +11,7 @@ import { Button } from '#/components/ui/button'
 import { Spinner } from '#/components/ui/spinner'
 import { Badge } from '#/components/ui/badge'
 import ThemeToggle from '#/components/ThemeToggle'
+import { PwaInstallButton } from '#/components/common/pwa-install-button'
 import { authClient } from '#/lib/auth/auth-client'
 import { AppSidebar } from './app-sidebar'
 import type { Actor } from '#/lib/authorization/actor'
@@ -48,6 +49,7 @@ export function AppShell({ actor }: { actor: Actor }) {
             დროის აღრიცხვა ჯერ არ არის გააქტიურებული
           </Badge>
           <div className="ml-auto flex items-center gap-2">
+            <PwaInstallButton />
             <ThemeToggle />
             <Button
               variant="ghost"

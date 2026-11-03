@@ -8,6 +8,7 @@ import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
+import { pwaPlugins } from './scripts/pwa.ts'
 
 const config = defineConfig({
   resolve: {
@@ -19,11 +20,19 @@ const config = defineConfig({
   },
   plugins: [
     devtools(),
-    nitro({ rollupConfig: { external: [/^@sentry\//] } }),
+    nitro({
+      rollupConfig: { external: [/^@sentry\//] },
+      routeRules: {
+        '/service-worker.js': { headers: { 'Cache-Control': 'no-cache' } },
+        '/manifest.webmanifest': { headers: { 'Cache-Control': 'no-cache' } },
+        '/offline.html': { headers: { 'Cache-Control': 'no-cache' } },
+      },
+    }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
     babel({ presets: [reactCompilerPreset()] }),
+    ...pwaPlugins(),
   ],
 })
 
