@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PwaContext } from '#/lib/pwa/pwa-context'
 import { PwaInstallButton } from './pwa-install-button'
 import { usePwaBrowser } from '#/hooks/use-pwa-browser'
+import { APP_NAME } from '#/lib/app'
 
 function InstallHarness() {
   return (
@@ -26,12 +27,30 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('PWA installation', () => {
-  it('shows Georgian installation instructions when no native prompt is available', async () => {
-    const user = userEvent.setup()
+  it('hides the desktop install button until the browser offers installation', () => {
     render(<InstallHarness />)
+    expect(
+      screen.queryByRole('button', { name: 'აპის დაყენება' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps Georgian manual installation instructions available on iOS', async () => {
+    const user = userEvent.setup()
+    render(
+      <PwaContext
+        value={{
+          online: true,
+          installed: false,
+          ios: true,
+          requestInstall: null,
+        }}
+      >
+        <PwaInstallButton />
+      </PwaContext>,
+    )
     await user.click(screen.getByRole('button', { name: 'აპის დაყენება' }))
     expect(await screen.findByRole('dialog')).toHaveTextContent(
-      'Teamwork თქვენს მოწყობილობაზე',
+      `${APP_NAME} თქვენს მოწყობილობაზე`,
     )
     expect(screen.getByRole('button', { name: 'დახურვა' })).toBeInTheDocument()
     expect(screen.queryByText('Close')).not.toBeInTheDocument()
@@ -66,10 +85,10 @@ describe('PWA installation', () => {
     await act(async () =>
       resolveChoice({ outcome: 'dismissed', platform: 'web' }),
     )
-    expect(screen.getByRole('button', { name: 'აპის დაყენება' })).toBeEnabled()
+    expect(
+      screen.queryByRole('button', { name: 'აპის დაყენება' }),
+    ).not.toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'აპის დაყენება' }))
-    expect(await screen.findByRole('dialog')).toBeInTheDocument()
     expect(prompt).toHaveBeenCalledOnce()
   })
 

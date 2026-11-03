@@ -42,22 +42,25 @@ export function PwaInstallButton() {
 
   return (
     <>
-      <Button
-        variant="outline"
-        className="h-10 min-w-10 sm:h-8"
-        onClick={() => void install()}
-        disabled={pending}
-        aria-busy={pending}
-        aria-label="აპის დაყენება"
-        title="აპის დაყენება"
-      >
-        {pending ? (
-          <Spinner aria-hidden="true" />
-        ) : (
-          <IconDownload aria-hidden="true" />
-        )}
-        <span className="hidden sm:inline">აპის დაყენება</span>
-      </Button>
+      {/* A desktop install action is available only when the browser offers it. */}
+      {pwa.requestInstall || pwa.ios ? (
+        <Button
+          variant="outline"
+          className="h-10 min-w-10 sm:h-8"
+          onClick={() => void install()}
+          disabled={pending}
+          aria-busy={pending}
+          aria-label="აპის დაყენება"
+          title="აპის დაყენება"
+        >
+          {pending ? (
+            <Spinner aria-hidden="true" />
+          ) : (
+            <IconDownload aria-hidden="true" />
+          )}
+          <span className="hidden sm:inline">აპის დაყენება</span>
+        </Button>
+      ) : null}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent showCloseButton={false}>
           <DialogHeader>
