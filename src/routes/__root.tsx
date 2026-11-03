@@ -3,12 +3,14 @@ import {
   Outlet,
   Scripts,
   createRootRoute,
-  useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import Footer from '../components/Footer'
-import Header from '../components/Header'
+import {
+  RouteError,
+  RouteNotFound,
+  RoutePending,
+} from '#/components/common/route-feedback'
 
 import appCss from '../styles.css?url'
 
@@ -25,7 +27,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'Teamwork',
+        title: 'თანამშრომლების მართვა',
       },
     ],
     links: [
@@ -35,45 +37,35 @@ export const Route = createRootRoute({
       },
     ],
   }),
-  component: RootLayout,
+  component: Outlet,
+  errorComponent: RouteError,
+  notFoundComponent: RouteNotFound,
+  pendingComponent: RoutePending,
   shellComponent: RootDocument,
 })
 
-function RootLayout() {
-  const isDashboard = useRouterState({
-    select: (state) =>
-      state.matches.some((match) => match.routeId === '/dashboard'),
-  })
-
-  return (
-    <>
-      {!isDashboard && <Header />}
-      <Outlet />
-      {!isDashboard && <Footer />}
-    </>
-  )
-}
-
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ka" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body className="font-sans antialiased wrap-anywhere selection:bg-[rgba(117,144,120,0.24)]">
+      <body className="font-sans antialiased wrap-anywhere selection:bg-[rgba(115,115,115,0.24)]">
         {children}
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
+        {import.meta.env.DEV && (
+          <TanStackDevtools
+            config={{
+              position: 'bottom-right',
+            }}
+            plugins={[
+              {
+                name: 'Tanstack Router',
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+            ]}
+          />
+        )}
         <Scripts />
       </body>
     </html>

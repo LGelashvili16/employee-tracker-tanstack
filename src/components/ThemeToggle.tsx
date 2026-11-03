@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button'
 type ThemeMode = 'light' | 'dark' | 'auto'
 
 const themeOptions = [
-  { mode: 'light', label: 'Light', icon: IconSun },
-  { mode: 'dark', label: 'Dark', icon: IconMoon },
-  { mode: 'auto', label: 'System', icon: IconDeviceDesktop },
+  { mode: 'light', label: 'ნათელი', icon: IconSun },
+  { mode: 'dark', label: 'მუქი', icon: IconMoon },
+  { mode: 'auto', label: 'სისტემური', icon: IconDeviceDesktop },
 ] as const
 
 function getInitialMode(): ThemeMode {
@@ -42,12 +42,14 @@ function applyThemeMode(mode: ThemeMode) {
 export default function ThemeToggle() {
   const [mode, setMode] = useState<ThemeMode>('auto')
 
+  // Synchronize the browser-only stored preference after SSR hydration.
   useEffect(() => {
     const initialMode = getInitialMode()
     setMode(initialMode)
     applyThemeMode(initialMode)
   }, [])
 
+  // The system color-scheme is an external subscription that needs cleanup.
   useEffect(() => {
     if (mode !== 'auto') {
       return
@@ -71,7 +73,7 @@ export default function ThemeToggle() {
   return (
     <div
       role="group"
-      aria-label="Color theme"
+      aria-label="ფერების თემა"
       className="inline-flex shrink-0 items-center gap-0.5 rounded-xl border border-border bg-muted/60 p-1"
     >
       {themeOptions.map(({ mode: option, label, icon: Icon }) => (
@@ -80,9 +82,9 @@ export default function ThemeToggle() {
           type="button"
           variant="ghost"
           size="icon"
-          aria-label={`${label} theme`}
+          aria-label={`${label} თემა`}
           aria-pressed={mode === option}
-          title={`${label} theme`}
+          title={`${label} თემა`}
           onClick={() => selectMode(option)}
           className="rounded-lg text-muted-foreground hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-sm"
         >

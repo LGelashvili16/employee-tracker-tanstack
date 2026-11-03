@@ -10,21 +10,71 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AboutRouteImport } from './routes/about'
-import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
+import { Route as AuthRouteRouteImport } from './routes/auth/route'
+import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
+import { Route as AuthenticatedLeaveRouteImport } from './routes/_authenticated/leave'
+import { Route as AuthenticatedManageRouteRouteImport } from './routes/_authenticated/manage/route'
+import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
+import { Route as AuthAcceptInvitationRouteImport } from './routes/auth/accept-invitation'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthMfaRouteImport } from './routes/auth/mfa'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
 import { Route as AuthVerifyEmailRouteImport } from './routes/auth/verify-email'
-import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
-import { Route as DashboardEmployeesRouteImport } from './routes/dashboard/employees'
-import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settings'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
+import { Route as AuthenticatedAdminAuditLogRouteImport } from './routes/_authenticated/admin/audit-log'
+import { Route as AuthenticatedAdminIntegrationsRouteImport } from './routes/_authenticated/admin/integrations'
+import { Route as AuthenticatedAdminInvitationsRouteImport } from './routes/_authenticated/admin/invitations'
+import { Route as AuthenticatedAdminLocationsRouteImport } from './routes/_authenticated/admin/locations'
+import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin/roles'
+import { Route as AuthenticatedAttendanceIndexRouteImport } from './routes/_authenticated/attendance/index'
+import { Route as AuthenticatedAttendanceCorrectionsRouteImport } from './routes/_authenticated/attendance/corrections'
+import { Route as AuthenticatedAttendanceHistoryRouteImport } from './routes/_authenticated/attendance/history'
+import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
+import { Route as AuthenticatedDashboardEmployeesRouteImport } from './routes/_authenticated/dashboard/employees'
+import { Route as AuthenticatedDashboardSettingsRouteImport } from './routes/_authenticated/dashboard/settings'
+import { Route as AuthenticatedJobsIndexRouteImport } from './routes/_authenticated/jobs/index'
+import { Route as AuthenticatedJobsJobIdRouteImport } from './routes/_authenticated/jobs/$jobId'
+import { Route as AuthenticatedManageIndexRouteImport } from './routes/_authenticated/manage/index'
+import { Route as AuthenticatedManageLeaveRouteImport } from './routes/_authenticated/manage/leave'
+import { Route as AuthenticatedManageReportsRouteImport } from './routes/_authenticated/manage/reports'
+import { Route as AuthenticatedManageScheduleRouteImport } from './routes/_authenticated/manage/schedule'
+import { Route as AuthenticatedManageTeamsRouteImport } from './routes/_authenticated/manage/teams'
+import { Route as AuthenticatedSettingsProfileRouteImport } from './routes/_authenticated/settings/profile'
+import { Route as AuthenticatedSettingsSecurityRouteImport } from './routes/_authenticated/settings/security'
+import { Route as AuthenticatedTimesheetsIndexRouteImport } from './routes/_authenticated/timesheets/index'
+import { Route as AuthenticatedTimesheetsTimesheetIdRouteImport } from './routes/_authenticated/timesheets/$timesheetId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthenticatedAdminSettingsApprovalsRouteImport } from './routes/_authenticated/admin/settings/approvals'
+import { Route as AuthenticatedAdminSettingsAttendanceRouteImport } from './routes/_authenticated/admin/settings/attendance'
+import { Route as AuthenticatedAdminSettingsCompanyRouteImport } from './routes/_authenticated/admin/settings/company'
+import { Route as AuthenticatedAdminSettingsLeaveRouteImport } from './routes/_authenticated/admin/settings/leave'
+import { Route as AuthenticatedAdminSettingsNotificationsRouteImport } from './routes/_authenticated/admin/settings/notifications'
+import { Route as AuthenticatedAdminSettingsSecurityRouteImport } from './routes/_authenticated/admin/settings/security'
+import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated/admin/users/index'
+import { Route as AuthenticatedAdminUsersUserIdRouteImport } from './routes/_authenticated/admin/users/$userId'
+import { Route as AuthenticatedManageAttendanceIndexRouteImport } from './routes/_authenticated/manage/attendance/index'
+import { Route as AuthenticatedManageAttendanceExceptionsRouteImport } from './routes/_authenticated/manage/attendance/exceptions'
+import { Route as AuthenticatedManageEmployeesIndexRouteImport } from './routes/_authenticated/manage/employees/index'
+import { Route as AuthenticatedManageEmployeesEmployeeIdRouteImport } from './routes/_authenticated/manage/employees/$employeeId'
+import { Route as AuthenticatedManageJobsIndexRouteImport } from './routes/_authenticated/manage/jobs/index'
+import { Route as AuthenticatedManageJobsJobIdRouteImport } from './routes/_authenticated/manage/jobs/$jobId'
+import { Route as AuthenticatedManageJobsNewRouteImport } from './routes/_authenticated/manage/jobs/new'
+import { Route as AuthenticatedManageTimesheetsIndexRouteImport } from './routes/_authenticated/manage/timesheets/index'
+import { Route as AuthenticatedManageTimesheetsTimesheetIdRouteImport } from './routes/_authenticated/manage/timesheets/$timesheetId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -32,152 +82,681 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardRouteRoute = DashboardRouteRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const AuthRouteRoute = AuthRouteRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLeaveRoute = AuthenticatedLeaveRouteImport.update({
+  id: '/leave',
+  path: '/leave',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedManageRouteRoute =
+  AuthenticatedManageRouteRouteImport.update({
+    id: '/manage',
+    path: '/manage',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedNotificationsRoute =
+  AuthenticatedNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedScheduleRoute = AuthenticatedScheduleRouteImport.update({
+  id: '/schedule',
+  path: '/schedule',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthAcceptInvitationRoute = AuthAcceptInvitationRouteImport.update({
+  id: '/accept-invitation',
+  path: '/accept-invitation',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
-  id: '/auth/forgot-password',
-  path: '/auth/forgot-password',
-  getParentRoute: () => rootRouteImport,
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: '/auth/login',
-  path: '/auth/login',
-  getParentRoute: () => rootRouteImport,
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthMfaRoute = AuthMfaRouteImport.update({
+  id: '/mfa',
+  path: '/mfa',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
-  id: '/auth/register',
-  path: '/auth/register',
-  getParentRoute: () => rootRouteImport,
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
-  id: '/auth/reset-password',
-  path: '/auth/reset-password',
-  getParentRoute: () => rootRouteImport,
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
-  id: '/auth/verify-email',
-  path: '/auth/verify-email',
-  getParentRoute: () => rootRouteImport,
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
-const DashboardIndexRoute = DashboardIndexRouteImport.update({
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => DashboardRouteRoute,
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
-const DashboardEmployeesRoute = DashboardEmployeesRouteImport.update({
-  id: '/employees',
-  path: '/employees',
-  getParentRoute: () => DashboardRouteRoute,
+const AuthenticatedAdminAuditLogRoute =
+  AuthenticatedAdminAuditLogRouteImport.update({
+    id: '/audit-log',
+    path: '/audit-log',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminIntegrationsRoute =
+  AuthenticatedAdminIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminInvitationsRoute =
+  AuthenticatedAdminInvitationsRouteImport.update({
+    id: '/invitations',
+    path: '/invitations',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminLocationsRoute =
+  AuthenticatedAdminLocationsRouteImport.update({
+    id: '/locations',
+    path: '/locations',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
-const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => DashboardRouteRoute,
+const AuthenticatedAttendanceIndexRoute =
+  AuthenticatedAttendanceIndexRouteImport.update({
+    id: '/attendance/',
+    path: '/attendance/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAttendanceCorrectionsRoute =
+  AuthenticatedAttendanceCorrectionsRouteImport.update({
+    id: '/attendance/corrections',
+    path: '/attendance/corrections',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAttendanceHistoryRoute =
+  AuthenticatedAttendanceHistoryRouteImport.update({
+    id: '/attendance/history',
+    path: '/attendance/history',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDashboardIndexRoute =
+  AuthenticatedDashboardIndexRouteImport.update({
+    id: '/dashboard/',
+    path: '/dashboard/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDashboardEmployeesRoute =
+  AuthenticatedDashboardEmployeesRouteImport.update({
+    id: '/dashboard/employees',
+    path: '/dashboard/employees',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDashboardSettingsRoute =
+  AuthenticatedDashboardSettingsRouteImport.update({
+    id: '/dashboard/settings',
+    path: '/dashboard/settings',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedJobsIndexRoute = AuthenticatedJobsIndexRouteImport.update({
+  id: '/jobs/',
+  path: '/jobs/',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedJobsJobIdRoute = AuthenticatedJobsJobIdRouteImport.update({
+  id: '/jobs/$jobId',
+  path: '/jobs/$jobId',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedManageIndexRoute =
+  AuthenticatedManageIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageLeaveRoute =
+  AuthenticatedManageLeaveRouteImport.update({
+    id: '/leave',
+    path: '/leave',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageReportsRoute =
+  AuthenticatedManageReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageScheduleRoute =
+  AuthenticatedManageScheduleRouteImport.update({
+    id: '/schedule',
+    path: '/schedule',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageTeamsRoute =
+  AuthenticatedManageTeamsRouteImport.update({
+    id: '/teams',
+    path: '/teams',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedSettingsProfileRoute =
+  AuthenticatedSettingsProfileRouteImport.update({
+    id: '/settings/profile',
+    path: '/settings/profile',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSettingsSecurityRoute =
+  AuthenticatedSettingsSecurityRouteImport.update({
+    id: '/settings/security',
+    path: '/settings/security',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedTimesheetsIndexRoute =
+  AuthenticatedTimesheetsIndexRouteImport.update({
+    id: '/timesheets/',
+    path: '/timesheets/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedTimesheetsTimesheetIdRoute =
+  AuthenticatedTimesheetsTimesheetIdRouteImport.update({
+    id: '/timesheets/$timesheetId',
+    path: '/timesheets/$timesheetId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminSettingsApprovalsRoute =
+  AuthenticatedAdminSettingsApprovalsRouteImport.update({
+    id: '/settings/approvals',
+    path: '/settings/approvals',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminSettingsAttendanceRoute =
+  AuthenticatedAdminSettingsAttendanceRouteImport.update({
+    id: '/settings/attendance',
+    path: '/settings/attendance',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminSettingsCompanyRoute =
+  AuthenticatedAdminSettingsCompanyRouteImport.update({
+    id: '/settings/company',
+    path: '/settings/company',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminSettingsLeaveRoute =
+  AuthenticatedAdminSettingsLeaveRouteImport.update({
+    id: '/settings/leave',
+    path: '/settings/leave',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminSettingsNotificationsRoute =
+  AuthenticatedAdminSettingsNotificationsRouteImport.update({
+    id: '/settings/notifications',
+    path: '/settings/notifications',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminSettingsSecurityRoute =
+  AuthenticatedAdminSettingsSecurityRouteImport.update({
+    id: '/settings/security',
+    path: '/settings/security',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminUsersIndexRoute =
+  AuthenticatedAdminUsersIndexRouteImport.update({
+    id: '/users/',
+    path: '/users/',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminUsersUserIdRoute =
+  AuthenticatedAdminUsersUserIdRouteImport.update({
+    id: '/users/$userId',
+    path: '/users/$userId',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedManageAttendanceIndexRoute =
+  AuthenticatedManageAttendanceIndexRouteImport.update({
+    id: '/attendance/',
+    path: '/attendance/',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageAttendanceExceptionsRoute =
+  AuthenticatedManageAttendanceExceptionsRouteImport.update({
+    id: '/attendance/exceptions',
+    path: '/attendance/exceptions',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageEmployeesIndexRoute =
+  AuthenticatedManageEmployeesIndexRouteImport.update({
+    id: '/employees/',
+    path: '/employees/',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageEmployeesEmployeeIdRoute =
+  AuthenticatedManageEmployeesEmployeeIdRouteImport.update({
+    id: '/employees/$employeeId',
+    path: '/employees/$employeeId',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageJobsIndexRoute =
+  AuthenticatedManageJobsIndexRouteImport.update({
+    id: '/jobs/',
+    path: '/jobs/',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageJobsJobIdRoute =
+  AuthenticatedManageJobsJobIdRouteImport.update({
+    id: '/jobs/$jobId',
+    path: '/jobs/$jobId',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageJobsNewRoute =
+  AuthenticatedManageJobsNewRouteImport.update({
+    id: '/jobs/new',
+    path: '/jobs/new',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageTimesheetsIndexRoute =
+  AuthenticatedManageTimesheetsIndexRouteImport.update({
+    id: '/timesheets/',
+    path: '/timesheets/',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
+const AuthenticatedManageTimesheetsTimesheetIdRoute =
+  AuthenticatedManageTimesheetsTimesheetIdRouteImport.update({
+    id: '/timesheets/$timesheetId',
+    path: '/timesheets/$timesheetId',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/auth': typeof AuthRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/manage': typeof AuthenticatedManageRouteRouteWithChildren
+  '/leave': typeof AuthenticatedLeaveRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/schedule': typeof AuthenticatedScheduleRoute
+  '/auth/accept-invitation': typeof AuthAcceptInvitationRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/mfa': typeof AuthMfaRoute
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
-  '/dashboard/employees': typeof DashboardEmployeesRoute
-  '/dashboard/settings': typeof DashboardSettingsRoute
-  '/dashboard/': typeof DashboardIndexRoute
+  '/admin/audit-log': typeof AuthenticatedAdminAuditLogRoute
+  '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
+  '/admin/invitations': typeof AuthenticatedAdminInvitationsRoute
+  '/admin/locations': typeof AuthenticatedAdminLocationsRoute
+  '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
+  '/attendance/history': typeof AuthenticatedAttendanceHistoryRoute
+  '/dashboard/employees': typeof AuthenticatedDashboardEmployeesRoute
+  '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
+  '/jobs/$jobId': typeof AuthenticatedJobsJobIdRoute
+  '/manage/leave': typeof AuthenticatedManageLeaveRoute
+  '/manage/reports': typeof AuthenticatedManageReportsRoute
+  '/manage/schedule': typeof AuthenticatedManageScheduleRoute
+  '/manage/teams': typeof AuthenticatedManageTeamsRoute
+  '/settings/profile': typeof AuthenticatedSettingsProfileRoute
+  '/settings/security': typeof AuthenticatedSettingsSecurityRoute
+  '/timesheets/$timesheetId': typeof AuthenticatedTimesheetsTimesheetIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/attendance/': typeof AuthenticatedAttendanceIndexRoute
+  '/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/jobs/': typeof AuthenticatedJobsIndexRoute
+  '/manage/': typeof AuthenticatedManageIndexRoute
+  '/timesheets/': typeof AuthenticatedTimesheetsIndexRoute
+  '/admin/settings/approvals': typeof AuthenticatedAdminSettingsApprovalsRoute
+  '/admin/settings/attendance': typeof AuthenticatedAdminSettingsAttendanceRoute
+  '/admin/settings/company': typeof AuthenticatedAdminSettingsCompanyRoute
+  '/admin/settings/leave': typeof AuthenticatedAdminSettingsLeaveRoute
+  '/admin/settings/notifications': typeof AuthenticatedAdminSettingsNotificationsRoute
+  '/admin/settings/security': typeof AuthenticatedAdminSettingsSecurityRoute
+  '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
+  '/manage/attendance/exceptions': typeof AuthenticatedManageAttendanceExceptionsRoute
+  '/manage/employees/$employeeId': typeof AuthenticatedManageEmployeesEmployeeIdRoute
+  '/manage/jobs/$jobId': typeof AuthenticatedManageJobsJobIdRoute
+  '/manage/jobs/new': typeof AuthenticatedManageJobsNewRoute
+  '/manage/timesheets/$timesheetId': typeof AuthenticatedManageTimesheetsTimesheetIdRoute
+  '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
+  '/manage/attendance/': typeof AuthenticatedManageAttendanceIndexRoute
+  '/manage/employees/': typeof AuthenticatedManageEmployeesIndexRoute
+  '/manage/jobs/': typeof AuthenticatedManageJobsIndexRoute
+  '/manage/timesheets/': typeof AuthenticatedManageTimesheetsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/leave': typeof AuthenticatedLeaveRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/schedule': typeof AuthenticatedScheduleRoute
+  '/auth/accept-invitation': typeof AuthAcceptInvitationRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/mfa': typeof AuthMfaRoute
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
-  '/dashboard/employees': typeof DashboardEmployeesRoute
-  '/dashboard/settings': typeof DashboardSettingsRoute
-  '/dashboard': typeof DashboardIndexRoute
+  '/admin/audit-log': typeof AuthenticatedAdminAuditLogRoute
+  '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
+  '/admin/invitations': typeof AuthenticatedAdminInvitationsRoute
+  '/admin/locations': typeof AuthenticatedAdminLocationsRoute
+  '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
+  '/attendance/history': typeof AuthenticatedAttendanceHistoryRoute
+  '/dashboard/employees': typeof AuthenticatedDashboardEmployeesRoute
+  '/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
+  '/jobs/$jobId': typeof AuthenticatedJobsJobIdRoute
+  '/manage/leave': typeof AuthenticatedManageLeaveRoute
+  '/manage/reports': typeof AuthenticatedManageReportsRoute
+  '/manage/schedule': typeof AuthenticatedManageScheduleRoute
+  '/manage/teams': typeof AuthenticatedManageTeamsRoute
+  '/settings/profile': typeof AuthenticatedSettingsProfileRoute
+  '/settings/security': typeof AuthenticatedSettingsSecurityRoute
+  '/timesheets/$timesheetId': typeof AuthenticatedTimesheetsTimesheetIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
+  '/attendance': typeof AuthenticatedAttendanceIndexRoute
+  '/dashboard': typeof AuthenticatedDashboardIndexRoute
+  '/jobs': typeof AuthenticatedJobsIndexRoute
+  '/manage': typeof AuthenticatedManageIndexRoute
+  '/timesheets': typeof AuthenticatedTimesheetsIndexRoute
+  '/admin/settings/approvals': typeof AuthenticatedAdminSettingsApprovalsRoute
+  '/admin/settings/attendance': typeof AuthenticatedAdminSettingsAttendanceRoute
+  '/admin/settings/company': typeof AuthenticatedAdminSettingsCompanyRoute
+  '/admin/settings/leave': typeof AuthenticatedAdminSettingsLeaveRoute
+  '/admin/settings/notifications': typeof AuthenticatedAdminSettingsNotificationsRoute
+  '/admin/settings/security': typeof AuthenticatedAdminSettingsSecurityRoute
+  '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
+  '/manage/attendance/exceptions': typeof AuthenticatedManageAttendanceExceptionsRoute
+  '/manage/employees/$employeeId': typeof AuthenticatedManageEmployeesEmployeeIdRoute
+  '/manage/jobs/$jobId': typeof AuthenticatedManageJobsJobIdRoute
+  '/manage/jobs/new': typeof AuthenticatedManageJobsNewRoute
+  '/manage/timesheets/$timesheetId': typeof AuthenticatedManageTimesheetsTimesheetIdRoute
+  '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
+  '/manage/attendance': typeof AuthenticatedManageAttendanceIndexRoute
+  '/manage/employees': typeof AuthenticatedManageEmployeesIndexRoute
+  '/manage/jobs': typeof AuthenticatedManageJobsIndexRoute
+  '/manage/timesheets': typeof AuthenticatedManageTimesheetsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/_authenticated/manage': typeof AuthenticatedManageRouteRouteWithChildren
+  '/_authenticated/leave': typeof AuthenticatedLeaveRoute
+  '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
+  '/auth/accept-invitation': typeof AuthAcceptInvitationRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/mfa': typeof AuthMfaRoute
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
-  '/dashboard/employees': typeof DashboardEmployeesRoute
-  '/dashboard/settings': typeof DashboardSettingsRoute
-  '/dashboard/': typeof DashboardIndexRoute
+  '/_authenticated/admin/audit-log': typeof AuthenticatedAdminAuditLogRoute
+  '/_authenticated/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
+  '/_authenticated/admin/invitations': typeof AuthenticatedAdminInvitationsRoute
+  '/_authenticated/admin/locations': typeof AuthenticatedAdminLocationsRoute
+  '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/_authenticated/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
+  '/_authenticated/attendance/history': typeof AuthenticatedAttendanceHistoryRoute
+  '/_authenticated/dashboard/employees': typeof AuthenticatedDashboardEmployeesRoute
+  '/_authenticated/dashboard/settings': typeof AuthenticatedDashboardSettingsRoute
+  '/_authenticated/jobs/$jobId': typeof AuthenticatedJobsJobIdRoute
+  '/_authenticated/manage/leave': typeof AuthenticatedManageLeaveRoute
+  '/_authenticated/manage/reports': typeof AuthenticatedManageReportsRoute
+  '/_authenticated/manage/schedule': typeof AuthenticatedManageScheduleRoute
+  '/_authenticated/manage/teams': typeof AuthenticatedManageTeamsRoute
+  '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileRoute
+  '/_authenticated/settings/security': typeof AuthenticatedSettingsSecurityRoute
+  '/_authenticated/timesheets/$timesheetId': typeof AuthenticatedTimesheetsTimesheetIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/attendance/': typeof AuthenticatedAttendanceIndexRoute
+  '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/_authenticated/jobs/': typeof AuthenticatedJobsIndexRoute
+  '/_authenticated/manage/': typeof AuthenticatedManageIndexRoute
+  '/_authenticated/timesheets/': typeof AuthenticatedTimesheetsIndexRoute
+  '/_authenticated/admin/settings/approvals': typeof AuthenticatedAdminSettingsApprovalsRoute
+  '/_authenticated/admin/settings/attendance': typeof AuthenticatedAdminSettingsAttendanceRoute
+  '/_authenticated/admin/settings/company': typeof AuthenticatedAdminSettingsCompanyRoute
+  '/_authenticated/admin/settings/leave': typeof AuthenticatedAdminSettingsLeaveRoute
+  '/_authenticated/admin/settings/notifications': typeof AuthenticatedAdminSettingsNotificationsRoute
+  '/_authenticated/admin/settings/security': typeof AuthenticatedAdminSettingsSecurityRoute
+  '/_authenticated/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
+  '/_authenticated/manage/attendance/exceptions': typeof AuthenticatedManageAttendanceExceptionsRoute
+  '/_authenticated/manage/employees/$employeeId': typeof AuthenticatedManageEmployeesEmployeeIdRoute
+  '/_authenticated/manage/jobs/$jobId': typeof AuthenticatedManageJobsJobIdRoute
+  '/_authenticated/manage/jobs/new': typeof AuthenticatedManageJobsNewRoute
+  '/_authenticated/manage/timesheets/$timesheetId': typeof AuthenticatedManageTimesheetsTimesheetIdRoute
+  '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
+  '/_authenticated/manage/attendance/': typeof AuthenticatedManageAttendanceIndexRoute
+  '/_authenticated/manage/employees/': typeof AuthenticatedManageEmployeesIndexRoute
+  '/_authenticated/manage/jobs/': typeof AuthenticatedManageJobsIndexRoute
+  '/_authenticated/manage/timesheets/': typeof AuthenticatedManageTimesheetsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/dashboard'
+    | '/auth'
     | '/about'
+    | '/admin'
+    | '/manage'
+    | '/leave'
+    | '/notifications'
+    | '/onboarding'
+    | '/schedule'
+    | '/auth/accept-invitation'
     | '/auth/forgot-password'
     | '/auth/login'
+    | '/auth/mfa'
     | '/auth/register'
     | '/auth/reset-password'
     | '/auth/verify-email'
+    | '/admin/audit-log'
+    | '/admin/integrations'
+    | '/admin/invitations'
+    | '/admin/locations'
+    | '/admin/roles'
+    | '/attendance/corrections'
+    | '/attendance/history'
     | '/dashboard/employees'
     | '/dashboard/settings'
-    | '/dashboard/'
+    | '/jobs/$jobId'
+    | '/manage/leave'
+    | '/manage/reports'
+    | '/manage/schedule'
+    | '/manage/teams'
+    | '/settings/profile'
+    | '/settings/security'
+    | '/timesheets/$timesheetId'
     | '/api/auth/$'
+    | '/admin/'
+    | '/attendance/'
+    | '/dashboard/'
+    | '/jobs/'
+    | '/manage/'
+    | '/timesheets/'
+    | '/admin/settings/approvals'
+    | '/admin/settings/attendance'
+    | '/admin/settings/company'
+    | '/admin/settings/leave'
+    | '/admin/settings/notifications'
+    | '/admin/settings/security'
+    | '/admin/users/$userId'
+    | '/manage/attendance/exceptions'
+    | '/manage/employees/$employeeId'
+    | '/manage/jobs/$jobId'
+    | '/manage/jobs/new'
+    | '/manage/timesheets/$timesheetId'
+    | '/admin/users/'
+    | '/manage/attendance/'
+    | '/manage/employees/'
+    | '/manage/jobs/'
+    | '/manage/timesheets/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/about'
+    | '/leave'
+    | '/notifications'
+    | '/onboarding'
+    | '/schedule'
+    | '/auth/accept-invitation'
     | '/auth/forgot-password'
     | '/auth/login'
+    | '/auth/mfa'
     | '/auth/register'
     | '/auth/reset-password'
     | '/auth/verify-email'
+    | '/admin/audit-log'
+    | '/admin/integrations'
+    | '/admin/invitations'
+    | '/admin/locations'
+    | '/admin/roles'
+    | '/attendance/corrections'
+    | '/attendance/history'
     | '/dashboard/employees'
     | '/dashboard/settings'
-    | '/dashboard'
+    | '/jobs/$jobId'
+    | '/manage/leave'
+    | '/manage/reports'
+    | '/manage/schedule'
+    | '/manage/teams'
+    | '/settings/profile'
+    | '/settings/security'
+    | '/timesheets/$timesheetId'
     | '/api/auth/$'
+    | '/admin'
+    | '/attendance'
+    | '/dashboard'
+    | '/jobs'
+    | '/manage'
+    | '/timesheets'
+    | '/admin/settings/approvals'
+    | '/admin/settings/attendance'
+    | '/admin/settings/company'
+    | '/admin/settings/leave'
+    | '/admin/settings/notifications'
+    | '/admin/settings/security'
+    | '/admin/users/$userId'
+    | '/manage/attendance/exceptions'
+    | '/manage/employees/$employeeId'
+    | '/manage/jobs/$jobId'
+    | '/manage/jobs/new'
+    | '/manage/timesheets/$timesheetId'
+    | '/admin/users'
+    | '/manage/attendance'
+    | '/manage/employees'
+    | '/manage/jobs'
+    | '/manage/timesheets'
   id:
     | '__root__'
     | '/'
-    | '/dashboard'
+    | '/_authenticated'
+    | '/auth'
     | '/about'
+    | '/_authenticated/admin'
+    | '/_authenticated/manage'
+    | '/_authenticated/leave'
+    | '/_authenticated/notifications'
+    | '/_authenticated/onboarding'
+    | '/_authenticated/schedule'
+    | '/auth/accept-invitation'
     | '/auth/forgot-password'
     | '/auth/login'
+    | '/auth/mfa'
     | '/auth/register'
     | '/auth/reset-password'
     | '/auth/verify-email'
-    | '/dashboard/employees'
-    | '/dashboard/settings'
-    | '/dashboard/'
+    | '/_authenticated/admin/audit-log'
+    | '/_authenticated/admin/integrations'
+    | '/_authenticated/admin/invitations'
+    | '/_authenticated/admin/locations'
+    | '/_authenticated/admin/roles'
+    | '/_authenticated/attendance/corrections'
+    | '/_authenticated/attendance/history'
+    | '/_authenticated/dashboard/employees'
+    | '/_authenticated/dashboard/settings'
+    | '/_authenticated/jobs/$jobId'
+    | '/_authenticated/manage/leave'
+    | '/_authenticated/manage/reports'
+    | '/_authenticated/manage/schedule'
+    | '/_authenticated/manage/teams'
+    | '/_authenticated/settings/profile'
+    | '/_authenticated/settings/security'
+    | '/_authenticated/timesheets/$timesheetId'
     | '/api/auth/$'
+    | '/_authenticated/admin/'
+    | '/_authenticated/attendance/'
+    | '/_authenticated/dashboard/'
+    | '/_authenticated/jobs/'
+    | '/_authenticated/manage/'
+    | '/_authenticated/timesheets/'
+    | '/_authenticated/admin/settings/approvals'
+    | '/_authenticated/admin/settings/attendance'
+    | '/_authenticated/admin/settings/company'
+    | '/_authenticated/admin/settings/leave'
+    | '/_authenticated/admin/settings/notifications'
+    | '/_authenticated/admin/settings/security'
+    | '/_authenticated/admin/users/$userId'
+    | '/_authenticated/manage/attendance/exceptions'
+    | '/_authenticated/manage/employees/$employeeId'
+    | '/_authenticated/manage/jobs/$jobId'
+    | '/_authenticated/manage/jobs/new'
+    | '/_authenticated/manage/timesheets/$timesheetId'
+    | '/_authenticated/admin/users/'
+    | '/_authenticated/manage/attendance/'
+    | '/_authenticated/manage/employees/'
+    | '/_authenticated/manage/jobs/'
+    | '/_authenticated/manage/timesheets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRouteRoute: typeof AuthRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
-  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
-  AuthLoginRoute: typeof AuthLoginRoute
-  AuthRegisterRoute: typeof AuthRegisterRoute
-  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
-  AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -190,6 +769,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -197,68 +783,264 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/leave': {
+      id: '/_authenticated/leave'
+      path: '/leave'
+      fullPath: '/leave'
+      preLoaderRoute: typeof AuthenticatedLeaveRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/manage': {
+      id: '/_authenticated/manage'
+      path: '/manage'
+      fullPath: '/manage'
+      preLoaderRoute: typeof AuthenticatedManageRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/notifications': {
+      id: '/_authenticated/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/schedule': {
+      id: '/_authenticated/schedule'
+      path: '/schedule'
+      fullPath: '/schedule'
+      preLoaderRoute: typeof AuthenticatedScheduleRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/auth/accept-invitation': {
+      id: '/auth/accept-invitation'
+      path: '/accept-invitation'
+      fullPath: '/auth/accept-invitation'
+      preLoaderRoute: typeof AuthAcceptInvitationRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/auth/forgot-password': {
       id: '/auth/forgot-password'
-      path: '/auth/forgot-password'
+      path: '/forgot-password'
       fullPath: '/auth/forgot-password'
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/auth/login': {
       id: '/auth/login'
-      path: '/auth/login'
+      path: '/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/mfa': {
+      id: '/auth/mfa'
+      path: '/mfa'
+      fullPath: '/auth/mfa'
+      preLoaderRoute: typeof AuthMfaRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/auth/register': {
       id: '/auth/register'
-      path: '/auth/register'
+      path: '/register'
       fullPath: '/auth/register'
       preLoaderRoute: typeof AuthRegisterRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/auth/reset-password': {
       id: '/auth/reset-password'
-      path: '/auth/reset-password'
+      path: '/reset-password'
       fullPath: '/auth/reset-password'
       preLoaderRoute: typeof AuthResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/auth/verify-email': {
       id: '/auth/verify-email'
-      path: '/auth/verify-email'
+      path: '/verify-email'
       fullPath: '/auth/verify-email'
       preLoaderRoute: typeof AuthVerifyEmailRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
-    '/dashboard/': {
-      id: '/dashboard/'
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
       path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/audit-log': {
+      id: '/_authenticated/admin/audit-log'
+      path: '/audit-log'
+      fullPath: '/admin/audit-log'
+      preLoaderRoute: typeof AuthenticatedAdminAuditLogRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/integrations': {
+      id: '/_authenticated/admin/integrations'
+      path: '/integrations'
+      fullPath: '/admin/integrations'
+      preLoaderRoute: typeof AuthenticatedAdminIntegrationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/invitations': {
+      id: '/_authenticated/admin/invitations'
+      path: '/invitations'
+      fullPath: '/admin/invitations'
+      preLoaderRoute: typeof AuthenticatedAdminInvitationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/locations': {
+      id: '/_authenticated/admin/locations'
+      path: '/locations'
+      fullPath: '/admin/locations'
+      preLoaderRoute: typeof AuthenticatedAdminLocationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/roles': {
+      id: '/_authenticated/admin/roles'
+      path: '/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AuthenticatedAdminRolesRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/attendance/': {
+      id: '/_authenticated/attendance/'
+      path: '/attendance'
+      fullPath: '/attendance/'
+      preLoaderRoute: typeof AuthenticatedAttendanceIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/attendance/corrections': {
+      id: '/_authenticated/attendance/corrections'
+      path: '/attendance/corrections'
+      fullPath: '/attendance/corrections'
+      preLoaderRoute: typeof AuthenticatedAttendanceCorrectionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/attendance/history': {
+      id: '/_authenticated/attendance/history'
+      path: '/attendance/history'
+      fullPath: '/attendance/history'
+      preLoaderRoute: typeof AuthenticatedAttendanceHistoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard/': {
+      id: '/_authenticated/dashboard/'
+      path: '/dashboard'
       fullPath: '/dashboard/'
-      preLoaderRoute: typeof DashboardIndexRouteImport
-      parentRoute: typeof DashboardRouteRoute
+      preLoaderRoute: typeof AuthenticatedDashboardIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/dashboard/employees': {
-      id: '/dashboard/employees'
-      path: '/employees'
+    '/_authenticated/dashboard/employees': {
+      id: '/_authenticated/dashboard/employees'
+      path: '/dashboard/employees'
       fullPath: '/dashboard/employees'
-      preLoaderRoute: typeof DashboardEmployeesRouteImport
-      parentRoute: typeof DashboardRouteRoute
+      preLoaderRoute: typeof AuthenticatedDashboardEmployeesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/dashboard/settings': {
-      id: '/dashboard/settings'
-      path: '/settings'
+    '/_authenticated/dashboard/settings': {
+      id: '/_authenticated/dashboard/settings'
+      path: '/dashboard/settings'
       fullPath: '/dashboard/settings'
-      preLoaderRoute: typeof DashboardSettingsRouteImport
-      parentRoute: typeof DashboardRouteRoute
+      preLoaderRoute: typeof AuthenticatedDashboardSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/jobs/': {
+      id: '/_authenticated/jobs/'
+      path: '/jobs'
+      fullPath: '/jobs/'
+      preLoaderRoute: typeof AuthenticatedJobsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/jobs/$jobId': {
+      id: '/_authenticated/jobs/$jobId'
+      path: '/jobs/$jobId'
+      fullPath: '/jobs/$jobId'
+      preLoaderRoute: typeof AuthenticatedJobsJobIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/manage/': {
+      id: '/_authenticated/manage/'
+      path: '/'
+      fullPath: '/manage/'
+      preLoaderRoute: typeof AuthenticatedManageIndexRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/leave': {
+      id: '/_authenticated/manage/leave'
+      path: '/leave'
+      fullPath: '/manage/leave'
+      preLoaderRoute: typeof AuthenticatedManageLeaveRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/reports': {
+      id: '/_authenticated/manage/reports'
+      path: '/reports'
+      fullPath: '/manage/reports'
+      preLoaderRoute: typeof AuthenticatedManageReportsRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/schedule': {
+      id: '/_authenticated/manage/schedule'
+      path: '/schedule'
+      fullPath: '/manage/schedule'
+      preLoaderRoute: typeof AuthenticatedManageScheduleRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/teams': {
+      id: '/_authenticated/manage/teams'
+      path: '/teams'
+      fullPath: '/manage/teams'
+      preLoaderRoute: typeof AuthenticatedManageTeamsRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/settings/profile': {
+      id: '/_authenticated/settings/profile'
+      path: '/settings/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof AuthenticatedSettingsProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings/security': {
+      id: '/_authenticated/settings/security'
+      path: '/settings/security'
+      fullPath: '/settings/security'
+      preLoaderRoute: typeof AuthenticatedSettingsSecurityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/timesheets/': {
+      id: '/_authenticated/timesheets/'
+      path: '/timesheets'
+      fullPath: '/timesheets/'
+      preLoaderRoute: typeof AuthenticatedTimesheetsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/timesheets/$timesheetId': {
+      id: '/_authenticated/timesheets/$timesheetId'
+      path: '/timesheets/$timesheetId'
+      fullPath: '/timesheets/$timesheetId'
+      preLoaderRoute: typeof AuthenticatedTimesheetsTimesheetIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -267,34 +1049,295 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/settings/approvals': {
+      id: '/_authenticated/admin/settings/approvals'
+      path: '/settings/approvals'
+      fullPath: '/admin/settings/approvals'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsApprovalsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/settings/attendance': {
+      id: '/_authenticated/admin/settings/attendance'
+      path: '/settings/attendance'
+      fullPath: '/admin/settings/attendance'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsAttendanceRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/settings/company': {
+      id: '/_authenticated/admin/settings/company'
+      path: '/settings/company'
+      fullPath: '/admin/settings/company'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsCompanyRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/settings/leave': {
+      id: '/_authenticated/admin/settings/leave'
+      path: '/settings/leave'
+      fullPath: '/admin/settings/leave'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsLeaveRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/settings/notifications': {
+      id: '/_authenticated/admin/settings/notifications'
+      path: '/settings/notifications'
+      fullPath: '/admin/settings/notifications'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsNotificationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/settings/security': {
+      id: '/_authenticated/admin/settings/security'
+      path: '/settings/security'
+      fullPath: '/admin/settings/security'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsSecurityRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/users/': {
+      id: '/_authenticated/admin/users/'
+      path: '/users'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AuthenticatedAdminUsersIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/users/$userId': {
+      id: '/_authenticated/admin/users/$userId'
+      path: '/users/$userId'
+      fullPath: '/admin/users/$userId'
+      preLoaderRoute: typeof AuthenticatedAdminUsersUserIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/manage/attendance/': {
+      id: '/_authenticated/manage/attendance/'
+      path: '/attendance'
+      fullPath: '/manage/attendance/'
+      preLoaderRoute: typeof AuthenticatedManageAttendanceIndexRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/attendance/exceptions': {
+      id: '/_authenticated/manage/attendance/exceptions'
+      path: '/attendance/exceptions'
+      fullPath: '/manage/attendance/exceptions'
+      preLoaderRoute: typeof AuthenticatedManageAttendanceExceptionsRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/employees/': {
+      id: '/_authenticated/manage/employees/'
+      path: '/employees'
+      fullPath: '/manage/employees/'
+      preLoaderRoute: typeof AuthenticatedManageEmployeesIndexRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/employees/$employeeId': {
+      id: '/_authenticated/manage/employees/$employeeId'
+      path: '/employees/$employeeId'
+      fullPath: '/manage/employees/$employeeId'
+      preLoaderRoute: typeof AuthenticatedManageEmployeesEmployeeIdRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/jobs/': {
+      id: '/_authenticated/manage/jobs/'
+      path: '/jobs'
+      fullPath: '/manage/jobs/'
+      preLoaderRoute: typeof AuthenticatedManageJobsIndexRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/jobs/$jobId': {
+      id: '/_authenticated/manage/jobs/$jobId'
+      path: '/jobs/$jobId'
+      fullPath: '/manage/jobs/$jobId'
+      preLoaderRoute: typeof AuthenticatedManageJobsJobIdRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/jobs/new': {
+      id: '/_authenticated/manage/jobs/new'
+      path: '/jobs/new'
+      fullPath: '/manage/jobs/new'
+      preLoaderRoute: typeof AuthenticatedManageJobsNewRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/timesheets/': {
+      id: '/_authenticated/manage/timesheets/'
+      path: '/timesheets'
+      fullPath: '/manage/timesheets/'
+      preLoaderRoute: typeof AuthenticatedManageTimesheetsIndexRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
+    '/_authenticated/manage/timesheets/$timesheetId': {
+      id: '/_authenticated/manage/timesheets/$timesheetId'
+      path: '/timesheets/$timesheetId'
+      fullPath: '/manage/timesheets/$timesheetId'
+      preLoaderRoute: typeof AuthenticatedManageTimesheetsTimesheetIdRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
   }
 }
 
-interface DashboardRouteRouteChildren {
-  DashboardEmployeesRoute: typeof DashboardEmployeesRoute
-  DashboardSettingsRoute: typeof DashboardSettingsRoute
-  DashboardIndexRoute: typeof DashboardIndexRoute
+interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminAuditLogRoute: typeof AuthenticatedAdminAuditLogRoute
+  AuthenticatedAdminIntegrationsRoute: typeof AuthenticatedAdminIntegrationsRoute
+  AuthenticatedAdminInvitationsRoute: typeof AuthenticatedAdminInvitationsRoute
+  AuthenticatedAdminLocationsRoute: typeof AuthenticatedAdminLocationsRoute
+  AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminSettingsApprovalsRoute: typeof AuthenticatedAdminSettingsApprovalsRoute
+  AuthenticatedAdminSettingsAttendanceRoute: typeof AuthenticatedAdminSettingsAttendanceRoute
+  AuthenticatedAdminSettingsCompanyRoute: typeof AuthenticatedAdminSettingsCompanyRoute
+  AuthenticatedAdminSettingsLeaveRoute: typeof AuthenticatedAdminSettingsLeaveRoute
+  AuthenticatedAdminSettingsNotificationsRoute: typeof AuthenticatedAdminSettingsNotificationsRoute
+  AuthenticatedAdminSettingsSecurityRoute: typeof AuthenticatedAdminSettingsSecurityRoute
+  AuthenticatedAdminUsersUserIdRoute: typeof AuthenticatedAdminUsersUserIdRoute
+  AuthenticatedAdminUsersIndexRoute: typeof AuthenticatedAdminUsersIndexRoute
 }
 
-const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
-  DashboardEmployeesRoute: DashboardEmployeesRoute,
-  DashboardSettingsRoute: DashboardSettingsRoute,
-  DashboardIndexRoute: DashboardIndexRoute,
+const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
+  {
+    AuthenticatedAdminAuditLogRoute: AuthenticatedAdminAuditLogRoute,
+    AuthenticatedAdminIntegrationsRoute: AuthenticatedAdminIntegrationsRoute,
+    AuthenticatedAdminInvitationsRoute: AuthenticatedAdminInvitationsRoute,
+    AuthenticatedAdminLocationsRoute: AuthenticatedAdminLocationsRoute,
+    AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
+    AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+    AuthenticatedAdminSettingsApprovalsRoute:
+      AuthenticatedAdminSettingsApprovalsRoute,
+    AuthenticatedAdminSettingsAttendanceRoute:
+      AuthenticatedAdminSettingsAttendanceRoute,
+    AuthenticatedAdminSettingsCompanyRoute:
+      AuthenticatedAdminSettingsCompanyRoute,
+    AuthenticatedAdminSettingsLeaveRoute: AuthenticatedAdminSettingsLeaveRoute,
+    AuthenticatedAdminSettingsNotificationsRoute:
+      AuthenticatedAdminSettingsNotificationsRoute,
+    AuthenticatedAdminSettingsSecurityRoute:
+      AuthenticatedAdminSettingsSecurityRoute,
+    AuthenticatedAdminUsersUserIdRoute: AuthenticatedAdminUsersUserIdRoute,
+    AuthenticatedAdminUsersIndexRoute: AuthenticatedAdminUsersIndexRoute,
+  }
+
+const AuthenticatedAdminRouteRouteWithChildren =
+  AuthenticatedAdminRouteRoute._addFileChildren(
+    AuthenticatedAdminRouteRouteChildren,
+  )
+
+interface AuthenticatedManageRouteRouteChildren {
+  AuthenticatedManageLeaveRoute: typeof AuthenticatedManageLeaveRoute
+  AuthenticatedManageReportsRoute: typeof AuthenticatedManageReportsRoute
+  AuthenticatedManageScheduleRoute: typeof AuthenticatedManageScheduleRoute
+  AuthenticatedManageTeamsRoute: typeof AuthenticatedManageTeamsRoute
+  AuthenticatedManageIndexRoute: typeof AuthenticatedManageIndexRoute
+  AuthenticatedManageAttendanceExceptionsRoute: typeof AuthenticatedManageAttendanceExceptionsRoute
+  AuthenticatedManageEmployeesEmployeeIdRoute: typeof AuthenticatedManageEmployeesEmployeeIdRoute
+  AuthenticatedManageJobsJobIdRoute: typeof AuthenticatedManageJobsJobIdRoute
+  AuthenticatedManageJobsNewRoute: typeof AuthenticatedManageJobsNewRoute
+  AuthenticatedManageTimesheetsTimesheetIdRoute: typeof AuthenticatedManageTimesheetsTimesheetIdRoute
+  AuthenticatedManageAttendanceIndexRoute: typeof AuthenticatedManageAttendanceIndexRoute
+  AuthenticatedManageEmployeesIndexRoute: typeof AuthenticatedManageEmployeesIndexRoute
+  AuthenticatedManageJobsIndexRoute: typeof AuthenticatedManageJobsIndexRoute
+  AuthenticatedManageTimesheetsIndexRoute: typeof AuthenticatedManageTimesheetsIndexRoute
 }
 
-const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
-  DashboardRouteRouteChildren,
+const AuthenticatedManageRouteRouteChildren: AuthenticatedManageRouteRouteChildren =
+  {
+    AuthenticatedManageLeaveRoute: AuthenticatedManageLeaveRoute,
+    AuthenticatedManageReportsRoute: AuthenticatedManageReportsRoute,
+    AuthenticatedManageScheduleRoute: AuthenticatedManageScheduleRoute,
+    AuthenticatedManageTeamsRoute: AuthenticatedManageTeamsRoute,
+    AuthenticatedManageIndexRoute: AuthenticatedManageIndexRoute,
+    AuthenticatedManageAttendanceExceptionsRoute:
+      AuthenticatedManageAttendanceExceptionsRoute,
+    AuthenticatedManageEmployeesEmployeeIdRoute:
+      AuthenticatedManageEmployeesEmployeeIdRoute,
+    AuthenticatedManageJobsJobIdRoute: AuthenticatedManageJobsJobIdRoute,
+    AuthenticatedManageJobsNewRoute: AuthenticatedManageJobsNewRoute,
+    AuthenticatedManageTimesheetsTimesheetIdRoute:
+      AuthenticatedManageTimesheetsTimesheetIdRoute,
+    AuthenticatedManageAttendanceIndexRoute:
+      AuthenticatedManageAttendanceIndexRoute,
+    AuthenticatedManageEmployeesIndexRoute:
+      AuthenticatedManageEmployeesIndexRoute,
+    AuthenticatedManageJobsIndexRoute: AuthenticatedManageJobsIndexRoute,
+    AuthenticatedManageTimesheetsIndexRoute:
+      AuthenticatedManageTimesheetsIndexRoute,
+  }
+
+const AuthenticatedManageRouteRouteWithChildren =
+  AuthenticatedManageRouteRoute._addFileChildren(
+    AuthenticatedManageRouteRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
+  AuthenticatedManageRouteRoute: typeof AuthenticatedManageRouteRouteWithChildren
+  AuthenticatedLeaveRoute: typeof AuthenticatedLeaveRoute
+  AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
+  AuthenticatedAttendanceCorrectionsRoute: typeof AuthenticatedAttendanceCorrectionsRoute
+  AuthenticatedAttendanceHistoryRoute: typeof AuthenticatedAttendanceHistoryRoute
+  AuthenticatedDashboardEmployeesRoute: typeof AuthenticatedDashboardEmployeesRoute
+  AuthenticatedDashboardSettingsRoute: typeof AuthenticatedDashboardSettingsRoute
+  AuthenticatedJobsJobIdRoute: typeof AuthenticatedJobsJobIdRoute
+  AuthenticatedSettingsProfileRoute: typeof AuthenticatedSettingsProfileRoute
+  AuthenticatedSettingsSecurityRoute: typeof AuthenticatedSettingsSecurityRoute
+  AuthenticatedTimesheetsTimesheetIdRoute: typeof AuthenticatedTimesheetsTimesheetIdRoute
+  AuthenticatedAttendanceIndexRoute: typeof AuthenticatedAttendanceIndexRoute
+  AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
+  AuthenticatedJobsIndexRoute: typeof AuthenticatedJobsIndexRoute
+  AuthenticatedTimesheetsIndexRoute: typeof AuthenticatedTimesheetsIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
+  AuthenticatedManageRouteRoute: AuthenticatedManageRouteRouteWithChildren,
+  AuthenticatedLeaveRoute: AuthenticatedLeaveRoute,
+  AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
+  AuthenticatedAttendanceCorrectionsRoute:
+    AuthenticatedAttendanceCorrectionsRoute,
+  AuthenticatedAttendanceHistoryRoute: AuthenticatedAttendanceHistoryRoute,
+  AuthenticatedDashboardEmployeesRoute: AuthenticatedDashboardEmployeesRoute,
+  AuthenticatedDashboardSettingsRoute: AuthenticatedDashboardSettingsRoute,
+  AuthenticatedJobsJobIdRoute: AuthenticatedJobsJobIdRoute,
+  AuthenticatedSettingsProfileRoute: AuthenticatedSettingsProfileRoute,
+  AuthenticatedSettingsSecurityRoute: AuthenticatedSettingsSecurityRoute,
+  AuthenticatedTimesheetsTimesheetIdRoute:
+    AuthenticatedTimesheetsTimesheetIdRoute,
+  AuthenticatedAttendanceIndexRoute: AuthenticatedAttendanceIndexRoute,
+  AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
+  AuthenticatedJobsIndexRoute: AuthenticatedJobsIndexRoute,
+  AuthenticatedTimesheetsIndexRoute: AuthenticatedTimesheetsIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
+interface AuthRouteRouteChildren {
+  AuthAcceptInvitationRoute: typeof AuthAcceptInvitationRoute
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthMfaRoute: typeof AuthMfaRoute
+  AuthRegisterRoute: typeof AuthRegisterRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+  AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
+}
+
+const AuthRouteRouteChildren: AuthRouteRouteChildren = {
+  AuthAcceptInvitationRoute: AuthAcceptInvitationRoute,
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthMfaRoute: AuthMfaRoute,
+  AuthRegisterRoute: AuthRegisterRoute,
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
+  AuthVerifyEmailRoute: AuthVerifyEmailRoute,
+}
+
+const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
+  AuthRouteRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRouteRoute: AuthRouteRouteWithChildren,
   AboutRoute: AboutRoute,
-  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
-  AuthLoginRoute: AuthLoginRoute,
-  AuthRegisterRoute: AuthRegisterRoute,
-  AuthResetPasswordRoute: AuthResetPasswordRoute,
-  AuthVerifyEmailRoute: AuthVerifyEmailRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

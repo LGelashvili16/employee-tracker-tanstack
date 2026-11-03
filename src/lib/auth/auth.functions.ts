@@ -1,25 +1,29 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
-import { auth } from '#/lib/auth/auth'
+import { setResponseStatus } from '@tanstack/react-start/server'
+import { z } from 'zod'
+import { readActor } from './session.server'
+import { sessionMiddleware } from './auth.middleware'
+import { permissionSchema } from '#/lib/authorization/permissions'
+import { assertPermission } from '#/lib/authorization/access'
 
 export const getSession = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
-
-    return session
+    return readActor()
   },
 )
 
-export const ensureSession = createServerFn({ method: 'GET' }).handler(
-  async () => {
-    const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+export const ensureSession = createServerFn({ method: 'GET' })
+  .middleware([sessionMiddleware])
+  .handler(({ context }) => context.actor)
 
-    if (!session) {
-      throw new Error('Unauthorized')
+export const requirePagePermission = createServerFn({ method: 'GET' })
+  .middleware([sessionMiddleware])
+  .validator(z.object({ permission: permissionSchema }).strict())
+  .handler(({ data, context }) => {
+    try {
+      return assertPermission(context.actor, data.permission)
+    } catch (error) {
+      setResponseStatus(403)
+      throw error
     }
-
-    return session
-  },
-)
+  })
