@@ -1,5 +1,14 @@
-import { relations } from 'drizzle-orm'
-import { pgTable, text, timestamp, boolean, index } from 'drizzle-orm/pg-core'
+import { relations, sql } from 'drizzle-orm'
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  index,
+  integer,
+  bigint,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core'
 
 /** One login identity per person; employment records remain a separate domain. */
 export const user = pgTable('user', {
@@ -7,8 +16,14 @@ export const user = pgTable('user', {
   id: text('id').primaryKey(),
   /** Display name shown for the account holder. */
   name: text('name').notNull(),
-  /** Unique email address used to sign in and receive account messages. */
+  /** Auth protocol identifier. Provisioned employees use a reserved .invalid address; real optional email belongs to their employee record. */
   email: text('email').notNull().unique(),
+  /** Immutable normalized login name, equal to the company employee code; null for legacy email accounts. */
+  username: text('username').unique(),
+  /** Server-controlled account lifecycle: invited, active, or suspended. Existing accounts remain active. */
+  accessState: text('access_state').notNull().default('active'),
+  /** UTC activation instant; null until a provisioned employee chooses a password. Legacy values are backfilled by the migration. */
+  activatedAt: timestamp('activated_at', { withTimezone: true }),
   /** Whether Better Auth has verified ownership of this email address. */
   emailVerified: boolean('email_verified').default(false).notNull(),
   /** Comma-separated server-provisioned roles; default grants only employee access. Client input is disabled. */
@@ -87,8 +102,25 @@ export const account = pgTable(
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
-  (table) => [index('account_userId_idx').on(table.userId)],
+  (table) => [
+    index('account_userId_idx').on(table.userId),
+    uniqueIndex('account_one_credential_per_user')
+      .on(table.userId)
+      .where(sql`${table.providerId} = 'credential'`),
+  ],
 )
+
+/** Better Auth's shared database-backed throttle counters; one row per request bucket, no employee credentials. */
+export const rateLimit = pgTable('rate_limit', {
+  /** Better Auth-generated bucket record identifier. */
+  id: text('id').primaryKey(),
+  /** Unique library-defined request bucket key, potentially containing a network address. */
+  key: text('key').notNull().unique(),
+  /** Request count in the current bounded window. */
+  count: integer('count').notNull(),
+  /** Last request time in Unix milliseconds, maintained by Better Auth. */
+  lastRequest: bigint('last_request', { mode: 'number' }).notNull(),
+})
 
 /** Expiring verification/recovery records, managed exclusively by Better Auth. */
 export const verification = pgTable(

@@ -1,24 +1,25 @@
-import { Link } from '@tanstack/react-router'
-import { FeaturePage } from '#/components/common/feature-page'
-import { Button } from '#/components/ui/button'
-import { ClockControls } from '#/features/attendance/components/clock-controls'
 import { dashboardContent } from '../dashboard.content'
 
 export function DashboardPage() {
   return (
-    <FeaturePage {...dashboardContent.dashboard}>
-      <ClockControls />
-      <nav aria-label="სწრაფი გადასვლა" className="flex flex-wrap gap-3">
-        <Button variant="outline" render={<Link to="/schedule" />}>
-          ჩემი განრიგი
-        </Button>
-        <Button variant="outline" render={<Link to="/jobs" />}>
-          ჩემი სამუშაოები
-        </Button>
-        <Button variant="outline" render={<Link to="/timesheets" />}>
-          სამუშაო საათები
-        </Button>
-      </nav>
-    </FeaturePage>
+    <>
+      <h1 className="sr-only">{dashboardContent.dashboard.title}</h1>
+      <div
+        className="grid auto-rows-min gap-4 md:grid-cols-3"
+        aria-hidden="true"
+      >
+        <div className="aspect-video rounded-xl bg-muted/50" />
+        <div className="aspect-video rounded-xl bg-muted/50" />
+        <div className="aspect-video rounded-xl bg-muted/50" />
+      </div>
+      <section
+        className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 p-4 md:min-h-min"
+        aria-label="სამუშაო სივრცის მიმოხილვა"
+      >
+        <p className="text-sm text-muted-foreground">
+          მიმოხილვის მონაცემები ჯერ არ არის ხელმისაწვდომი.
+        </p>
+      </section>
+    </>
   )
 }

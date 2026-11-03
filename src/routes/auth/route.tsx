@@ -22,7 +22,12 @@ function AuthLayout() {
         <PwaInstallButton />
         <ThemeToggle />
       </div>
-      <AuthWelcome animateBrand={Boolean(matchRoute({ to: '/auth/login' }))} />
+      <AuthWelcome
+        animateBrand={Boolean(
+          matchRoute({ to: '/auth/login' }) ||
+          matchRoute({ to: '/auth/register' }),
+        )}
+      />
       <section className="flex min-w-0 flex-col justify-center px-5 py-24 sm:px-10 lg:px-16">
         <div className="mx-auto flex w-full max-w-md flex-col gap-6">
           <Link

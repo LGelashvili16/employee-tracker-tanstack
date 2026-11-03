@@ -3,7 +3,7 @@ import type { Role } from './permissions'
 export type Actor = {
   id: string
   name: string
-  email: string
+  email: string | null
   emailVerified: boolean
   roles: Array<Role>
 }

@@ -1,6 +1,6 @@
 export const companySettingsContent = {
   administration: {
-    title: 'ადმინისტრირება',
+    title: 'ადმინისტრირების მიმოხილვა',
     description: 'კომპანიის სამუშაო სივრცისა და წვდომების პარამეტრები.',
   },
   companySettings: {

@@ -11,6 +11,12 @@ import { nitro } from 'nitro/vite'
 import { pwaPlugins } from './scripts/pwa.ts'
 
 const config = defineConfig({
+  // Keep Start's optimizer artifacts separate from standalone local previews.
+  cacheDir: 'node_modules/.vite/teamwork-start',
+  optimizeDeps: {
+    // Account management is lazy-loaded; prebundle Query before navigating there.
+    include: ['@tanstack/react-query'],
+  },
   resolve: {
     // Explicit filesystem aliases also resolve in Nitro's SSR module runner on Windows.
     alias: {

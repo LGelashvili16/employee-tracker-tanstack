@@ -15,7 +15,10 @@ describe('untrusted route and form inputs', () => {
     expect(
       authLinkSearchSchema.safeParse({ token: 'a'.repeat(513) }).success,
     ).toBe(false)
-    const result = loginSchema.safeParse({ email: 'invalid', password: '' })
+    const result = loginSchema.safeParse({
+      identifier: 'invalid name',
+      password: '',
+    })
     expect(result.success).toBe(false)
     if (!result.success)
       expect(

@@ -1,6 +1,5 @@
-import { FeaturePage } from '#/components/common/feature-page'
-import { authContent } from '../auth.content'
+import { AccountSetupForm } from '../components/account-setup-form'
 
 export function ResetPasswordPage() {
-  return <FeaturePage {...authContent.resetPassword} />
+  return <AccountSetupForm purpose="reset" />
 }

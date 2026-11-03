@@ -9,7 +9,12 @@ export function RouteError() {
       title="გვერდის გახსნა ვერ მოხერხდა"
       description="შეამოწმეთ თქვენი წვდომა ან სცადეთ მოგვიანებით."
     >
-      <Button variant="outline" render={<Link to="/dashboard" />}>
+      <Button
+        nativeButton={false}
+        role="link"
+        variant="outline"
+        render={<Link to="/dashboard" />}
+      >
         მთავარ გვერდზე დაბრუნება
       </Button>
     </FeaturePage>
@@ -21,7 +26,12 @@ export function RouteNotFound() {
       title="გვერდი ვერ მოიძებნა"
       description="შეამოწმეთ ბმული და სცადეთ ხელახლა."
     >
-      <Button variant="outline" render={<Link to="/" />}>
+      <Button
+        nativeButton={false}
+        role="link"
+        variant="outline"
+        render={<Link to="/" />}
+      >
         მთავარ გვერდზე დაბრუნება
       </Button>
     </FeaturePage>

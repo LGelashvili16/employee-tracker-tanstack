@@ -28,14 +28,26 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const form = useForm({
-    defaultValues: { email: '', password: '' },
+    defaultValues: { identifier: '', password: '' },
     validators: { onSubmit: loginSchema },
     onSubmit: async ({ value }) => {
       setError('')
       try {
-        const result = await authClient.signIn.email(value)
+        const result = value.identifier.includes('@')
+          ? await authClient.signIn.email({
+              email: value.identifier,
+              password: value.password,
+            })
+          : await authClient.signIn.username({
+              username: value.identifier.toLowerCase(),
+              password: value.password,
+            })
         if (result.error) {
-          setError('შესვლა ვერ მოხერხდა. გადაამოწმეთ ელფოსტა და პაროლი.')
+          setError(
+            result.error.status === 429
+              ? 'ძალიან ბევრი მცდელობაა. სცადეთ მოგვიანებით.'
+              : 'შესვლა ვერ მოხერხდა. გადაამოწმეთ მომხმარებლის სახელი, პაროლი და ანგარიშის სტატუსი.',
+          )
           return
         }
         router.clearCache()
@@ -65,25 +77,29 @@ export function LoginPage() {
           }}
         >
           <FieldGroup>
-            <form.Field name="email">
+            <form.Field name="identifier">
               {(field) => (
                 <Field data-invalid={!field.state.meta.isValid}>
-                  <FieldLabel htmlFor="email">ელფოსტა</FieldLabel>
+                  <FieldLabel htmlFor="identifier">
+                    მომხმარებლის სახელი
+                  </FieldLabel>
                   <Input
-                    id="email"
+                    id="identifier"
                     name={field.name}
-                    type="email"
+                    type="text"
                     className="h-10"
-                    placeholder="თქვენი ელფოსტა"
-                    autoComplete="email"
+                    placeholder="თანამშრომლის კოდი"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
                     aria-invalid={!field.state.meta.isValid}
-                    aria-describedby="email-error"
+                    aria-describedby="identifier-error"
                   />
                   <FieldError
-                    id="email-error"
+                    id="identifier-error"
                     errors={field.state.meta.errors}
                   />
                 </Field>
@@ -164,17 +180,17 @@ export function LoginPage() {
       </CardContent>
       <CardFooter className="flex flex-col items-start gap-3 py-5">
         <p className="text-sm text-muted-foreground">
-          ჯერ არ გაქვთ ანგარიში?{' '}
+          პირველი შესვლა?{' '}
           <Link
             to="/auth/register"
             className="font-medium text-foreground underline underline-offset-4"
           >
-            რეგისტრაცია
+            ანგარიშის გააქტიურება
           </Link>
         </p>
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <IconLock className="size-3.5" aria-hidden="true" />
-          ანგარიშის შექმნა შესაძლებელია კომპანიის მოწვევით.
+          ანგარიშს ქმნის კომპანიის ადმინისტრატორი.
         </p>
       </CardFooter>
     </Card>

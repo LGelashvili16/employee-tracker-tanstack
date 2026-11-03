@@ -6,8 +6,9 @@ export const authContent = {
     description: `შედით თქვენს ${APP_NAME} ანგარიშში.`,
   },
   register: {
-    title: 'ანგარიშის შექმნა',
-    description: 'რეგისტრაცია ხელმისაწვდომია მხოლოდ კომპანიის მოწვევით.',
+    title: 'ანგარიშის გააქტიურება',
+    description:
+      'გამოიყენეთ ადმინისტრატორისგან მიღებული კოდი და აირჩიეთ პაროლი.',
   },
   acceptInvitation: {
     title: 'მოწვევის მიღება',
@@ -15,11 +16,11 @@ export const authContent = {
   },
   forgotPassword: {
     title: 'პაროლის აღდგენა',
-    description: 'ანგარიშზე წვდომის აღდგენა.',
+    description: 'პაროლის აღდგენა კომპანიის ადმინისტრატორის დახმარებით.',
   },
   resetPassword: {
     title: 'ახალი პაროლი',
-    description: 'ანგარიშის ახალი პაროლის დაყენება.',
+    description: 'მიუთითეთ ადმინისტრატორის მიერ გაცემული კოდი და ახალი პაროლი.',
   },
   verifyEmail: {
     title: 'ელფოსტის დადასტურება',
