@@ -20,8 +20,27 @@ describe('role and permission boundaries', () => {
         expect(hasPermission(roles, permission)).toBe(false)
     }
   })
-  it('grants admins the full workspace without expanding management roles', () => {
-    expect(hasEveryPermission(['admin'], permissionSchema.options)).toBe(true)
+  it('limits administrators to platform configuration without operational grants', () => {
+    const platformPermissions = [
+      'admin.access',
+      'users.manage',
+      'invitations.manage',
+      'roles.manage',
+      'company.configure',
+      'attendance.configure',
+      'approvals.configure',
+      'leave.configure',
+      'security.configure',
+      'notifications.configure',
+      'locations.manage',
+      'integrations.manage',
+      'audit.read',
+    ] as const
+    for (const permission of permissionSchema.options) {
+      expect(hasPermission(['admin'], permission)).toBe(
+        platformPermissions.some((platform) => platform === permission),
+      )
+    }
     expect(hasPermission(['supervisor'], 'timesheets.review.team')).toBe(true)
     expect(hasPermission(['supervisor'], 'roles.manage')).toBe(false)
   })
@@ -60,7 +79,7 @@ describe('role and permission boundaries', () => {
   it('combines grants across roles for all/any checks', () => {
     const required = ['users.manage', 'timesheets.review.team'] as const
     expect(hasEveryPermission(['admin', 'supervisor'], required)).toBe(true)
-    expect(hasEveryPermission(['admin'], required)).toBe(true)
+    expect(hasEveryPermission(['admin'], required)).toBe(false)
     expect(hasAnyPermission(['supervisor'], required)).toBe(true)
     expect(hasAnyPermission(['employee'], required)).toBe(false)
   })

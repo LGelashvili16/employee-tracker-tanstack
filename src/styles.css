@@ -155,14 +155,15 @@ body::after {
   mask-image: radial-gradient(circle at 50% 30%, black, transparent 78%);
 }
 
-a {
+/* Button links use their variant colors, including on hover. */
+a:not([data-slot='button']) {
   color: var(--lagoon-deep);
   text-decoration-color: rgba(64, 64, 64, 0.4);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
 
-a:hover {
+a:not([data-slot='button']):hover {
   color: var(--primary);
 }
 

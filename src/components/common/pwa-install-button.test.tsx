@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { PwaContext } from '#/lib/pwa/pwa-context'
+import { PwaContext } from '#/contexts/pwa-context'
 import { PwaInstallButton } from './pwa-install-button'
 import { usePwaBrowser } from '#/hooks/use-pwa-browser'
 import { APP_NAME } from '#/lib/app'

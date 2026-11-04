@@ -84,6 +84,8 @@ src/
     ui/                            # shadcn primitives and their variants
     common/                        # Shared composed UI without domain ownership
     layout/                        # Application/auth shells and navigation
+  providers/                       # App-wide React providers and AppProviders composition
+  contexts/                        # Shared React context definitions and their contracts
   hooks/                           # Hooks genuinely shared across features
   lib/
     auth/                          # Better Auth configuration, client, session, middleware
@@ -203,6 +205,9 @@ public/                            # Public static assets; never secrets
 
 ## React, Components, and Readability
 
+- Organize app-wide React state consistently: provider components belong in `src/providers/`, context definitions and their contracts in `src/contexts/`, and consumer hooks such as `useModal()` and `usePwa()` in `src/hooks/`. Keep feature-specific providers, contexts, and hooks inside their owning `src/features/<feature>/` module unless they are genuinely shared.
+- Compose app-wide providers in `src/providers/app-providers.tsx` and mount `AppProviders` from the root document. Preserve provider dependency order and keep context definitions independent of their provider implementations to avoid circular imports. Do not add empty providers or contexts for hypothetical future use.
+- Reuse the global dialog through `useModal()` from `#/hooks/use-modal` when a dialog must open from different parts of the app. It accepts complete JSX components with children; follow [the global dialog usage guide](docs/global-dialog.md). Keep feature-owned dialogs local when global coordination is unnecessary.
 - Use the existing shadcn `Skeleton` component for page, section, card, and table loading states. Compose reusable, feature-appropriate skeleton layouts that match the loaded content's dimensions, preserve layout, and include one Georgian accessible status with `aria-busy`; hide decorative placeholders from assistive technology and respect reduced motion. Reuse `src/components/common/page-skeleton.tsx` for the generic route fallback. Show skeletons only while loading, never as a substitute for an empty/error/unimplemented state or with an artificial delay.
 - Async action buttons MUST use the existing shadcn `Spinner` while pending, retain a meaningful Georgian label, expose `aria-busy`, and disable repeat submission as appropriate without changing button dimensions. Do not use a page skeleton inside a button or recreate spinner icons ad hoc.
 - Keep shadcn Skeleton as the default loading primitive. Skullet was reviewed as a sample-content measurement alternative; the current shared layouts do not justify another dependency or rendering sample components merely to calculate placeholders. Reconsider it only for a demonstrated layout-consistency problem after verifying Start SSR/hydration, accessibility, reduced motion, and the absence of side effects or private data in sample content.

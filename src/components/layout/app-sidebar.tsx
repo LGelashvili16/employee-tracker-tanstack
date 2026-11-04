@@ -56,7 +56,11 @@ export function AppSidebar({
     },
     {
       label: 'გუნდის მართვა',
-      items: navigationItems.filter((item) => item.to.startsWith('/manage')),
+      items: navigationItems.filter(
+        (item) =>
+          item.to.startsWith('/manage') &&
+          !('secondary' in item && item.secondary),
+      ),
     },
     {
       label: 'ადმინისტრირება',

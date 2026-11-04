@@ -44,6 +44,22 @@ export const roleSchema = z.enum(
 )
 export type Role = z.infer<typeof roleSchema>
 
+const administrationPermissions = [
+  'admin.access',
+  'users.manage',
+  'invitations.manage',
+  'roles.manage',
+  'company.configure',
+  'attendance.configure',
+  'approvals.configure',
+  'leave.configure',
+  'security.configure',
+  'notifications.configure',
+  'locations.manage',
+  'integrations.manage',
+  'audit.read',
+] as const satisfies ReadonlyArray<Permission>
+
 const managementPermissions: Record<
   'supervisor' | 'operations_manager' | 'hr_manager',
   ReadonlyArray<Permission>
@@ -111,8 +127,8 @@ export const roles = {
   hr_manager: accessControl.newRole({
     teamwork: managementPermissions.hr_manager,
   }),
-  // Administrators use both workspaces; resource and owner protections remain in services.
-  admin: accessControl.newRole({ teamwork: permissionSchema.options }),
+  // Platform administration does not imply authority over daily team operations.
+  admin: accessControl.newRole({ teamwork: administrationPermissions }),
   owner: accessControl.newRole({ teamwork: permissionSchema.options }),
 } satisfies Record<Role, unknown>
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { usePwaBrowser } from '#/hooks/use-pwa-browser'
-import { PwaContext } from '#/lib/pwa/pwa-context'
-import { PwaStatus } from './pwa-status'
+import { PwaContext } from '#/contexts/pwa-context'
+import { PwaStatus } from '#/components/common/pwa-status'
 
 export function PwaProvider({ children }: { children: ReactNode }) {
   const browser = usePwaBrowser()

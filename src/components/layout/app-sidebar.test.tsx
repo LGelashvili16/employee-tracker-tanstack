@@ -6,6 +6,8 @@ import { SidebarProvider } from '#/components/ui/sidebar'
 import { AdministrationPage } from '#/features/company-settings/pages/administration-page'
 import { WorkspaceUserMenu } from './workspace-user-menu'
 import { AttendanceNavigation } from '#/features/attendance/components/attendance-navigation'
+import { TeamAttendanceNavigation } from '#/features/attendance/components/team-attendance-navigation'
+import { ManageJobsPage } from '#/features/jobs/pages/manage-jobs-page'
 import type { AnchorHTMLAttributes } from 'react'
 import type { Role } from '#/lib/authorization/permissions'
 
@@ -23,7 +25,7 @@ vi.mock('@tanstack/react-router', () => ({
   }) => <a href={to} {...props} />,
 }))
 
-function renderSidebar(role: Role) {
+function renderSidebar(role: Role | ReadonlyArray<Role>) {
   return render(
     <SidebarProvider>
       <AppSidebar
@@ -32,7 +34,7 @@ function renderSidebar(role: Role) {
           name: 'ტესტი',
           email: null,
           emailVerified: false,
-          roles: [role],
+          roles: typeof role === 'string' ? [role] : [...role],
         }}
       />
     </SidebarProvider>,
@@ -89,23 +91,94 @@ describe('workspace navigation', () => {
     await user.click(screen.getByRole('menuitem', { name: 'გამოსვლა' }))
     expect(onSignOut).toHaveBeenCalledTimes(1)
   })
-  it.each(['admin', 'owner'] as const)(
-    'shows all workspace sections to %s',
+  it.each(['owner'] as const)('shows all workspace sections to %s', (role) => {
+    renderSidebar(role)
+    expect(screen.getByText('ჩემი სივრცე')).toBeInTheDocument()
+    expect(screen.getByText('გუნდის მართვა')).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'მთავარი გვერდი' }),
+    ).toHaveAttribute('href', '/dashboard')
+    expect(
+      screen.getByRole('link', { name: 'ადმინისტრირება' }),
+    ).toHaveAttribute('href', '/admin/dashboard')
+    expect(
+      screen.getByRole('link', { name: 'საათების განხილვა' }),
+    ).toBeInTheDocument()
+  })
+  it('keeps personal work and platform access for admins without team-management access', () => {
+    renderSidebar('admin')
+    expect(
+      screen.getByRole('link', { name: 'მთავარი გვერდი' }),
+    ).toHaveAttribute('href', '/dashboard')
+    expect(screen.getByRole('link', { name: 'დასწრება' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'ადმინისტრირება' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('გუნდის მართვა')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'გუნდის დასწრება' }),
+    ).not.toBeInTheDocument()
+  })
+  it('combines administration and the explicitly assigned management role', () => {
+    renderSidebar(['admin', 'supervisor'])
+    expect(
+      screen.getByRole('link', { name: 'გუნდის დასწრება' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'საათების განხილვა' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'ადმინისტრირება' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'განრიგის მართვა' }),
+    ).not.toBeInTheDocument()
+  })
+  it.each(['supervisor', 'operations_manager', 'hr_manager'] as const)(
+    'keeps platform configuration out of the %s workspace',
     (role) => {
       renderSidebar(role)
-      expect(screen.getByText('ჩემი სივრცე')).toBeInTheDocument()
       expect(screen.getByText('გუნდის მართვა')).toBeInTheDocument()
       expect(
-        screen.getByRole('link', { name: 'მთავარი გვერდი' }),
-      ).toHaveAttribute('href', '/dashboard')
+        screen.queryByRole('link', { name: 'ადმინისტრირება' }),
+      ).not.toBeInTheDocument()
       expect(
-        screen.getByRole('link', { name: 'ადმინისტრირება' }),
-      ).toHaveAttribute('href', '/admin/dashboard')
-      expect(
-        screen.getByRole('link', { name: 'საათების განხილვა' }),
-      ).toBeInTheDocument()
+        screen.queryByRole('link', { name: 'მომხმარებლები' }),
+      ).not.toBeInTheDocument()
     },
   )
+  it('keeps attendance exceptions within attendance and job creation on the jobs page', () => {
+    location.pathname = '/manage/attendance/exceptions'
+    const { container } = renderSidebar('owner')
+    expect(
+      container.querySelector('a[href="/manage/attendance"]'),
+    ).toHaveAttribute('data-active')
+    expect(
+      screen.queryByRole('link', { name: 'დასწრების გამონაკლისები' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'ახალი სამუშაო' }),
+    ).not.toBeInTheDocument()
+    render(<TeamAttendanceNavigation roles={['supervisor']} />)
+    expect(
+      screen.getByRole('link', { name: 'დასწრების გამონაკლისები' }),
+    ).toHaveAttribute('aria-current', 'page')
+    render(<ManageJobsPage />)
+    expect(screen.getByRole('link', { name: 'ახალი სამუშაო' })).toHaveAttribute(
+      'href',
+      '/manage/jobs/new',
+    )
+    expect(screen.getByText('ეს განყოფილება მზადდება')).toBeInTheDocument()
+  })
+  it('does not show attendance review navigation to read-only operations managers', () => {
+    render(<TeamAttendanceNavigation roles={['operations_manager']} />)
+    expect(
+      screen.getByRole('link', { name: 'გუნდის დასწრება' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'დასწრების გამონაკლისები' }),
+    ).not.toBeInTheDocument()
+  })
   it.each(['admin', 'owner'] as const)(
     'shows only administration navigation in the admin workspace for %s',
     (role) => {

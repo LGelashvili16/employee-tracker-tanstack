@@ -68,9 +68,8 @@ function DialogContent({
               />
             }
           >
-            <IconX
-            />
-            <span className="sr-only">Close</span>
+            <IconX aria-hidden="true" />
+            <span className="sr-only">დახურვა</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>
@@ -108,7 +107,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close render={<Button variant="outline" />}>
-          Close
+          დახურვა
         </DialogPrimitive.Close>
       )}
     </div>

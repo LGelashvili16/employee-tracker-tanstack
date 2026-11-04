@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { IconDownload, IconShare2 } from '@tabler/icons-react'
-import { usePwa } from '#/lib/pwa/pwa-context'
+import { usePwa } from '#/hooks/use-pwa'
 import { APP_NAME } from '#/lib/app'
 import { Button } from '#/components/ui/button'
 import { Spinner } from '#/components/ui/spinner'

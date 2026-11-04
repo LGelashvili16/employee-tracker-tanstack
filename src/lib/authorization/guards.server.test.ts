@@ -59,6 +59,26 @@ describe('direct server authorization guards', () => {
     )
     expect(mocks.status).toHaveBeenCalledWith(401)
   })
+  it('denies direct operational access to platform-only administrators', async () => {
+    mocks.readActor.mockResolvedValue({ ...actor, roles: ['admin'] })
+    for (const permission of [
+      'manage.access',
+      'attendance.read.team',
+      'attendance.review.team',
+      'timesheets.review.team',
+      'schedule.manage',
+      'jobs.manage',
+      'employees.manage',
+      'teams.manage',
+      'leave.review',
+      'reports.read',
+    ] as const) {
+      await expect(requirePermissions(permission)).rejects.toThrow(
+        AuthorizationError,
+      )
+      expect(mocks.status).toHaveBeenLastCalledWith(403)
+    }
+  })
   it('rejects authenticated calls lacking a grant with 403', async () => {
     mocks.readActor.mockResolvedValue(actor)
     await expect(requirePermissions('users.manage')).rejects.toThrow(

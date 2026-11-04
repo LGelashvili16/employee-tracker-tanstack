@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react'
+import { createContext } from 'react'
 
 export interface PwaContextValue {
   installed: boolean
@@ -8,9 +8,3 @@ export interface PwaContextValue {
 }
 
 export const PwaContext = createContext<PwaContextValue | null>(null)
-
-export function usePwa() {
-  const context = useContext(PwaContext)
-  if (!context) throw new Error('PwaProvider is required')
-  return context
-}

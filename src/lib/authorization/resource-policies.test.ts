@@ -86,8 +86,17 @@ describe('server resource policies', () => {
       ).toThrow(AuthorizationError)
     }
   })
-  it('allows admins to review scoped records while preserving workflow protections', () => {
+  it('denies platform-only administrators even when employment and team scope match', () => {
     const admin: Actor = { ...actor, roles: ['admin'] }
+    expect(() => assertTeamAttendanceAccess(admin, scope, 'team-a')).toThrow(
+      AuthorizationError,
+    )
+    expect(() => assertCanReviewTimesheet(admin, scope, timesheet)).toThrow(
+      AuthorizationError,
+    )
+  })
+  it('allows administrators with an explicit management role while preserving workflow protections', () => {
+    const admin: Actor = { ...actor, roles: ['admin', 'supervisor'] }
     expect(() =>
       assertCanReviewTimesheet(admin, scope, timesheet),
     ).not.toThrow()

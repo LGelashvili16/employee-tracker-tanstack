@@ -124,6 +124,7 @@ export const navigationItems = [
   },
   {
     to: '/manage/attendance/exceptions',
+    secondary: true,
     icon: IconAlertTriangle,
     label: 'დასწრების გამონაკლისები',
     permission: 'attendance.review.team',
@@ -148,6 +149,7 @@ export const navigationItems = [
   },
   {
     to: '/manage/jobs/new',
+    secondary: true,
     icon: IconCirclePlus,
     label: 'ახალი სამუშაო',
     permission: 'jobs.manage',
@@ -271,6 +273,9 @@ export function isNavigationItemActive(pathname: string, destination: string) {
       path === '/timesheets' ||
       path.startsWith('/timesheets/')
     )
+  }
+  if (destination === '/manage/attendance' || destination === '/manage/jobs') {
+    return path === destination || path.startsWith(`${destination}/`)
   }
   return path === destination
 }

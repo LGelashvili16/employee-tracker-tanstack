@@ -12,5 +12,10 @@ export const Route = createFileRoute('/_authenticated/manage/attendance/')({
       attendanceContent.teamAttendance.title,
       attendanceContent.teamAttendance.description,
     ),
-  component: TeamAttendancePage,
+  component: TeamAttendanceRoute,
 })
+
+function TeamAttendanceRoute() {
+  const { actor } = Route.useRouteContext()
+  return <TeamAttendancePage roles={actor.roles} />
+}
