@@ -17,19 +17,26 @@ import { RecentAttendance } from './recent-attendance'
 import { CurrentDayWidget } from './current-day-widget'
 import { DailyGoalWidget } from './daily-goal-widget'
 import { cn } from '#/lib/utils'
+import { TimeGreeting } from '#/components/common/time-greeting'
 
 export function AttendanceOverview({
   actorId,
   dashboardLayout = false,
+  greetingName,
 }: {
   actorId: string
   dashboardLayout?: boolean
+  greetingName?: string
 }) {
   // Keep this employee cache scoped to the mounted private page, including across account changes.
   const [client] = useState(() => new QueryClient())
   return (
     <QueryClientProvider client={client}>
-      <OverviewContent actorId={actorId} dashboardLayout={dashboardLayout} />
+      <OverviewContent
+        actorId={actorId}
+        dashboardLayout={dashboardLayout}
+        greetingName={greetingName}
+      />
     </QueryClientProvider>
   )
 }
@@ -37,15 +44,32 @@ export function AttendanceOverview({
 function OverviewContent({
   actorId,
   dashboardLayout,
+  greetingName,
 }: {
   actorId: string
   dashboardLayout: boolean
+  greetingName?: string
 }) {
   const query = useQuery(attendanceOptions(actorId))
   const reducedMotion = useReducedMotion()
+  const heading =
+    greetingName === undefined ? null : (
+      <TimeGreeting
+        name={greetingName}
+        clock={
+          query.data?.ok
+            ? {
+                instant: query.data.value.serverNow,
+                timezone: query.data.value.workday.timezone,
+              }
+            : undefined
+        }
+      />
+    )
   if (query.isPending)
     return (
       <div role="status" aria-busy="true" aria-label="დასწრება იტვირთება">
+        {heading ? <div className="mb-6">{heading}</div> : null}
         <div aria-hidden="true" className="flex flex-col gap-4">
           <div
             className={cn(
@@ -103,6 +127,7 @@ function OverviewContent({
   if (query.isError || !result?.ok)
     return (
       <div className="flex flex-col items-start gap-4">
+        {heading}
         <Alert variant="destructive">
           <AlertDescription>
             {result && !result.ok
@@ -131,6 +156,7 @@ function OverviewContent({
         transition={{ duration: reducedMotion ? 0 : 0.2 }}
         className="flex flex-col gap-4"
       >
+        {heading ? <div className="mb-2">{heading}</div> : null}
         <div
           className={cn(
             'grid gap-4',

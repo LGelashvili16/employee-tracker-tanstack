@@ -47,5 +47,10 @@ export type AttendanceOverview = {
   lastSessionId: string | null
   today: AttendanceDay | null
   recent: Array<AttendanceDay>
-  week: { seconds: number; days: number; lateSeconds: number }
+  week: {
+    seconds: number
+    days: number
+    lateSeconds: number
+    daily: Array<{ date: string; seconds: number }>
+  }
 }

@@ -63,6 +63,10 @@ export async function getAttendanceOverview(
         seconds: weekDays.reduce((sum, day) => sum + day.seconds, 0),
         days: weekDays.length,
         lateSeconds: weekDays.reduce((sum, day) => sum + day.lateSeconds, 0),
+        daily: weekDays.map((day) => ({
+          date: day.date,
+          seconds: day.seconds,
+        })),
       },
     }
   })

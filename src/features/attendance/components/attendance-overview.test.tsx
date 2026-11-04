@@ -5,6 +5,7 @@ import { AttendanceOverview } from './attendance-overview'
 import { ClockTimer } from './attendance-clock'
 import { FinishWorkConfirmation } from './finish-work-confirmation'
 import { DailyGoalWidget } from './daily-goal-widget'
+import { AttendanceWeeklyWidget } from './attendance-weekly-widget'
 import { ModalProvider } from '#/providers/modal-provider'
 import {
   attendanceStatus,
@@ -64,7 +65,7 @@ function overview(): Overview {
     lastSessionId: null,
     today: null,
     recent: [],
-    week: { seconds: 0, days: 0, lateSeconds: 0 },
+    week: { seconds: 0, days: 0, lateSeconds: 0, daily: [] },
   }
 }
 function working(): Overview {
@@ -101,7 +102,12 @@ function working(): Overview {
     lastSessionId: sessionId,
     today: day,
     recent: [day],
-    week: { seconds: 3600, days: 1, lateSeconds: 0 },
+    week: {
+      seconds: 3600,
+      days: 1,
+      lateSeconds: 0,
+      daily: [{ date: day.date, seconds: day.seconds }],
+    },
   }
 }
 beforeEach(() => {
@@ -113,6 +119,60 @@ afterEach(() => {
 })
 
 describe('persisted attendance dashboard', () => {
+  it('shows a full week of actual daily totals and labels future days separately', () => {
+    const state = working()
+    state.week = {
+      seconds: 3 * 3600,
+      days: 2,
+      lateSeconds: 60,
+      daily: [
+        { date: '2026-11-02', seconds: 2 * 3600 },
+        { date: '2026-11-04', seconds: 3600 },
+      ],
+    }
+    render(<AttendanceWeeklyWidget overview={state} compact />)
+    const chart = screen.getByRole('figure', {
+      name: 'კვირის განმავლობაში აღრიცხული დრო',
+    })
+    expect(within(chart).getAllByRole('listitem')).toHaveLength(7)
+    expect(
+      within(chart).getByRole('listitem', {
+        name: '2 ნოემბერი 2026, აღრიცხულია 02:00',
+      }),
+    ).toBeVisible()
+    expect(
+      within(chart).getByRole('listitem', {
+        name: '4 ნოემბერი 2026, აღრიცხულია 01:00',
+      }),
+    ).toBeVisible()
+    expect(
+      within(chart).getByRole('listitem', {
+        name: '5 ნოემბერი 2026, მომავალი დღე',
+      }),
+    ).toBeVisible()
+    expect(screen.getByText('00:01')).toBeVisible()
+  })
+  it('keeps existing weekly totals usable while an older cached response awaits refresh', async () => {
+    const state = working()
+    const { daily, ...legacyWeek } = state.week
+    expect(daily).toHaveLength(1)
+    calls.read.mockResolvedValue({
+      ok: true,
+      value: { ...state, week: legacyWeek },
+    })
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" dashboardLayout />
+      </ModalProvider>,
+    )
+    await screen.findByRole('button', { name: 'სამუშაოს დასრულება' })
+    expect(screen.getByText('ამ კვირაში')).toBeVisible()
+    expect(
+      screen.queryByRole('figure', {
+        name: 'კვირის განმავლობაში აღრიცხული დრო',
+      }),
+    ).not.toBeInTheDocument()
+  })
   it('advances the daily goal with the live session and completes only at eight recorded hours', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] })
     const state = working()
@@ -176,6 +236,7 @@ describe('persisted attendance dashboard', () => {
         <AttendanceOverview
           actorId="employee"
           dashboardLayout={dashboardLayout}
+          greetingName={dashboardLayout ? 'ანა' : undefined}
         />
       </ModalProvider>
     )
@@ -183,6 +244,9 @@ describe('persisted attendance dashboard', () => {
     await screen.findByRole('button', { name: 'სამუშაოს დაწყება' })
     expect(screen.queryByText('დღევანდელი თარიღი')).not.toBeInTheDocument()
     rerender(view(true))
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'დილა მშვიდობისა, ანა' }),
+    ).toBeVisible()
     expect(screen.getByText('დღევანდელი თარიღი')).toBeVisible()
     expect(screen.getByRole('grid', { name: 'ნოემბერი 2026' })).toBeVisible()
     expect(

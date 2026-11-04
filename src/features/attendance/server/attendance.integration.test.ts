@@ -168,6 +168,7 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     expect(overview.today?.seconds).toBe(3600)
     expect(overview.today?.lateSeconds).toBe(300)
     expect(overview.week.days).toBe(1)
+    expect(overview.week.daily).toEqual([{ date: '2026-11-04', seconds: 3600 }])
     const types = await sql().query(
       `SELECT data_type FROM information_schema.columns WHERE table_name = 'attendance_session' AND column_name IN ('started_at', 'ended_at', 'expected_start_at', 'expected_end_at')`,
     )

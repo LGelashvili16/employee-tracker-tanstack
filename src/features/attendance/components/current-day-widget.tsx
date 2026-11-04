@@ -19,7 +19,7 @@ export function CurrentDayWidget({
   const localized = (value: Date, pattern: string) =>
     format(value, pattern, { locale: ka })
   return (
-    <Card className="@container h-full rounded-2xl bg-gradient-to-br from-badge-orange/15 via-card to-card shadow-sm [--card-spacing:--spacing(4)]">
+    <Card className="@container h-full gap-2 rounded-2xl bg-gradient-to-br from-badge-orange/15 via-card to-card shadow-sm [--card-spacing:--spacing(4)]">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-badge-orange text-badge-orange-foreground">
@@ -28,23 +28,23 @@ export function CurrentDayWidget({
           დღევანდელი თარიღი
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col items-center gap-3 @xs:flex-row @xs:justify-between">
+      <CardContent className="flex flex-col items-center gap-4 @sm:flex-row @sm:justify-between">
         <time
           dateTime={date}
           aria-label={localized(today, 'EEEE, d MMMM yyyy')}
-          className="flex w-full items-center justify-center gap-4 @xs:w-auto @xs:flex-col @xs:items-start @xs:gap-1"
+          className="flex w-full items-center justify-center gap-4 @sm:w-auto @sm:flex-col @sm:items-start @sm:gap-1"
         >
-          <span className="text-4xl font-semibold tracking-tight tabular-nums @xs:order-2">
+          <span className="text-4xl font-semibold tracking-tight tabular-nums @sm:order-2">
             {localized(today, 'dd')}
           </span>
-          <span className="flex flex-col gap-1 @xs:contents">
-            <span className="text-sm font-medium text-badge-orange-foreground @xs:order-1">
+          <span className="flex flex-col gap-1 @sm:contents">
+            <span className="text-sm font-medium text-badge-orange-foreground @sm:order-1">
               {localized(today, 'EEEE')}
             </span>
-            <span className="text-sm text-muted-foreground @xs:order-3">
+            <span className="text-sm text-muted-foreground @sm:order-3">
               {localized(today, 'MMMM yyyy')}
             </span>
-            <span className="text-xs text-muted-foreground @xs:order-4 @xs:mt-2">
+            <span className="text-xs text-muted-foreground @sm:order-4 @sm:mt-2">
               {timezone}
             </span>
           </span>
@@ -59,7 +59,7 @@ export function CurrentDayWidget({
           hideNavigation
           disableNavigation
           showOutsideDays={false}
-          className="shrink-0 bg-transparent p-0 text-xs [--cell-size:--spacing(6)]"
+          className="shrink-0 bg-transparent p-0 text-xs [--cell-size:--spacing(6)] @min-[15rem]:[--cell-size:--spacing(7)] @xs:[--cell-size:--spacing(8)]"
           modifiers={{ weekend: { dayOfWeek: [0, 6] } }}
           modifiersClassNames={{
             weekend:
@@ -68,12 +68,12 @@ export function CurrentDayWidget({
           classNames={{
             month_caption: 'sr-only',
             month: 'flex w-full flex-col gap-2',
-            week: 'mt-1 flex w-full',
-            day: 'size-(--cell-size) rounded-md text-center align-middle text-xs tabular-nums',
+            week: 'flex w-full',
+            day: 'h-6 w-(--cell-size) rounded-md text-center align-middle text-xs tabular-nums @xs:h-7',
             today:
               'rounded-md bg-badge-orange font-semibold text-badge-orange-foreground ring-1 ring-badge-orange-foreground/30',
             weekday:
-              'size-(--cell-size) shrink-0 text-xs font-normal whitespace-nowrap text-muted-foreground',
+              'h-6 w-(--cell-size) shrink-0 text-xs font-normal whitespace-nowrap text-muted-foreground',
           }}
           labels={{
             labelGrid: (value) => localized(value, 'MMMM yyyy'),
