@@ -1,5 +1,5 @@
 import '@tanstack/react-start/server-only'
-import { asc, desc, eq, gt, inArray, lte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '#/db'
 import {
   companySchedule,
@@ -9,6 +9,8 @@ import {
   employee,
 } from '#/db/schema'
 import type { CompanySchedule } from '../scheduling.schemas'
+import { companyLocalDate } from '../scheduling.rules'
+import type { CompanyWorkday } from '../scheduling.types'
 
 export type ScheduleTransaction = Parameters<
   Parameters<typeof db.transaction>[0]
@@ -118,4 +120,72 @@ export async function insertVersion(
   await tx
     .insert(companyScheduleAudit)
     .values({ effectiveFrom: version.effectiveFrom, actorId, reason })
+}
+
+/** Private read interface for attendance; no administration or audit fields leave this boundary. */
+export async function companyWorkdayAt(
+  now: Date,
+  connection: ScheduleTransaction,
+): Promise<CompanyWorkday> {
+  // Match the schedule writer's exclusive lock so first-time configuration cannot change timezone/date between these reads.
+  await connection.execute(sql`select pg_advisory_xact_lock_shared(812734, 1)`)
+  const latest = (
+    await connection
+      .select({ timezone: companySchedule.timezone })
+      .from(companySchedule)
+      .orderBy(desc(companySchedule.effectiveFrom))
+      .limit(1)
+  ).at(0)
+  const timezone = latest?.timezone ?? 'Asia/Tbilisi'
+  const date = companyLocalDate(now, timezone)
+  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay() || 7
+  const start = sql`(${date}::date + ${companyScheduleDay.startTime}) at time zone ${companySchedule.timezone}`
+  const end = sql`(${date}::date + ${companyScheduleDay.endTime}) at time zone ${companySchedule.timezone}`
+  const record = (
+    await connection
+      .select({
+        effectiveFrom: companySchedule.effectiveFrom,
+        start: companyScheduleDay.startTime,
+        end: companyScheduleDay.endTime,
+        startsAt: sql<Date>`${start}`.mapWith(companySchedule.createdAt),
+        endsAt: sql<Date>`${end}`.mapWith(companySchedule.createdAt),
+        // Reject nonexistent local times on spring-forward days. Ambiguous fall-back times use PostgreSQL's standard-time choice.
+        valid: sql<boolean>`to_char((${start}) at time zone ${companySchedule.timezone}, 'HH24:MI:SS') = ${companyScheduleDay.startTime}::text and to_char((${end}) at time zone ${companySchedule.timezone}, 'HH24:MI:SS') = ${companyScheduleDay.endTime}::text`,
+      })
+      .from(companySchedule)
+      .innerJoin(
+        companyScheduleDay,
+        and(
+          eq(companySchedule.effectiveFrom, companyScheduleDay.effectiveFrom),
+          eq(companyScheduleDay.weekday, weekday),
+        ),
+      )
+      .where(lte(companySchedule.effectiveFrom, date))
+      .orderBy(desc(companySchedule.effectiveFrom))
+      .limit(1)
+  ).at(0)
+  const empty: CompanyWorkday = {
+    date,
+    timezone,
+    kind: 'unconfigured',
+    effectiveFrom: null,
+    start: null,
+    end: null,
+    startsAt: null,
+    endsAt: null,
+  }
+  if (!record) return empty
+  if (!record.start || !record.end)
+    return { ...empty, kind: 'day_off', effectiveFrom: record.effectiveFrom }
+  if (!record.valid || record.endsAt <= record.startsAt) return empty
+  return {
+    date,
+    timezone,
+    kind: 'scheduled',
+    effectiveFrom: record.effectiveFrom,
+    start: record.start.slice(0, 5),
+    end: record.end.slice(0, 5),
+    startsAt: record.startsAt.toISOString(),
+    endsAt: record.endsAt.toISOString(),
+  }
 }

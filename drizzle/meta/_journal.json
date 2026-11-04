@@ -43,6 +43,13 @@
       "when": 1793794182142,
       "tag": "0005_checkout_reminders",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793800289911,
+      "tag": "0006_attendance_sessions",
+      "breakpoints": true
     }
   ]
 }

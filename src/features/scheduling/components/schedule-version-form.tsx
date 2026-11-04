@@ -186,8 +186,8 @@ export function ScheduleVersionForm({
                   aria-hidden="true"
                 />
                 <p>
-                  სამუშაოზე შესვლა, გასვლა და შეხსენებების გაგზავნა ჯერ
-                  მიუწვდომელია. ამ ეტაპზე ინახება მხოლოდ განრიგი.
+                  შეხსენებების გაგზავნა ჯერ მიუწვდომელია. აქ ინახება მათი დროის
+                  პარამეტრები.
                 </p>
               </div>
               <footer className="sticky bottom-4 z-10 flex justify-end rounded-xl border bg-card p-4 shadow-lg">

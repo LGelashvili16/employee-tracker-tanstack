@@ -15,16 +15,6 @@ import { companySettingsContent } from '../company-settings.content'
 export function AdministrationPage() {
   return (
     <FeaturePage {...companySettingsContent.administration}>
-      <div>
-        <Button
-          nativeButton={false}
-          role="link"
-          variant="outline"
-          render={<Link to="/dashboard" />}
-        >
-          სამუშაო სივრცეში დაბრუნება
-        </Button>
-      </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardHeader>

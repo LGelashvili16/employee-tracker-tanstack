@@ -4,9 +4,8 @@ import { AttendanceNavigation } from '#/features/attendance/components/attendanc
 
 export function TimesheetsPage() {
   return (
-    <>
-      <AttendanceNavigation />
+    <AttendanceNavigation>
       <FeaturePage {...timesheetsContent.timesheets} />
-    </>
+    </AttendanceNavigation>
   )
 }

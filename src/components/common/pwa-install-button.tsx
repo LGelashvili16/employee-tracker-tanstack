@@ -46,6 +46,7 @@ export function PwaInstallButton() {
       {pwa.requestInstall || pwa.ios ? (
         <Button
           variant="outline"
+          depth="raised"
           className="h-10 min-w-10 sm:h-8"
           onClick={() => void install()}
           disabled={pending}

@@ -1,25 +1,13 @@
 import { dashboardContent } from '../dashboard.content'
+import { AttendanceOverview } from '#/features/attendance/components/attendance-overview'
 
-export function DashboardPage() {
+export function DashboardPage({ actorId }: { actorId: string }) {
   return (
-    <>
-      <h1 className="sr-only">{dashboardContent.dashboard.title}</h1>
-      <div
-        className="grid auto-rows-min gap-4 md:grid-cols-3"
-        aria-hidden="true"
-      >
-        <div className="aspect-video rounded-xl bg-muted/50" />
-        <div className="aspect-video rounded-xl bg-muted/50" />
-        <div className="aspect-video rounded-xl bg-muted/50" />
-      </div>
-      <section
-        className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 p-4 md:min-h-min"
-        aria-label="სამუშაო სივრცის მიმოხილვა"
-      >
-        <p className="text-sm text-muted-foreground">
-          მიმოხილვის მონაცემები ჯერ არ არის ხელმისაწვდომი.
-        </p>
-      </section>
-    </>
+    <section className="flex flex-col gap-6">
+      <h1 className="text-2xl font-semibold tracking-tight">
+        {dashboardContent.dashboard.title}
+      </h1>
+      <AttendanceOverview key={actorId} actorId={actorId} />
+    </section>
   )
 }

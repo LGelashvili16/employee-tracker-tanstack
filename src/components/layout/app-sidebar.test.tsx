@@ -25,10 +25,11 @@ vi.mock('@tanstack/react-router', () => ({
   }) => <a href={to} {...props} />,
 }))
 
-function renderSidebar(role: Role | ReadonlyArray<Role>) {
+function renderSidebar(role: Role | ReadonlyArray<Role>, inset = false) {
   return render(
     <SidebarProvider>
       <AppSidebar
+        inset={inset}
         actor={{
           id: 'test',
           name: 'ტესტი',
@@ -45,7 +46,28 @@ describe('workspace navigation', () => {
   beforeEach(() => {
     location.pathname = '/dashboard'
   })
-  it('keeps a single administration link in the inset workspace and a real account menu', async () => {
+  it('expands the permission-based administration group from the personal workspace', async () => {
+    const user = userEvent.setup()
+    renderSidebar('admin', true)
+    const administration = screen.getByRole('button', {
+      name: 'ადმინისტრირება',
+    })
+    expect(administration).toHaveAttribute('aria-expanded', 'false')
+    expect(
+      screen.queryByRole('link', { name: 'მომხმარებლები' }),
+    ).not.toBeInTheDocument()
+    await user.click(administration)
+    expect(screen.getByRole('link', { name: 'მომხმარებლები' })).toHaveAttribute(
+      'href',
+      '/admin/users',
+    )
+    expect(
+      screen.getByRole('link', { name: 'დასწრების წესები' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'დასწრება' })).toBeInTheDocument()
+  })
+  it('keeps personal and admin navigation together on admin routes with a real account menu', async () => {
+    location.pathname = '/admin/users'
     const user = userEvent.setup()
     const actor = {
       id: 'test',
@@ -79,11 +101,13 @@ describe('workspace navigation', () => {
       'true',
     )
     expect(
-      screen.getByRole('link', { name: 'ადმინისტრირება' }),
-    ).toHaveAttribute('href', '/admin/users')
-    expect(
-      screen.queryByRole('link', { name: 'მომხმარებლები' }),
-    ).not.toBeInTheDocument()
+      screen.getByRole('button', { name: 'ადმინისტრირება' }),
+    ).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('link', { name: 'მომხმარებლები' })).toHaveAttribute(
+      'href',
+      '/admin/users',
+    )
+    expect(screen.getByRole('link', { name: 'დასწრება' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'ანგარიშის მენიუ' }))
     expect(
       await screen.findByRole('menuitem', { name: 'ჩემი პროფილი' }),
@@ -98,9 +122,7 @@ describe('workspace navigation', () => {
     expect(
       screen.getByRole('link', { name: 'მთავარი გვერდი' }),
     ).toHaveAttribute('href', '/dashboard')
-    expect(
-      screen.getByRole('link', { name: 'ადმინისტრირება' }),
-    ).toHaveAttribute('href', '/admin/users')
+    expect(screen.getByText('ადმინისტრირება')).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'საათების განხილვა' }),
     ).toBeInTheDocument()
@@ -111,9 +133,7 @@ describe('workspace navigation', () => {
       screen.getByRole('link', { name: 'მთავარი გვერდი' }),
     ).toHaveAttribute('href', '/dashboard')
     expect(screen.getByRole('link', { name: 'დასწრება' })).toBeInTheDocument()
-    expect(
-      screen.getByRole('link', { name: 'ადმინისტრირება' }),
-    ).toBeInTheDocument()
+    expect(screen.getByText('ადმინისტრირება')).toBeInTheDocument()
     expect(screen.queryByText('გუნდის მართვა')).not.toBeInTheDocument()
     expect(
       screen.queryByRole('link', { name: 'გუნდის დასწრება' }),
@@ -127,9 +147,7 @@ describe('workspace navigation', () => {
     expect(
       screen.getByRole('link', { name: 'საათების განხილვა' }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByRole('link', { name: 'ადმინისტრირება' }),
-    ).toBeInTheDocument()
+    expect(screen.getByText('ადმინისტრირება')).toBeInTheDocument()
     expect(
       screen.queryByRole('link', { name: 'განრიგის მართვა' }),
     ).not.toBeInTheDocument()
@@ -139,9 +157,7 @@ describe('workspace navigation', () => {
     (role) => {
       renderSidebar(role)
       expect(screen.getByText('გუნდის მართვა')).toBeInTheDocument()
-      expect(
-        screen.queryByRole('link', { name: 'ადმინისტრირება' }),
-      ).not.toBeInTheDocument()
+      expect(screen.queryByText('ადმინისტრირება')).not.toBeInTheDocument()
       expect(
         screen.queryByRole('link', { name: 'მომხმარებლები' }),
       ).not.toBeInTheDocument()
@@ -180,7 +196,7 @@ describe('workspace navigation', () => {
     ).not.toBeInTheDocument()
   })
   it.each(['admin', 'owner'] as const)(
-    'shows only administration navigation in the admin workspace for %s',
+    'keeps personal navigation visible on admin pages for %s',
     (role) => {
       location.pathname = '/admin/users'
       renderSidebar(role)
@@ -201,13 +217,13 @@ describe('workspace navigation', () => {
         expect(screen.queryByRole('link', { name })).not.toBeInTheDocument()
       }
       expect(
-        screen.getByRole('link', { name: 'სამუშაო სივრცეში დაბრუნება' }),
-      ).toHaveAttribute('href', '/dashboard')
-      expect(screen.queryByText('ჩემი სივრცე')).not.toBeInTheDocument()
-      expect(screen.queryByText('გუნდის მართვა')).not.toBeInTheDocument()
-      expect(
-        screen.queryByRole('link', { name: 'დასწრება' }),
+        screen.queryByRole('link', { name: 'სამუშაო სივრცეში დაბრუნება' }),
       ).not.toBeInTheDocument()
+      expect(screen.getByText('ჩემი სივრცე')).toBeInTheDocument()
+      if (role === 'owner')
+        expect(screen.getByText('გუნდის მართვა')).toBeInTheDocument()
+      else expect(screen.queryByText('გუნდის მართვა')).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'დასწრება' })).toBeInTheDocument()
     },
   )
   it('hides administration and management from employees', () => {
@@ -238,24 +254,41 @@ describe('workspace navigation', () => {
       screen.queryByRole('link', { name: 'ადმინისტრირების მიმოხილვა' }),
     ).not.toBeInTheDocument()
   })
-  it('keeps attendance selected and its supporting pages reachable', () => {
+  it('keeps attendance selected and its supporting pages reachable', async () => {
     location.pathname = '/attendance/history'
     const { container } = renderSidebar('employee')
     expect(container.querySelector('a[href="/attendance"]')).toHaveAttribute(
       'data-active',
     )
-    render(<AttendanceNavigation />)
+    render(
+      <AttendanceNavigation>
+        <h1>დასწრების ჩანაწერები</h1>
+      </AttendanceNavigation>,
+    )
     expect(
-      screen.getByRole('link', { name: 'დასწრების ისტორია' }),
+      screen.getByRole('tab', { name: 'დასწრების ისტორია' }),
     ).toHaveAttribute('aria-current', 'page')
     expect(
-      screen.getByRole('link', { name: 'დროის შესწორებები' }),
+      screen.getByRole('tab', { name: 'დროის შესწორებები' }),
     ).toHaveAttribute('href', '/attendance/corrections')
     expect(
-      screen.getByRole('link', { name: 'სამუშაო საათები' }),
+      screen.getByRole('tab', { name: 'სამუშაო საათები' }),
     ).toHaveAttribute('href', '/timesheets')
+    const history = screen.getByRole('tab', { name: 'დასწრების ისტორია' })
+    expect(history).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAccessibleName(
+      'დასწრების ისტორია',
+    )
+    expect(screen.getByRole('tabpanel')).toHaveTextContent(
+      'დასწრების ჩანაწერები',
+    )
+    const user = userEvent.setup()
+    history.focus()
+    await user.keyboard('{ArrowRight}')
+    expect(screen.getByRole('tab', { name: 'დროის შესწორებები' })).toHaveFocus()
+    expect(history).toHaveAttribute('aria-selected', 'true')
   })
-  it('keeps navigation between administration and the workspace explicit', () => {
+  it('retains the legacy overview without a workspace switch', () => {
     render(<AdministrationPage />)
     expect(
       screen.getByRole('heading', {
@@ -264,8 +297,8 @@ describe('workspace navigation', () => {
       }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'სამუშაო სივრცეში დაბრუნება' }),
-    ).toHaveAttribute('href', '/dashboard')
+      screen.queryByRole('link', { name: 'სამუშაო სივრცეში დაბრუნება' }),
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'მომხმარებლების მართვა' }),
     ).toHaveAttribute('href', '/admin/users')

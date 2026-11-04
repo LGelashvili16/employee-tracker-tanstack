@@ -1,12 +1,10 @@
 import { APP_NAME } from '#/lib/app'
 import { Link, useLocation } from '@tanstack/react-router'
 import {
-  IconBuildingCommunity,
   IconLayoutDashboard,
   IconChevronRight,
   IconUsers,
   IconSettings,
-  IconArrowLeft,
 } from '@tabler/icons-react'
 import {
   Collapsible,
@@ -42,8 +40,6 @@ export function AppSidebar({
 }) {
   const pathname = useLocation({ select: (location) => location.pathname })
   const { setOpenMobile } = useSidebar()
-  const isAdministration =
-    pathname === '/admin' || pathname.startsWith('/admin/')
   const groups = [
     {
       label: 'ჩემი სივრცე',
@@ -71,11 +67,7 @@ export function AppSidebar({
           item.to === '/admin/settings/attendance',
       ),
     },
-  ].filter((group) =>
-    isAdministration
-      ? group.label === 'ადმინისტრირება'
-      : group.label !== 'ადმინისტრირება',
-  )
+  ]
   return (
     <Sidebar variant={inset ? 'inset' : 'sidebar'}>
       <SidebarHeader>
@@ -83,21 +75,18 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               render={
-                <Link
-                  to={isAdministration ? '/admin/users' : '/dashboard'}
-                  onClick={() => setOpenMobile(false)}
-                />
+                <Link to="/dashboard" onClick={() => setOpenMobile(false)} />
               }
               size="lg"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <IconBuildingCommunity className="size-4" aria-hidden="true" />
-              </div>
+              <img
+                src="/favicon.svg"
+                alt=""
+                className="size-8 shrink-0 rounded-lg"
+              />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{APP_NAME}</span>
-                <span className="truncate text-xs">
-                  {isAdministration ? 'ადმინისტრირება' : 'სამუშაო სივრცე'}
-                </span>
+                <span className="truncate text-xs">სამუშაო სივრცე</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -105,6 +94,11 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         {groups.map((group) => {
+          if (
+            group.label === 'ადმინისტრირება' &&
+            !hasPermission(actor.roles, 'admin.access')
+          )
+            return null
           const items = group.items.filter(
             (item) =>
               !item.permission || hasPermission(actor.roles, item.permission),
@@ -133,13 +127,21 @@ export function AppSidebar({
             </SidebarGroupContent>
           )
           return (
-            <SidebarGroup key={group.label}>
+            <SidebarGroup
+              key={group.label}
+              className={
+                group.label === 'ადმინისტრირება' ? 'mt-auto' : undefined
+              }
+            >
               {inset ? (
                 <Collapsible
                   key={`${group.label}-${pathname.split('/')[1]}`}
-                  defaultOpen={items.some((item) =>
-                    isNavigationItemActive(pathname, item.to),
-                  )}
+                  defaultOpen={
+                    group.label === 'ჩემი სივრცე' ||
+                    items.some((item) =>
+                      isNavigationItemActive(pathname, item.to),
+                    )
+                  }
                   className="group/navigation"
                 >
                   <SidebarMenu>
@@ -173,33 +175,6 @@ export function AppSidebar({
             </SidebarGroup>
           )
         })}
-        {(isAdministration || hasPermission(actor.roles, 'admin.access')) && (
-          <SidebarGroup className="mt-auto">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  render={
-                    <Link
-                      to={isAdministration ? '/dashboard' : '/admin/users'}
-                      onClick={() => setOpenMobile(false)}
-                    />
-                  }
-                >
-                  {isAdministration ? (
-                    <IconArrowLeft aria-hidden="true" />
-                  ) : (
-                    <IconSettings aria-hidden="true" />
-                  )}
-                  <span>
-                    {isAdministration
-                      ? 'სამუშაო სივრცეში დაბრუნება'
-                      : 'ადმინისტრირება'}
-                  </span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroup>
-        )}
       </SidebarContent>
       <SidebarFooter>
         {footer ?? (

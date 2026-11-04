@@ -29,7 +29,9 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 
   const closeModal = useCallback(() => {
     setModal((current) =>
-      current?.isOpen ? { ...current, isOpen: false } : current,
+      current?.isOpen && (current.options.canClose?.() ?? true)
+        ? { ...current, isOpen: false }
+        : current,
     )
   }, [])
 

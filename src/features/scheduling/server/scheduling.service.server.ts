@@ -13,6 +13,17 @@ import type { ScheduleSettings } from '../scheduling.types'
 
 export class ScheduleWorkflowError extends Error {}
 
+/** Internal attendance interface; the caller establishes the active employee before reading expectations. */
+export function getCompanyWorkday(
+  now: Date,
+  transaction?: repository.ScheduleTransaction,
+) {
+  if (transaction) return repository.companyWorkdayAt(now, transaction)
+  return repository.transactSchedules((tx) =>
+    repository.companyWorkdayAt(now, tx),
+  )
+}
+
 async function authorize(
   tx: repository.ScheduleTransaction,
   actor: Actor | null,

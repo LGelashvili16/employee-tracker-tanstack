@@ -40,6 +40,12 @@
   --popover-foreground: #262626;
   --primary: #303030;
   --primary-foreground: #ffffff;
+  --button-highlight: rgb(255 255 255 / 24%);
+  --button-edge: rgb(0 0 0 / 30%);
+  --button-shadow: rgb(0 0 0 / 20%);
+  --control-highlight: rgb(255 255 255 / 85%);
+  --control-edge: rgb(0 0 0 / 12%);
+  --control-shadow: rgb(0 0 0 / 12%);
   --secondary: #eeeeee;
   --secondary-foreground: #262626;
   --muted: #eeeeee;
@@ -514,6 +520,19 @@ a {
 }
 
 @theme inline {
+  --shadow-control-raised:
+    inset 0 1px 1px var(--control-highlight),
+    inset 0 -2px 0 var(--control-edge), 0 2px 3px var(--control-shadow);
+  --shadow-control-pressed:
+    inset 0 2px 3px var(--control-edge), inset 0 -1px 0 var(--control-highlight);
+  --shadow-button-primary:
+    inset 0 1px 1px var(--button-highlight), inset 0 -2px 0 var(--button-edge),
+    0 2px 3px var(--button-shadow);
+  --shadow-button-primary-hover:
+    inset 0 1px 1px var(--button-highlight), inset 0 -2px 0 var(--button-edge),
+    0 3px 6px var(--button-shadow);
+  --shadow-button-primary-pressed:
+    inset 0 2px 3px var(--button-edge), inset 0 -1px 0 var(--button-highlight);
   --font-heading: var(--font-sans);
   --font-sans: 'Google Sans Variable', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -577,6 +596,12 @@ a {
   --popover-foreground: #ededed;
   --primary: #d4d4d4;
   --primary-foreground: #171717;
+  --button-highlight: rgb(255 255 255 / 85%);
+  --button-edge: rgb(0 0 0 / 24%);
+  --button-shadow: rgb(0 0 0 / 36%);
+  --control-highlight: rgb(255 255 255 / 12%);
+  --control-edge: rgb(0 0 0 / 35%);
+  --control-shadow: rgb(0 0 0 / 30%);
   --secondary: #242424;
   --secondary-foreground: #ededed;
   --muted: #242424;

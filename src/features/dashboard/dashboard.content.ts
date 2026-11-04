@@ -1,7 +1,8 @@
 export const dashboardContent = {
   dashboard: {
     title: 'მთავარი გვერდი',
-    description: 'თქვენი სამუშაო დღის, დასწრებისა და დავალებების მიმოხილვა.',
+    description:
+      'თქვენი სამუშაო დღის, მიმდინარე დროისა და დასწრების მიმოხილვა.',
   },
   management: {
     title: 'მართვის მიმოხილვა',

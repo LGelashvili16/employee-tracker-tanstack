@@ -1,5 +1,6 @@
 import { Link, useLocation } from '@tanstack/react-router'
-import { Button } from '#/components/ui/button'
+import type { ReactNode } from 'react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 
 const attendanceLinks = [
   { to: '/attendance', label: 'დასწრება' },
@@ -8,26 +9,42 @@ const attendanceLinks = [
   { to: '/timesheets', label: 'სამუშაო საათები' },
 ] as const
 
-export function AttendanceNavigation() {
+export function AttendanceNavigation({ children }: { children: ReactNode }) {
   const pathname = useLocation({ select: (location) => location.pathname })
+  const activePath = pathname.replace(/\/$/, '')
   return (
-    <nav aria-label="დასწრების განყოფილებები" className="flex flex-wrap gap-2">
-      {attendanceLinks.map((item) => {
-        const active = pathname.replace(/\/$/, '') === item.to
-        return (
-          <Button
-            nativeButton={false}
-            role="link"
-            key={item.to}
-            variant={active ? 'secondary' : 'ghost'}
-            render={
-              <Link to={item.to} aria-current={active ? 'page' : undefined} />
-            }
-          >
-            {item.label}
-          </Button>
-        )
-      })}
-    </nav>
+    <Tabs value={activePath} className="min-w-0 gap-6">
+      <nav
+        aria-label="დასწრების განყოფილებები"
+        className="-m-1 overflow-x-auto p-1"
+      >
+        <TabsList
+          aria-label="დასწრების განყოფილებები"
+          className="w-max gap-1 rounded-xl border p-1 group-data-horizontal/tabs:h-auto"
+        >
+          {attendanceLinks.map((item) => (
+            <TabsTrigger
+              nativeButton={false}
+              key={item.to}
+              value={item.to}
+              className="h-10 flex-none rounded-lg px-4 motion-reduce:transition-none"
+              render={
+                <Link
+                  to={item.to}
+                  aria-current={activePath === item.to ? 'page' : undefined}
+                />
+              }
+            >
+              {item.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </nav>
+      {attendanceLinks.map((item) => (
+        <TabsContent key={item.to} value={item.to}>
+          {activePath === item.to ? children : null}
+        </TabsContent>
+      ))}
+    </Tabs>
   )
 }

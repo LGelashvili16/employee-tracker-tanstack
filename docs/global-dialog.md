@@ -48,6 +48,11 @@ size are optional; size defaults to `default`, with `wide` available for larger
 content. The provider supplies the dialog shell and header. Pass the body rather
 than another `DialogContent` or `DialogTitle`.
 
+For an in-flight mutation, supply `canClose: () => !submitting.current` using a
+caller-owned ref. All dismissals, including `closeModal()`, respect this guard.
+Reset the ref before closing after success and in `finally` after failure. The
+dialog body must also disable repeat submission and show the pending spinner.
+
 Call `closeModal()` from dialog content after a successful action. Escape,
 outside presses, and the close button also dismiss the dialog. Opening another
 dialog replaces the current content and resets its local state. Closed content

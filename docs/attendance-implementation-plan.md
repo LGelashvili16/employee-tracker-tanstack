@@ -1,6 +1,6 @@
 # Teamwork attendance implementation plan
 
-This document tracks delivery in small, verifiable steps. Company work schedules can now be configured at `/admin/settings/attendance`. Other attendance and scheduling routes remain shells and must continue to describe unavailable workflows honestly. Check-in/out and notification delivery are still pending.
+This document tracks delivery in small, verifiable steps. Company work schedules are configured at `/admin/settings/attendance`. The dashboard and attendance page now share working self-service check-in/out, a persistent timer, today's schedule, weekly summaries, and recent attendance. Other unimplemented workflows remain explicit shells. Notification delivery, manager attendance, corrections, and breaks remain pending.
 
 ## Product rules
 
@@ -37,7 +37,7 @@ Versions are append-only. The first version may start today; subsequent versions
 
 ## 3. Schedule exceptions and assignments
 
-The administration sidebar currently surfaces only Users and Attendance Rules. The `/admin` entry opens Users. Other existing admin routes retain their guards and URLs but are hidden from the sidebar until their workflows are needed. Attendance settings uses compact weekday rows and separate effective-date, rules, and save panels. The redesign passed 21 relevant component/navigation tests, lint, TypeScript, and the production build. Live visual verification was attempted but browser access timed out.
+The shared sidebar has personal, team-management, and administration groups, filtered by permissions. The administration group sits at the bottom and currently surfaces only Users and Attendance Rules. It opens automatically on admin URLs; personal navigation and the account menu remain available there. The `/admin` entry opens Users. Other existing admin routes retain their guards and URLs but stay hidden until their workflows are needed. Attendance settings uses compact weekday rows and separate effective-date and reminder panels with a sticky save footer. Saved versions remain in the database and are not listed on this settings page.
 
 - [ ] Add holidays and single-date exceptions; integrate approved leave through its service contract when available.
 - [ ] Add employee/team overrides only with real assignment workflows. Define precedence: date exception, employee override, team override, company default. Resolve competing team assignments explicitly.
@@ -46,12 +46,16 @@ The administration sidebar currently surfaces only Users and Attendance Rules. T
 
 ## 4. Employee check-in and check-out
 
-- [ ] Persist sessions linked to existing employee records, with timezone-aware start/end timestamps and retained schedule expectations.
-- [ ] Enforce one open session per employee through a database unique partial index. Check out using a conditional atomic write; reject negative durations and duplicate actions safely.
-- [ ] Derive employee identity and active employment on the server; never accept client timestamps for ordinary punches.
-- [ ] Replace clock-control placeholders with persisted state, today's schedule, clear confirmation, and pending/error states. Reconcile concurrent tabs and invalidate affected Query caches.
+- [x] Persist sessions linked to existing employee records, with timezone-aware start/end timestamps and retained schedule expectations.
+- [x] Enforce one open session per employee through a database unique partial index. Check out using a conditional atomic write; reject negative durations and duplicate actions safely.
+- [x] Derive employee identity and active employment on the server; never accept client timestamps for ordinary punches.
+- [x] Replace clock-control placeholders with persisted state, today's schedule, clear confirmation, and pending/error states. Reconcile concurrent tabs through focus/60-second refetch and invalidate affected Query caches. Stop automatic polling after failed/forbidden reads.
 - [ ] Add personal attendance history with bounded, Zod-validated pagination/date filters and self-only authorization.
-- [ ] Test concurrent check-ins, repeated check-outs, inactive employment, and direct unauthorized calls against PostgreSQL.
+- [x] Test concurrent check-ins/check-outs, repeated check-outs, inactive employment, and direct unauthorized service calls against PostgreSQL.
+
+The first delivery includes five recent attendance days, not a full paginated history. One day can contain several nonoverlapping sessions; the first arrival determines lateness and the last completed departure determines early departure. Gaps are excluded from worked duration. Missing prior-day check-outs remain open and block a new interval; closing one records the current actual time after confirmation. Corrections are explicitly unavailable until step 6. No unscheduled/day-off check-ins are accepted yet; holiday/leave exceptions still require step 3. Browser counters use a monotonic elapsed clock anchored to a server sample and recover from persisted timestamps after reopening. Ordinary punches do not accept historical client timestamps. DST gaps in schedule hours are rejected; repeated wall times use PostgreSQL's standard-time interpretation.
+
+Bklit UI's `chart-stat-flow` source was installed from its official registry with the MIT license retained under `src/components/charts/`. Motion and `@number-flow/react` power the dashboard's transitions and animated numeric widgets. The component was adapted to existing aliases, Georgian formatting, semantic tokens, and deterministic SSR hydration; no second component library or chart dataset was introduced. Motion respects reduced-motion preferences, and the timer avoids live screen-reader announcements each second.
 
 ## 5. Attendance evaluation and manager visibility
 
@@ -107,3 +111,11 @@ Each step includes targeted tests, formatting/lint, TypeScript checks, and a pro
 - Form coverage: missing workdays, saving without a change-reason input, successful submission, repeat-submission protection, server rejection, and invalid hours. Date-rule tests cover company-local midnight, leap days, and append-only effective dates.
 - Full default regression run: 120 passed, 30 opt-in database tests skipped. Three subsequently added page-state tests passed in a targeted run together with the 23 schedule validation tests. TypeScript, targeted lint, formatting, and migration checks passed.
 - Production build passed. Signed-in browser verification remains outstanding because no usable authenticated browser session was available; no test schedules were saved to the application database.
+
+### Attendance dashboard delivery, 2026-11-04
+
+- Installed the reviewed Bklit `chart-stat-flow` registry source with its license, Motion, and NumberFlow. No full chart catalog or unused dependencies were added.
+- Migration `0006_attendance_sessions.sql` was generated, inspected, tested, and applied to the local development database. All actual/expected instants use timezone-aware columns; one-open-session and request uniqueness constraints protect concurrent actions.
+- Default regression run: 143 passed, with 46 opt-in database tests skipped. Follow-up UI/time-rule run: 11 passed. Final separate PostgreSQL attendance/scheduling run: 36 passed, including a schedule-write/attendance-read race across a company-date boundary. New UI coverage includes server-confirmed actions, pending submissions, early-out confirmation, failed writes, persisted timer recovery, monotonic ticking, and unresolved prior-day sessions.
+- Production build, TypeScript, lint, and migration checks passed. A temporary production server confirmed an anonymous dashboard redirect to login and HTTP 401 for attendance reads and validly serialized check-in/out requests; that server was stopped afterward.
+- Live browser preview timed out, so signed-in visual verification remains outstanding. No employee attendance punches were fabricated in the application database. Reminder delivery, leave/holiday exceptions, breaks, manager attendance, corrections, and full paginated history remain future work.

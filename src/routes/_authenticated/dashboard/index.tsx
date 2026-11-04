@@ -9,5 +9,10 @@ export const Route = createFileRoute('/_authenticated/dashboard/')({
       dashboardContent.dashboard.title,
       dashboardContent.dashboard.description,
     ),
-  component: DashboardPage,
+  component: DashboardRoute,
 })
+
+function DashboardRoute() {
+  const { actor } = Route.useRouteContext()
+  return <DashboardPage actorId={actor.id} />
+}

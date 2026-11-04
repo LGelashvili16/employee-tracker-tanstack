@@ -5,6 +5,7 @@ export type ModalOptions = {
   title: string
   description?: string
   size?: 'default' | 'wide'
+  canClose?: () => boolean
 }
 
 export type ModalContextValue = {

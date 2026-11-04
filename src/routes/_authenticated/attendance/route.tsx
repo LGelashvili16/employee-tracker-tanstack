@@ -7,9 +7,8 @@ export const Route = createFileRoute('/_authenticated/attendance')({
 
 function AttendanceLayout() {
   return (
-    <>
-      <AttendanceNavigation />
+    <AttendanceNavigation>
       <Outlet />
-    </>
+    </AttendanceNavigation>
   )
 }
