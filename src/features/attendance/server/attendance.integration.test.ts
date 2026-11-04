@@ -15,6 +15,7 @@ import {
 import type { Actor } from '#/lib/authorization/actor'
 import type * as Service from './attendance.service.server'
 import type * as Scheduling from '#/features/scheduling/server/scheduling.service.server'
+import type * as Review from './attendance-review.service.server'
 import type { db as Database } from '#/db'
 
 vi.mock('@tanstack/react-start/server-only', () => ({}))
@@ -26,6 +27,7 @@ let connection: pg.Client | undefined
 let database: typeof Database | undefined
 let service: typeof Service
 let scheduling: typeof Scheduling
+let review: typeof Review
 let created = false
 let employeeId: string
 const actor: Actor = {
@@ -76,14 +78,15 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
       )
     process.env.DATABASE_URL = target.toString()
     service = await import('./attendance.service.server')
+    review = await import('./attendance-review.service.server')
     scheduling =
       await import('#/features/scheduling/server/scheduling.service.server')
     database = (await import('#/db')).db
     await sql().query(
-      `INSERT INTO "user" (id, name, email, roles) VALUES ('attendance-a', 'ანა', 'a@attendance.invalid', 'employee'), ('attendance-b', 'ბექა', 'b@attendance.invalid', 'employee')`,
+      `INSERT INTO "user" (id, name, email, roles) VALUES ('attendance-a', 'ანა', 'a@attendance.invalid', 'employee'), ('attendance-b', 'ბექა', 'b@attendance.invalid', 'employee'), ('review-manager', 'ხელმძღვანელი', 'manager@attendance.invalid', 'supervisor'), ('review-admin', 'ადმინისტრატორი', 'admin@attendance.invalid', 'admin')`,
     )
     const employees = await sql().query(
-      `INSERT INTO employee (code, user_id, full_name) VALUES ('attendance-a', 'attendance-a', 'ანა'), ('attendance-b', 'attendance-b', 'ბექა') RETURNING id, user_id`,
+      `INSERT INTO employee (code, user_id, full_name) VALUES ('attendance-a', 'attendance-a', 'ანა'), ('attendance-b', 'attendance-b', 'ბექა'), ('review-manager', 'review-manager', 'ხელმძღვანელი'), ('review-admin', 'review-admin', 'ადმინისტრატორი') RETURNING id, user_id`,
     )
     employeeId = employees.rows.find(
       (row: { user_id: string }) => row.user_id === actor.id,
@@ -93,7 +96,7 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     time('2026-11-04T06:05:00Z')
     await sql().query(
-      'DELETE FROM attendance_session; DELETE FROM company_schedule_day; DELETE FROM company_schedule;',
+      'DELETE FROM attendance_audit; DELETE FROM attendance_reviewer; DELETE FROM attendance_setting; DELETE FROM attendance_session; DELETE FROM company_schedule_day; DELETE FROM company_schedule;',
     )
     await sql().query(
       `UPDATE "user" SET access_state = 'active'; UPDATE employee SET status = 'active';`,
@@ -336,6 +339,292 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     } finally {
       if (!committed) await sql().query('ROLLBACK')
       await reading.catch(() => undefined)
+    }
+  })
+
+  const manager: Actor = {
+    ...actor,
+    id: 'review-manager',
+    roles: ['supervisor'],
+  }
+  const administrator: Actor = {
+    ...actor,
+    id: 'review-admin',
+    roles: ['admin'],
+  }
+  async function assign() {
+    await review.assignAttendanceReviewer(administrator, {
+      employeeId,
+      reviewerId: manager.id,
+      revoke: false,
+      reason: 'თანამშრომლის უშუალო ხელმძღვანელი',
+    })
+  }
+  it('records early starts and outside-schedule time without deducting a hypothetical break', async () => {
+    time('2026-11-04T04:00:00Z')
+    const record = await service.checkIn(actor, request())
+    time('2026-11-04T16:00:00Z')
+    await service.checkOut(actor, { sessionId: record.id, confirmEarly: false })
+    const overview = await service.getAttendanceOverview(actor)
+    expect(overview.today).toMatchObject({
+      seconds: 12 * 3600,
+      earlyStartSeconds: 2 * 3600,
+      lateSeconds: 0,
+      earlySeconds: 0,
+      outsideSeconds: 3 * 3600,
+      approvedOutsideSeconds: 0,
+      pendingReviews: 1,
+    })
+    await assign()
+    await review.reviewAttendance(manager, {
+      sessionId: record.id,
+      revision: 1,
+      decision: 'approve',
+      approveOutside: true,
+      reason: 'დადასტურდა დამატებით შესრულებული სამუშაო',
+    })
+    expect(
+      (await service.getAttendanceOverview(actor)).today
+        ?.approvedOutsideSeconds,
+    ).toBe(3 * 3600)
+    await expect(
+      review.reviewAttendance(manager, {
+        sessionId: record.id,
+        revision: 1,
+        decision: 'approve',
+        approveOutside: true,
+        reason: 'განმეორებითი დადასტურება',
+      }),
+    ).rejects.toThrow()
+  })
+  it('preserves an overnight session on its starting date and permits the next morning early check-in', async () => {
+    time('2026-11-04T18:58:00Z')
+    const record = await service.checkIn(actor, request())
+    time('2026-11-04T20:15:00Z')
+    const overnight = await service.getAttendanceOverview(actor)
+    expect(overnight.workday.date).toBe('2026-11-05')
+    expect(overnight.recent[0]).toMatchObject({
+      date: '2026-11-04',
+      seconds: 77 * 60,
+      requiresReview: false,
+    })
+    await service.checkOut(actor, { sessionId: record.id, confirmEarly: false })
+    time('2026-11-05T04:00:00Z')
+    await service.checkIn(actor, request(record.id))
+    expect((await service.getAttendanceOverview(actor)).today).toMatchObject({
+      date: '2026-11-05',
+      earlyStartSeconds: 2 * 3600,
+    })
+  })
+  it('requires explicit scope and fresh permissions, forbids self-review and enforces revocation', async () => {
+    const record = await service.checkIn(actor, request())
+    time('2026-11-04T15:00:00Z')
+    await service.checkOut(actor, { sessionId: record.id, confirmEarly: false })
+    const decision = {
+      sessionId: record.id,
+      revision: 1,
+      decision: 'approve',
+      approveOutside: false,
+      reason: 'შესრულებული დრო გადამოწმებულია',
+    }
+    await expect(review.reviewAttendance(null, decision)).rejects.toThrow()
+    await expect(review.reviewAttendance(manager, decision)).rejects.toThrow()
+    await expect(
+      review.reviewAttendance({ ...actor, roles: ['owner'] }, decision),
+    ).rejects.toThrow()
+    expect(
+      (await review.listAttendanceForReview(manager, { page: 0 })).items,
+    ).toEqual([])
+    await assign()
+    expect(
+      (await review.listAttendanceForReview(manager, { page: 0 })).items.map(
+        (item) => item.id,
+      ),
+    ).toEqual([record.id])
+    await sql().query(
+      `UPDATE "user" SET roles='employee' WHERE id='review-manager'`,
+    )
+    await expect(review.reviewAttendance(manager, decision)).rejects.toThrow()
+    await sql().query(
+      `UPDATE "user" SET roles='supervisor' WHERE id='review-manager'`,
+    )
+    await review.assignAttendanceReviewer(administrator, {
+      employeeId,
+      reviewerId: manager.id,
+      revoke: true,
+      reason: 'ხელმძღვანელის უფლებამოსილება დასრულდა',
+    })
+    await expect(review.reviewAttendance(manager, decision)).rejects.toThrow()
+    await expect(
+      review.assignAttendanceReviewer(administrator, {
+        employeeId,
+        reviewerId: actor.id,
+        revoke: false,
+        reason: 'საკუთარი ჩანაწერის გადამოწმება',
+      }),
+    ).rejects.toThrow()
+  })
+  it('audits corrections, preserves original punches and invalidates previous approval', async () => {
+    const record = await service.checkIn(actor, request())
+    time('2026-11-04T17:00:00Z')
+    await service.checkOut(actor, { sessionId: record.id, confirmEarly: false })
+    await assign()
+    await review.reviewAttendance(manager, {
+      sessionId: record.id,
+      revision: 1,
+      decision: 'approve',
+      approveOutside: true,
+      reason: 'თავდაპირველი დრო დადასტურებულია',
+    })
+    await review.correctAttendance(manager, {
+      sessionId: record.id,
+      revision: 2,
+      start: '2026-11-04T10:00',
+      end: '2026-11-04T19:00',
+      reason: 'თანამშრომლის რეალური დრო გადამოწმებულია',
+    })
+    const item = (await review.listAttendanceForReview(manager, { page: 0 }))
+      .items[0]
+    expect(item).toMatchObject({
+      reviewState: 'pending',
+      revision: 3,
+      approvedOutsideSeconds: 0,
+      startedAt: '2026-11-04T06:00:00.000Z',
+      endedAt: '2026-11-04T15:00:00.000Z',
+      originalStartedAt: '2026-11-04T06:05:00.000Z',
+      originalEndedAt: '2026-11-04T17:00:00.000Z',
+    })
+    expect(
+      (
+        await sql().query(
+          `SELECT action FROM attendance_audit WHERE target_id=$1 ORDER BY created_at,id`,
+          [record.id],
+        )
+      ).rows.map((row) => row.action),
+    ).toEqual(['attendance.approved', 'attendance.corrected'])
+    await expect(
+      review.correctAttendance(manager, {
+        sessionId: record.id,
+        revision: 3,
+        start: '2026-11-04T10:00',
+        end: '2026-11-06T19:00',
+        reason: 'მომავალი დროის დაუშვებელი ჩაწერა',
+      }),
+    ).rejects.toThrow()
+  })
+  it('rejects overlaps and serializes competing corrections and approvals', async () => {
+    const first = await service.checkIn(actor, request())
+    time('2026-11-04T10:00:00Z')
+    await service.checkOut(actor, { sessionId: first.id, confirmEarly: true })
+    time('2026-11-04T11:00:00Z')
+    const second = await service.checkIn(actor, request(first.id))
+    time('2026-11-04T16:00:00Z')
+    await service.checkOut(actor, { sessionId: second.id, confirmEarly: false })
+    await assign()
+    await expect(
+      review.correctAttendance(manager, {
+        sessionId: first.id,
+        revision: 1,
+        start: '2026-11-04T10:00',
+        end: '2026-11-04T17:00',
+        reason: 'გადაფარული დროის შესწორება',
+      }),
+    ).rejects.toThrow()
+    const outcomes = await Promise.allSettled([
+      review.correctAttendance(manager, {
+        sessionId: first.id,
+        revision: 1,
+        start: '2026-11-04T10:00',
+        end: '2026-11-04T14:00',
+        reason: 'გადამოწმებული დროის შესწორება',
+      }),
+      review.reviewAttendance(manager, {
+        sessionId: first.id,
+        revision: 1,
+        decision: 'approve',
+        approveOutside: false,
+        reason: 'გადამოწმებული დროის დადასტურება',
+      }),
+    ])
+    expect(
+      outcomes.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1)
+  })
+  it('snapshots the configured warning threshold and never automatically checks out', async () => {
+    const first = await service.checkIn(actor, request())
+    await review.saveAttendanceLimit(administrator, {
+      maxOpenHours: 8,
+      revision: 0,
+      reason: 'ხანგრძლივი სამუშაოს გადამოწმების წესი',
+    })
+    time('2026-11-04T20:00:00Z')
+    expect(
+      (await service.getAttendanceOverview(actor)).openSession?.maxOpenHours,
+    ).toBe(16)
+    await service.checkOut(actor, { sessionId: first.id, confirmEarly: false })
+    time('2026-11-05T04:00:00Z')
+    await service.checkIn(actor, request(first.id))
+    time('2026-11-05T12:00:00Z')
+    const overview = await service.getAttendanceOverview(actor)
+    expect(overview.openSession).not.toBeNull()
+    expect(overview.openSession?.maxOpenHours).toBe(8)
+    expect(overview.today?.requiresReview).toBe(true)
+  })
+  it('denies direct self-review even if an invalid self-assignment exists in storage', async () => {
+    const record = await service.checkIn(manager, request())
+    time('2026-11-04T15:00:00Z')
+    await service.checkOut(manager, {
+      sessionId: record.id,
+      confirmEarly: false,
+    })
+    await sql().query(
+      `INSERT INTO attendance_reviewer (reviewer_id,employee_id) SELECT 'review-manager',id FROM employee WHERE user_id='review-manager'`,
+    )
+    await expect(
+      review.reviewAttendance(manager, {
+        sessionId: record.id,
+        revision: 1,
+        decision: 'approve',
+        approveOutside: false,
+        reason: 'საკუთარი დროის დადასტურება',
+      }),
+    ).rejects.toThrow()
+    expect(
+      (await review.listAttendanceForReview(manager, { page: 0 })).items,
+    ).toEqual([])
+    await expect(
+      review.attendanceReviewHistory(manager, { sessionId: record.id }),
+    ).rejects.toThrow()
+  })
+  it('rolls back approval if its audit cannot be persisted', async () => {
+    const record = await service.checkIn(actor, request())
+    time('2026-11-04T15:00:00Z')
+    await service.checkOut(actor, { sessionId: record.id, confirmEarly: false })
+    await assign()
+    await sql().query(
+      `CREATE FUNCTION reject_attendance_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action = 'attendance.approved' THEN RAISE EXCEPTION 'Test audit failure'; END IF; RETURN NEW; END $$; CREATE TRIGGER reject_attendance_audit BEFORE INSERT ON attendance_audit FOR EACH ROW EXECUTE FUNCTION reject_attendance_audit();`,
+    )
+    try {
+      await expect(
+        review.reviewAttendance(manager, {
+          sessionId: record.id,
+          revision: 1,
+          decision: 'approve',
+          approveOutside: true,
+          reason: 'რეალური დროის დადასტურება',
+        }),
+      ).rejects.toThrow()
+      expect(
+        (await review.listAttendanceForReview(manager, { page: 0 })).items[0],
+      ).toMatchObject({
+        reviewState: 'pending',
+        revision: 1,
+        approvedOutsideSeconds: 0,
+      })
+    } finally {
+      await sql().query(
+        'DROP TRIGGER reject_attendance_audit ON attendance_audit; DROP FUNCTION reject_attendance_audit();',
+      )
     }
   })
 })

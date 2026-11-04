@@ -35,6 +35,8 @@ const sessionProjection = {
   startedAt: attendanceSession.startedAt,
   endedAt: attendanceSession.endedAt,
   expectedEndAt: attendanceSession.expectedEndAt,
+  expectedStartAt: attendanceSession.expectedStartAt,
+  maxOpenHours: attendanceSession.maxOpenHours,
 }
 export async function latestSession(
   tx: AttendanceTransaction,
@@ -109,7 +111,11 @@ export async function endSession(
 ) {
   return tx
     .update(attendanceSession)
-    .set({ endedAt: now })
+    .set({
+      endedAt: now,
+      originalEndedAt: now,
+      revision: sql`${attendanceSession.revision} + 1`,
+    })
     .where(
       and(
         eq(attendanceSession.id, sessionId),
@@ -128,6 +134,9 @@ export async function attendanceDays(
   now: Date,
   since?: string,
 ): Promise<Array<AttendanceDay>> {
+  const actualEnd = sql`coalesce(${attendanceSession.endedAt}, ${now}::timestamptz)`
+  const beforeSchedule = sql`greatest(0, extract(epoch from (least(${actualEnd}, ${attendanceSession.expectedStartAt}) - ${attendanceSession.startedAt})))`
+  const afterSchedule = sql`greatest(0, extract(epoch from (${actualEnd} - greatest(${attendanceSession.startedAt}, ${attendanceSession.expectedEndAt}))))`
   const rows = await tx
     .select({
       date: attendanceSession.workDate,
@@ -151,6 +160,26 @@ export async function attendanceDays(
           Number,
         ),
       incomplete: sql<boolean>`bool_or(${attendanceSession.endedAt} is null)`,
+      earlyStartSeconds:
+        sql<number>`greatest(0, extract(epoch from (min(${attendanceSession.expectedStartAt}) - min(${attendanceSession.startedAt}))))`.mapWith(
+          Number,
+        ),
+      outsideSeconds:
+        sql<number>`sum(${beforeSchedule} + ${afterSchedule})`.mapWith(Number),
+      approvedOutsideSeconds:
+        sql<number>`sum(${attendanceSession.approvedOutsideSeconds})`.mapWith(
+          Number,
+        ),
+      pendingReviews:
+        sql<number>`count(*) filter (where ${attendanceSession.reviewState} = 'pending' and ${attendanceSession.endedAt} is not null)`.mapWith(
+          Number,
+        ),
+      rejectedReviews:
+        sql<number>`count(*) filter (where ${attendanceSession.reviewState} = 'rejected')`.mapWith(
+          Number,
+        ),
+      requiresReview: sql<boolean>`bool_or(${attendanceSession.endedAt} is null and ${now}::timestamptz - ${attendanceSession.startedAt} >= ${attendanceSession.maxOpenHours} * interval '1 hour')`,
+      corrected: sql<boolean>`bool_or((${attendanceSession.originalStartedAt} is not null and ${attendanceSession.originalStartedAt} <> ${attendanceSession.startedAt}) or (${attendanceSession.endedAt} is not null and (${attendanceSession.originalEndedAt} is null or ${attendanceSession.originalEndedAt} <> ${attendanceSession.endedAt})))`,
     })
     .from(attendanceSession)
     .where(
@@ -169,5 +198,7 @@ export async function attendanceDays(
     seconds: Math.floor(row.seconds),
     lateSeconds: Math.ceil(row.lateSeconds),
     earlySeconds: Math.ceil(row.earlySeconds),
+    earlyStartSeconds: Math.ceil(row.earlyStartSeconds),
+    outsideSeconds: Math.floor(row.outsideSeconds),
   }))
 }

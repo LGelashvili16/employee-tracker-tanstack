@@ -1,17 +1,12 @@
-import { FeaturePage } from '#/components/common/feature-page'
-import { attendanceContent } from '../attendance.content'
-import { TeamAttendanceNavigation } from '../components/team-attendance-navigation'
+import { TeamAttendancePage } from './team-attendance-page'
 import type { Role } from '#/lib/authorization/permissions'
 
 export function AttendanceExceptionsPage({
   roles,
+  actorId,
 }: {
   roles: ReadonlyArray<Role>
+  actorId: string
 }) {
-  return (
-    <div className="flex flex-col gap-6">
-      <TeamAttendanceNavigation roles={roles} />
-      <FeaturePage {...attendanceContent.attendanceExceptions} />
-    </div>
-  )
+  return <TeamAttendancePage roles={roles} actorId={actorId} exceptionsOnly />
 }

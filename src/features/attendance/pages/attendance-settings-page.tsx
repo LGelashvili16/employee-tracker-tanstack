@@ -13,6 +13,7 @@ import { Spinner } from '#/components/ui/spinner'
 import { scheduleSettingsOptions } from '#/features/scheduling/scheduling.queries'
 import { ScheduleVersionForm } from '#/features/scheduling/components/schedule-version-form'
 import { attendanceContent } from '../attendance.content'
+import { AttendanceConfiguration } from '../components/attendance-configuration'
 
 export function AttendanceSettingsPage({ actorId }: { actorId: string }) {
   // Match the existing private feature cache ownership; remount on identity changes.
@@ -95,6 +96,7 @@ function SettingsContent({ actorId }: { actorId: string }) {
             settings={result.value}
             actorId={actorId}
           />
+          <AttendanceConfiguration actorId={actorId} />
         </>
       )}
     </section>

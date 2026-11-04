@@ -4,6 +4,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AttendanceSettingsPage } from './attendance-settings-page'
 
 const read = vi.hoisted(() => vi.fn())
+vi.mock('../attendance.functions', () => ({
+  readAttendanceSettings: vi.fn(async () => ({
+    ok: true,
+    value: {
+      setting: { maxOpenHours: 16, revision: 0 },
+      employees: [],
+      reviewers: [],
+      assignments: [],
+      truncated: false,
+    },
+  })),
+  updateAttendanceLimit: vi.fn(),
+  updateAttendanceReviewer: vi.fn(),
+}))
 const notifications = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 vi.mock('sonner', () => ({ toast: notifications }))
 vi.mock('#/features/scheduling/scheduling.functions', () => ({

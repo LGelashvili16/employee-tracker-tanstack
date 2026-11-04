@@ -1,10 +1,11 @@
-import { useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import { IconClock, IconLogin, IconLogout } from '@tabler/icons-react'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Spinner } from '#/components/ui/spinner'
 import { Alert, AlertDescription } from '#/components/ui/alert'
+import { AttendanceDeviationBadges } from './attendance-deviation-badges'
 import { useModal } from '#/hooks/use-modal'
 import { FinishWorkConfirmation } from './finish-work-confirmation'
 import { ChartStatFlow } from '#/components/charts/chart-stat-flow'
@@ -12,12 +13,15 @@ import { useAttendanceActions } from '../hooks/use-attendance-actions'
 import { useElapsedSeconds } from '../hooks/use-elapsed-seconds'
 import {
   elapsedSeconds,
-  formatAttendanceDuration,
   formatAttendanceTime,
   formatWorkedTime,
+  needsSessionReview,
 } from '../attendance.rules'
 import type { AttendanceOverview } from '../attendance.types'
-import { attendanceStatus } from '../attendance.presentation'
+import {
+  attendanceStatus,
+  workDurationStatus,
+} from '../attendance.presentation'
 
 const digitFormat = { minimumIntegerDigits: 2, maximumFractionDigits: 0 }
 
@@ -31,16 +35,22 @@ export function AttendanceClock({
   const action = useAttendanceActions(actorId, overview)
   const { openModal } = useModal()
   const submitting = useRef(false)
+  const sampleReceivedAt = useRef<number | null>(null)
+  const recordClockStart = useCallback((startedAt: number) => {
+    sampleReceivedAt.current = startedAt
+  }, [])
   const open = overview.openSession
   const status = attendanceStatus(overview)
   const oldSession = open !== null && open.workDate !== overview.workday.date
-  const early =
+  const activeDay = oldSession
+    ? overview.recent.find((day) => day.date === open.workDate)
+    : overview.today
+  const needsReview =
     open !== null &&
-    Date.parse(overview.serverNow) < Date.parse(open.expectedEndAt)
-  const late = overview.today?.lateSeconds ?? 0
-  const firstIn = oldSession ? open.startedAt : overview.today?.firstIn
+    needsSessionReview(open.startedAt, overview.serverNow, open.maxOpenHours)
+  const firstIn = activeDay?.firstIn ?? open?.startedAt
   const initialSeconds = oldSession
-    ? elapsedSeconds(open.startedAt, overview.serverNow)
+    ? (activeDay?.seconds ?? elapsedSeconds(open.startedAt, overview.serverNow))
     : (overview.today?.seconds ?? 0)
 
   return (
@@ -50,7 +60,9 @@ export function AttendanceClock({
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
             <IconClock className="size-5" aria-hidden="true" />
           </span>
-          {oldSession ? 'ღია ჩანაწერის დრო' : 'დღეს ნამუშევარი'}
+          {oldSession
+            ? `${open.workDate} დღის აღრიცხული დრო`
+            : 'დღეს ნამუშევარი'}
         </CardTitle>
         <Badge variant={status.variant}>{status.label}</Badge>
       </CardHeader>
@@ -60,6 +72,7 @@ export function AttendanceClock({
             key={`${overview.serverNow}:${open?.id ?? 'stopped'}`}
             seconds={initialSeconds}
             running={open !== null}
+            onStart={recordClockStart}
           />
         </div>
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -81,23 +94,14 @@ export function AttendanceClock({
               )}
             </span>
           ) : null}
-          {late > 0 ? (
-            <Badge variant="orange">
-              დაგვიანება: {formatAttendanceDuration(late)}
-            </Badge>
-          ) : null}
-          {(overview.today?.earlySeconds ?? 0) > 0 ? (
-            <Badge variant="yellow">
-              ადრე გასვლა:{' '}
-              {formatAttendanceDuration(overview.today?.earlySeconds ?? 0)}
-            </Badge>
-          ) : null}
+          {activeDay ? <AttendanceDeviationBadges {...activeDay} /> : null}
         </div>
-        {oldSession ? (
-          <Alert variant="destructive">
+        {oldSession || needsReview ? (
+          <Alert variant={needsReview ? 'destructive' : 'default'}>
             <AlertDescription>
-              წინა სამუშაო დღის ჩანაწერი ღიაა. დასრულების დრო დაფიქსირდება ახლა.
-              დროის შესწორების მოთხოვნები ჯერ მიუწვდომელია.
+              {needsReview
+                ? `ჩანაწერი ღიაა სულ მცირე ${open.maxOpenHours} საათი და საჭიროებს ხელმძღვანელის გადამოწმებას. დროის აღრიცხვა გრძელდება.`
+                : 'სამუშაო წინა დღეს დაიწყო. დრო ეკუთვნის დაწყების სამუშაო დღეს და აღრიცხვა გრძელდება დასრულებამდე.'}
             </AlertDescription>
           </Alert>
         ) : null}
@@ -109,10 +113,14 @@ export function AttendanceClock({
           aria-busy={action.pending}
           onClick={() => {
             if (!open) void action.start()
-            else if (early || oldSession) {
+            else {
               openModal(
                 <FinishWorkConfirmation
                   oldSession={oldSession}
+                  needsReview={needsReview}
+                  workDate={open.workDate}
+                  workedSeconds={initialSeconds}
+                  clockStartedAt={sampleReceivedAt.current ?? performance.now()}
                   remainingSeconds={elapsedSeconds(
                     overview.serverNow,
                     open.expectedEndAt,
@@ -125,7 +133,7 @@ export function AttendanceClock({
                   canClose: () => !submitting.current,
                 },
               )
-            } else void action.finish(false)
+            }
           }}
         >
           <span className="flex size-4 items-center justify-center">
@@ -147,18 +155,26 @@ export function AttendanceClock({
 export function ClockTimer({
   seconds,
   running,
+  onStart,
 }: {
   seconds: number
   running: boolean
+  onStart?: (startedAt: number) => void
 }) {
-  const total = seconds + useElapsedSeconds(running)
+  const total = seconds + useElapsedSeconds(running, undefined, onStart)
+  const durationStatus = workDurationStatus(total)
   const values = [
     Math.floor(total / 3600),
     Math.floor(total / 60) % 60,
     total % 60,
   ]
   return (
-    <div role="timer" aria-live="off" aria-label="ნამუშევარი დრო">
+    <div
+      className="flex flex-col items-center gap-2"
+      role="timer"
+      aria-live="off"
+      aria-label="ნამუშევარი დრო"
+    >
       <span className="sr-only">{formatWorkedTime(total)}</span>
       <div aria-hidden="true" className="flex items-start gap-3 py-3 sm:gap-5">
         {values.map((value, index) => (
@@ -180,6 +196,10 @@ export function ClockTimer({
           </div>
         ))}
       </div>
+      <Badge variant={durationStatus.variant}>{durationStatus.label}</Badge>
+      <p className="text-center text-xs text-muted-foreground">
+        მიზანი: 8 სთ მუშაობა + 1 სთ შესვენება
+      </p>
     </div>
   )
 }

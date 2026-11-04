@@ -6,6 +6,7 @@ import { startOfWorkWeek } from '../attendance.rules'
 import * as repository from './attendance.repository.server'
 import type { Actor } from '#/lib/authorization/actor'
 import type { AttendanceOverview } from '../attendance.types'
+import { attendanceSetting } from '#/db/schema'
 
 export class AttendanceWorkflowError extends Error {}
 async function activeEmployee(
@@ -53,6 +54,7 @@ export async function getAttendanceOverview(
             startedAt: open.startedAt.toISOString(),
             endedAt: open.endedAt?.toISOString() ?? null,
             expectedEndAt: open.expectedEndAt.toISOString(),
+            expectedStartAt: open.expectedStartAt.toISOString(),
           }
         : null,
       today: recent.find((day) => day.date === workday.date) ?? null,
@@ -111,6 +113,14 @@ export async function checkIn(actor: Actor | null, input: unknown) {
       expectedStartAt: new Date(workday.startsAt),
       expectedEndAt: new Date(workday.endsAt),
       startedAt: now,
+      originalStartedAt: now,
+      maxOpenHours:
+        (
+          await tx
+            .select({ hours: attendanceSetting.maxOpenHours })
+            .from(attendanceSetting)
+            .limit(1)
+        ).at(0)?.hours ?? 16,
     })
     if (!created)
       throw new AttendanceWorkflowError(

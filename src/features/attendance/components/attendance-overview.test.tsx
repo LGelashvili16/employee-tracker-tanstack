@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AttendanceOverview } from './attendance-overview'
 import { ClockTimer } from './attendance-clock'
+import { FinishWorkConfirmation } from './finish-work-confirmation'
 import { ModalProvider } from '#/providers/modal-provider'
 import {
   attendanceStatus,
@@ -75,6 +76,13 @@ function working(): Overview {
     seconds: 3600,
     lateSeconds: 0,
     earlySeconds: 0,
+    earlyStartSeconds: 0,
+    outsideSeconds: 0,
+    approvedOutsideSeconds: 0,
+    pendingReviews: 0,
+    rejectedReviews: 0,
+    requiresReview: false,
+    corrected: false,
     incomplete: true,
   }
   return {
@@ -86,6 +94,8 @@ function working(): Overview {
       startedAt: day.firstIn,
       endedAt: null,
       expectedEndAt: '2026-11-04T15:00:00.000Z',
+      expectedStartAt: '2026-11-04T06:00:00.000Z',
+      maxOpenHours: 16,
     },
     lastSessionId: sessionId,
     today: day,
@@ -98,9 +108,31 @@ beforeEach(() => {
 })
 afterEach(() => {
   vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 describe('persisted attendance dashboard', () => {
+  it.each([true, false])(
+    'hides internal pending-review status on employee screens while running=%s',
+    async (running) => {
+      const state = working()
+      if (!state.today) throw new Error('Missing working fixture')
+      state.today.pendingReviews = 1
+      state.today.incomplete = running
+      if (!running) state.openSession = null
+      calls.read.mockResolvedValue({ ok: true, value: state })
+      render(
+        <ModalProvider>
+          <AttendanceOverview actorId="employee" />
+        </ModalProvider>,
+      )
+      await screen.findByRole('button', {
+        name: running ? 'სამუშაოს დასრულება' : 'სამუშაოს დაწყება',
+      })
+      expect(screen.queryByText('განხილვის მოლოდინში')).not.toBeInTheDocument()
+      expect(screen.getAllByText('8 საათზე ნაკლები').length).toBeGreaterThan(0)
+    },
+  )
   it('uses Georgian calendar dates and distinguishes attendance states', () => {
     expect(formatAttendanceDate('2026-11-04')).toBe('4 ნოემბერი 2026')
     expect(attendanceStatus(overview())).toEqual({
@@ -119,7 +151,7 @@ describe('persisted attendance dashboard', () => {
           ? { ...active.openSession, workDate: '2026-11-03' }
           : null,
       }),
-    ).toEqual({ label: 'გამოტოვებული გასვლა', variant: 'red' })
+    ).toEqual({ label: 'წინა დღეს დაწყებული', variant: 'secondary' })
     for (const [lateSeconds, earlySeconds, variant] of [
       [0, 0, 'green'],
       [60, 0, 'orange'],
@@ -303,6 +335,39 @@ describe('persisted attendance dashboard', () => {
       screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
     ).toHaveTextContent('01:00:00')
   })
+  it.each([1, 9])(
+    'confirms checkout after 19:00 with %s elapsed hours',
+    async (hours) => {
+      const state = working()
+      state.serverNow = '2026-11-04T20:00:00.000Z'
+      if (!state.today || !state.openSession)
+        throw new Error('Missing working fixture')
+      state.today.seconds = hours * 3600
+      state.today.firstIn = new Date(
+        Date.parse(state.serverNow) - hours * 3600000,
+      ).toISOString()
+      state.openSession.startedAt = state.today.firstIn
+      calls.read.mockResolvedValue({ ok: true, value: state })
+      const user = userEvent.setup()
+      render(
+        <ModalProvider>
+          <AttendanceOverview actorId="employee" />
+        </ModalProvider>,
+      )
+      await user.click(
+        await screen.findByRole('button', { name: 'სამუშაოს დასრულება' }),
+      )
+      expect(calls.finish).not.toHaveBeenCalled()
+      const dialog = screen.getByRole('dialog', { name: 'სამუშაოს დასრულება' })
+      expect(within(dialog).getByText('დღეს აღრიცხული დრო')).toBeVisible()
+      expect(within(dialog).getByText(`0${hours}:00:00`)).toBeVisible()
+      expect(
+        within(dialog).queryByText('გასვლა აღირიცხება ადრე დასრულებად.'),
+      ).not.toBeInTheDocument()
+      await user.click(within(dialog).getByRole('button', { name: 'გაუქმება' }))
+      expect(calls.finish).not.toHaveBeenCalled()
+    },
+  )
   it('keeps the shared confirmation open and prevents repeat checkout while saving', async () => {
     calls.read.mockResolvedValue({ ok: true, value: working() })
     let complete: ((value: unknown) => void) | undefined
@@ -346,6 +411,11 @@ describe('persisted attendance dashboard', () => {
     state.serverNow = '2026-11-05T07:00:00.000Z'
     state.workday = { ...state.workday, date: '2026-11-05' }
     state.today = null
+    state.recent = state.recent.map((day) => ({
+      ...day,
+      seconds: 25 * 3600,
+      requiresReview: true,
+    }))
     calls.read.mockResolvedValue({ ok: true, value: state })
     const user = userEvent.setup()
     render(
@@ -359,7 +429,7 @@ describe('persisted attendance dashboard', () => {
     expect(
       screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
     ).toHaveTextContent('25:00:00')
-    expect(screen.getByText('ღია ჩანაწერის დრო')).toBeVisible()
+    expect(screen.getByText('2026-11-04 დღის აღრიცხული დრო')).toBeVisible()
     await user.click(finish)
     expect(
       within(screen.getByRole('dialog')).getByText(
@@ -370,7 +440,7 @@ describe('persisted attendance dashboard', () => {
   })
   it('advances from the server sample using monotonic time rather than browser wall-clock changes', () => {
     vi.useFakeTimers({
-      toFake: ['Date', 'setInterval', 'clearInterval', 'performance'],
+      toFake: ['Date', 'setTimeout', 'clearTimeout', 'performance'],
     })
     render(<ClockTimer seconds={3600} running />)
     act(() => {
@@ -380,5 +450,97 @@ describe('persisted attendance dashboard', () => {
     expect(
       screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
     ).toHaveTextContent('01:00:02')
+  })
+  it.each([
+    [
+      8 * 3600 - 1,
+      '8 საათზე ნაკლები',
+      'yellow',
+      '8 საათი შესრულებულია',
+      'green',
+    ],
+    [9 * 3600, '8 საათი შესრულებულია', 'green', '9 საათზე მეტი', 'orange'],
+  ] as const)(
+    'updates duration color and label while crossing %s seconds',
+    (seconds, before, beforeColor, after, afterColor) => {
+      vi.useFakeTimers({
+        toFake: ['setTimeout', 'clearTimeout', 'performance'],
+      })
+      render(<ClockTimer seconds={seconds} running />)
+      expect(screen.getByText(before)).toHaveAttribute(
+        'data-variant',
+        beforeColor,
+      )
+      expect(
+        screen.getByText('მიზანი: 8 სთ მუშაობა + 1 სთ შესვენება'),
+      ).toBeVisible()
+      act(() => vi.advanceTimersByTime(1000))
+      expect(screen.getByText(after)).toHaveAttribute(
+        'data-variant',
+        afterColor,
+      )
+    },
+  )
+  it('summarizes all today sessions plus elapsed time since the server sample', async () => {
+    const monotonicTime = vi.spyOn(performance, 'now').mockReturnValue(0)
+    const state = working()
+    if (!state.today) throw new Error('Missing working fixture')
+    state.today.seconds = 2 * 3600
+    calls.read.mockResolvedValue({ ok: true, value: state })
+    const user = userEvent.setup()
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    const finish = await screen.findByRole('button', {
+      name: 'სამუშაოს დასრულება',
+    })
+    monotonicTime.mockReturnValue(125000)
+    await user.click(finish)
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('02:02:05')).toBeVisible()
+    expect(calls.finish).not.toHaveBeenCalled()
+  })
+  it('keeps the confirmation and background clock synchronized across a target boundary', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] })
+    const seconds = 8 * 3600 - 3
+    function timers(showConfirmation: boolean) {
+      return (
+        <ModalProvider>
+          <ClockTimer seconds={seconds} running />
+          {showConfirmation ? (
+            <FinishWorkConfirmation
+              oldSession={false}
+              workedSeconds={seconds}
+              clockStartedAt={0}
+              remainingSeconds={3}
+              finish={calls.finish}
+              submitting={{ current: false }}
+            />
+          ) : null}
+        </ModalProvider>
+      )
+    }
+    const { rerender } = render(timers(false))
+    act(() => vi.advanceTimersByTime(1250))
+    rerender(timers(true))
+    expect(
+      screen.getByRole('timer', { name: 'დასრულებამდე აღრიცხული დრო' }),
+    ).toHaveTextContent('07:59:58')
+    expect(screen.getByText('გასვლა აღირიცხება ადრე დასრულებად.')).toBeVisible()
+    act(() => vi.advanceTimersByTime(3750))
+    expect(
+      screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
+    ).toHaveTextContent('08:00:02')
+    expect(
+      screen.getByRole('timer', { name: 'დასრულებამდე აღრიცხული დრო' }),
+    ).toHaveTextContent('08:00:02')
+    for (const badge of screen.getAllByText('8 საათი შესრულებულია'))
+      expect(badge).toHaveAttribute('data-variant', 'green')
+    expect(
+      screen.queryByText('გასვლა აღირიცხება ადრე დასრულებად.'),
+    ).not.toBeInTheDocument()
+    expect(calls.finish).not.toHaveBeenCalled()
   })
 })

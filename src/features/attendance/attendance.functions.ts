@@ -3,13 +3,31 @@ import { setResponseHeader } from '@tanstack/react-start/server'
 import { authenticatedMiddleware } from '#/lib/auth/auth.middleware'
 import { enforcePolicy } from '#/lib/authorization/guards.server'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
-import { checkInSchema, checkOutSchema } from './attendance.schemas'
 import {
   AttendanceWorkflowError,
   checkIn,
   checkOut,
   getAttendanceOverview,
 } from './server/attendance.service.server'
+import {
+  checkInSchema,
+  checkOutSchema,
+  attendanceAssignmentSchema,
+  attendanceCorrectionSchema,
+  attendanceHistorySchema,
+  attendanceLimitSchema,
+  attendanceListSchema,
+  attendanceReviewSchema,
+} from './attendance.schemas'
+import {
+  assignAttendanceReviewer,
+  attendanceReviewHistory,
+  correctAttendance,
+  listAttendanceForReview,
+  readAttendanceConfiguration,
+  reviewAttendance,
+  saveAttendanceLimit,
+} from './server/attendance-review.service.server'
 
 async function safely<T>(action: () => Promise<T>) {
   setResponseHeader('Cache-Control', 'private, no-store')
@@ -37,3 +55,45 @@ export const finishMyWork = createServerFn({ method: 'POST' })
   .middleware([authenticatedMiddleware])
   .validator(checkOutSchema)
   .handler(({ context, data }) => safely(() => checkOut(context.actor, data)))
+
+export const readTeamAttendance = createServerFn({ method: 'GET' })
+  .middleware([authenticatedMiddleware])
+  .validator(attendanceListSchema)
+  .handler(({ context, data }) =>
+    safely(() => listAttendanceForReview(context.actor, data)),
+  )
+export const decideAttendance = createServerFn({ method: 'POST' })
+  .middleware([authenticatedMiddleware])
+  .validator(attendanceReviewSchema)
+  .handler(({ context, data }) =>
+    safely(() => reviewAttendance(context.actor, data)),
+  )
+export const amendAttendance = createServerFn({ method: 'POST' })
+  .middleware([authenticatedMiddleware])
+  .validator(attendanceCorrectionSchema)
+  .handler(({ context, data }) =>
+    safely(() => correctAttendance(context.actor, data)),
+  )
+export const readAttendanceSettings = createServerFn({ method: 'GET' })
+  .middleware([authenticatedMiddleware])
+  .handler(({ context }) =>
+    safely(() => readAttendanceConfiguration(context.actor)),
+  )
+export const updateAttendanceLimit = createServerFn({ method: 'POST' })
+  .middleware([authenticatedMiddleware])
+  .validator(attendanceLimitSchema)
+  .handler(({ context, data }) =>
+    safely(() => saveAttendanceLimit(context.actor, data)),
+  )
+export const updateAttendanceReviewer = createServerFn({ method: 'POST' })
+  .middleware([authenticatedMiddleware])
+  .validator(attendanceAssignmentSchema)
+  .handler(({ context, data }) =>
+    safely(() => assignAttendanceReviewer(context.actor, data)),
+  )
+export const readAttendanceReviewHistory = createServerFn({ method: 'GET' })
+  .middleware([authenticatedMiddleware])
+  .validator(attendanceHistorySchema)
+  .handler(({ context, data }) =>
+    safely(() => attendanceReviewHistory(context.actor, data)),
+  )

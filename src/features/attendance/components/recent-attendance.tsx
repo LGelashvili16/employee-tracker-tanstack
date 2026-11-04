@@ -9,13 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table'
-import {
-  formatAttendanceDuration,
-  formatAttendanceTime,
-  formatWorkedTime,
-} from '../attendance.rules'
+import { formatAttendanceTime, formatWorkedTime } from '../attendance.rules'
 import type { AttendanceOverview } from '../attendance.types'
 import { formatAttendanceDate } from '../attendance.presentation'
+import { AttendanceDeviationBadges } from './attendance-deviation-badges'
+import { companyLocalDate } from '#/features/scheduling/scheduling.rules'
 
 export function RecentAttendance({
   overview,
@@ -65,7 +63,7 @@ export function RecentAttendance({
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {day.lastOut
-                      ? formatAttendanceTime(day.lastOut, day.timezone)
+                      ? `${companyLocalDate(new Date(day.lastOut), day.timezone) !== day.date ? `${formatAttendanceDate(companyLocalDate(new Date(day.lastOut), day.timezone), true)} ` : ''}${formatAttendanceTime(day.lastOut, day.timezone)}`
                       : 'ჯერ არ დაფიქსირებულა'}
                   </TableCell>
                   <TableCell className="tabular-nums">
@@ -74,30 +72,19 @@ export function RecentAttendance({
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {day.incomplete ? (
-                        <Badge
-                          variant={
-                            day.date < overview.workday.date ? 'red' : 'green'
-                          }
-                        >
-                          {day.date < overview.workday.date
-                            ? 'გამოტოვებული გასვლა'
-                            : 'მიმდინარე'}
+                        <Badge variant={day.requiresReview ? 'red' : 'green'}>
+                          {day.requiresReview
+                            ? 'გადასამოწმებელია'
+                            : day.date < overview.workday.date
+                              ? 'წინა დღეს დაწყებული'
+                              : 'მიმდინარე'}
                         </Badge>
                       ) : null}
-                      {day.lateSeconds > 0 ? (
-                        <Badge variant="orange">
-                          დაგვიანება {formatAttendanceDuration(day.lateSeconds)}
-                        </Badge>
-                      ) : null}
-                      {day.earlySeconds > 0 ? (
-                        <Badge variant="yellow">
-                          ადრე გასვლა{' '}
-                          {formatAttendanceDuration(day.earlySeconds)}
-                        </Badge>
-                      ) : null}
+                      <AttendanceDeviationBadges {...day} />
                       {!day.incomplete &&
                       !day.lateSeconds &&
-                      !day.earlySeconds ? (
+                      !day.earlySeconds &&
+                      !day.outsideSeconds ? (
                         <Badge variant="green">დროულად</Badge>
                       ) : null}
                     </div>

@@ -5,21 +5,36 @@ import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Spinner } from '#/components/ui/spinner'
 import { useModal } from '#/hooks/use-modal'
-import { formatAttendanceDuration } from '../attendance.rules'
+import { formatAttendanceDuration, formatWorkedTime } from '../attendance.rules'
+import { workDurationStatus } from '../attendance.presentation'
+import { useElapsedSeconds } from '../hooks/use-elapsed-seconds'
 
 export function FinishWorkConfirmation({
   oldSession,
+  needsReview = false,
+  workDate,
+  workedSeconds,
+  clockStartedAt,
   remainingSeconds,
   finish,
   submitting,
 }: {
   oldSession: boolean
+  needsReview?: boolean
+  workDate?: string
+  workedSeconds: number
+  clockStartedAt: number
   remainingSeconds: number
   finish: () => Promise<boolean>
   submitting: RefObject<boolean>
 }) {
   const { closeModal } = useModal()
   const [pending, setPending] = useState(false)
+  const elapsed = useElapsedSeconds(true, clockStartedAt)
+  const totalSeconds = workedSeconds + elapsed
+  const remaining = Math.max(0, remainingSeconds - elapsed)
+  const durationStatus = workDurationStatus(totalSeconds)
+  const early = remaining > 0
 
   async function confirm() {
     if (submitting.current) return
@@ -46,19 +61,44 @@ export function FinishWorkConfirmation({
           )}
         </span>
         <div className="flex min-w-0 flex-col items-start gap-3">
-          <Badge variant={oldSession ? 'red' : 'yellow'}>
-            {oldSession ? 'გამოტოვებული გასვლა' : 'ადრე დასრულება'}
+          <Badge variant={needsReview ? 'red' : early ? 'yellow' : 'secondary'}>
+            {oldSession
+              ? 'წინა დღეს დაწყებული'
+              : early
+                ? 'ადრე დასრულება'
+                : 'სამუშაოს დასრულება'}
           </Badge>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">
+              {oldSession
+                ? `${workDate ?? ''} დღის აღრიცხული დრო`
+                : 'დღეს აღრიცხული დრო'}
+            </span>
+            <span
+              role="timer"
+              aria-live="off"
+              aria-label="დასრულებამდე აღრიცხული დრო"
+              className="text-3xl font-semibold tracking-tight tabular-nums"
+            >
+              {formatWorkedTime(totalSeconds)}
+            </span>
+            <Badge variant={durationStatus.variant}>
+              {durationStatus.label}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              მიზანი: 8 სთ მუშაობა + 1 სთ შესვენება
+            </span>
+          </div>
           {oldSession ? (
             <p className="text-sm leading-relaxed text-muted-foreground">
-              ღია ჩანაწერი დასრულდება მიმდინარე დროით. გადაამოწმეთ, ნამდვილად
-              გსურთ თუ არა მისი დახურვა.
+              ღია ჩანაწერი დასრულდება მიმდინარე დროით. დრო სრულად მიეკუთვნება
+              დაწყების სამუშაო დღეს.
             </p>
-          ) : (
+          ) : early ? (
             <>
               <div className="flex flex-col gap-1">
                 <span className="text-3xl font-semibold tracking-tight tabular-nums">
-                  {formatAttendanceDuration(remainingSeconds)}
+                  {formatAttendanceDuration(remaining)}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   დაგეგმილ დასრულებამდე დარჩენილი დრო
@@ -68,6 +108,11 @@ export function FinishWorkConfirmation({
                 გასვლა აღირიცხება ადრე დასრულებად.
               </p>
             </>
+          ) : (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              დაადასტურეთ სამუშაოს დასრულება. გასვლის დრო დაფიქსირდება
+              დადასტურებისას.
+            </p>
           )}
         </div>
       </div>

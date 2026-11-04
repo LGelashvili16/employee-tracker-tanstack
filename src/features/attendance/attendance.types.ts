@@ -7,6 +7,8 @@ export type WorkingSession = {
   startedAt: string
   endedAt: string | null
   expectedEndAt: string
+  expectedStartAt: string
+  maxOpenHours: number
 }
 export type AttendanceDay = {
   date: string
@@ -16,7 +18,27 @@ export type AttendanceDay = {
   seconds: number
   lateSeconds: number
   earlySeconds: number
+  earlyStartSeconds: number
+  outsideSeconds: number
+  approvedOutsideSeconds: number
+  pendingReviews: number
+  rejectedReviews: number
+  requiresReview: boolean
+  corrected: boolean
   incomplete: boolean
+}
+
+export type ReviewSession = WorkingSession & {
+  isFirstOfDay: boolean
+  isLastOfDay: boolean
+  employeeId: string
+  employeeName: string
+  revision: number
+  reviewState: string
+  approvedOutsideSeconds: number
+  originalStartedAt: string | null
+  originalEndedAt: string | null
+  canReview: boolean
 }
 export type AttendanceOverview = {
   serverNow: string

@@ -19,5 +19,11 @@ export const Route = createFileRoute(
 
 function AttendanceExceptionsRoute() {
   const { actor } = Route.useRouteContext()
-  return <AttendanceExceptionsPage roles={actor.roles} />
+  return (
+    <AttendanceExceptionsPage
+      key={actor.id}
+      roles={actor.roles}
+      actorId={actor.id}
+    />
+  )
 }

@@ -50,6 +50,13 @@
       "when": 1793800289911,
       "tag": "0006_attendance_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793823889290,
+      "tag": "0007_attendance_review",
+      "breakpoints": true
     }
   ]
 }

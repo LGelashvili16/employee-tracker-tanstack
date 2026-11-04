@@ -1,15 +1,44 @@
 import { format, parseISO } from 'date-fns'
 import { ka } from 'date-fns/locale'
 import type { AttendanceOverview } from './attendance.types'
+import {
+  DAILY_BREAK_ALLOWANCE_SECONDS,
+  DAILY_WORK_TARGET_SECONDS,
+  needsSessionReview,
+} from './attendance.rules'
+
+export function workDurationStatus(seconds: number) {
+  if (seconds < DAILY_WORK_TARGET_SECONDS)
+    return {
+      variant: 'yellow',
+      label: '8 საათზე ნაკლები',
+    } as const
+  // The counter includes elapsed attendance; the break is an allowance, not a recorded deduction.
+  if (seconds <= DAILY_WORK_TARGET_SECONDS + DAILY_BREAK_ALLOWANCE_SECONDS)
+    return {
+      variant: 'green',
+      label: '8 საათი შესრულებულია',
+    } as const
+  return {
+    variant: 'orange',
+    label: '9 საათზე მეტი',
+  } as const
+}
 
 export function attendanceStatus(overview: AttendanceOverview): {
   label: string
   variant: 'green' | 'red' | 'yellow' | 'orange' | 'secondary'
 } {
   if (overview.openSession) {
-    return overview.openSession.workDate !== overview.workday.date
-      ? { label: 'გამოტოვებული გასვლა', variant: 'red' }
-      : { label: 'მუშაობთ', variant: 'green' }
+    return needsSessionReview(
+      overview.openSession.startedAt,
+      overview.serverNow,
+      overview.openSession.maxOpenHours,
+    )
+      ? { label: 'ხანგრძლივი ჩანაწერი გადასამოწმებელია', variant: 'red' }
+      : overview.openSession.workDate !== overview.workday.date
+        ? { label: 'წინა დღეს დაწყებული', variant: 'secondary' }
+        : { label: 'მუშაობთ', variant: 'green' }
   }
   if (overview.today) {
     return {
