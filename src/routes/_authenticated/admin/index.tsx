@@ -6,7 +6,7 @@ import { requirePagePermission } from '#/lib/auth/auth.functions'
 export const Route = createFileRoute('/_authenticated/admin/')({
   beforeLoad: async () => {
     await requirePagePermission({ data: { permission: 'admin.access' } })
-    throw redirect({ to: '/admin/dashboard', replace: true })
+    throw redirect({ to: '/admin/users', replace: true })
   },
   head: () =>
     pageHead(

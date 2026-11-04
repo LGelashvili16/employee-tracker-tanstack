@@ -64,7 +64,12 @@ export function AppSidebar({
     },
     {
       label: 'ადმინისტრირება',
-      items: navigationItems.filter((item) => item.to.startsWith('/admin')),
+      // Surface working admin workflows as they ship; keep unfinished routes out of navigation.
+      items: navigationItems.filter(
+        (item) =>
+          item.to === '/admin/users' ||
+          item.to === '/admin/settings/attendance',
+      ),
     },
   ].filter((group) =>
     isAdministration
@@ -79,7 +84,7 @@ export function AppSidebar({
             <SidebarMenuButton
               render={
                 <Link
-                  to={isAdministration ? '/admin/dashboard' : '/dashboard'}
+                  to={isAdministration ? '/admin/users' : '/dashboard'}
                   onClick={() => setOpenMobile(false)}
                 />
               }
@@ -175,7 +180,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   render={
                     <Link
-                      to={isAdministration ? '/dashboard' : '/admin/dashboard'}
+                      to={isAdministration ? '/dashboard' : '/admin/users'}
                       onClick={() => setOpenMobile(false)}
                     />
                   }

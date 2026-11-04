@@ -23,6 +23,7 @@ export const attendanceContent = {
   },
   attendanceSettings: {
     title: 'დასწრების წესები',
-    description: 'სამუშაო დროის, შესვენებებისა და შესწორებების წესები.',
+    description:
+      'კომპანიის სამუშაო განრიგი და შესვლისა და გასვლის შეხსენებები.',
   },
 } as const

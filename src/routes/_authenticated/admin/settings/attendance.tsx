@@ -14,5 +14,10 @@ export const Route = createFileRoute(
       attendanceContent.attendanceSettings.title,
       attendanceContent.attendanceSettings.description,
     ),
-  component: AttendanceSettingsPage,
+  component: AttendanceSettingsRoute,
 })
+
+function AttendanceSettingsRoute() {
+  const { actor } = Route.useRouteContext()
+  return <AttendanceSettingsPage key={actor.id} actorId={actor.id} />
+}

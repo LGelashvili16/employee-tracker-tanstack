@@ -80,7 +80,7 @@ describe('workspace navigation', () => {
     )
     expect(
       screen.getByRole('link', { name: 'ადმინისტრირება' }),
-    ).toHaveAttribute('href', '/admin/dashboard')
+    ).toHaveAttribute('href', '/admin/users')
     expect(
       screen.queryByRole('link', { name: 'მომხმარებლები' }),
     ).not.toBeInTheDocument()
@@ -100,7 +100,7 @@ describe('workspace navigation', () => {
     ).toHaveAttribute('href', '/dashboard')
     expect(
       screen.getByRole('link', { name: 'ადმინისტრირება' }),
-    ).toHaveAttribute('href', '/admin/dashboard')
+    ).toHaveAttribute('href', '/admin/users')
     expect(
       screen.getByRole('link', { name: 'საათების განხილვა' }),
     ).toBeInTheDocument()
@@ -188,8 +188,18 @@ describe('workspace navigation', () => {
         screen.getByRole('link', { name: 'მომხმარებლები' }),
       ).toHaveAttribute('href', '/admin/users')
       expect(
-        screen.getByRole('link', { name: 'ადმინისტრირების მიმოხილვა' }),
-      ).toHaveAttribute('href', '/admin/dashboard')
+        screen.getByRole('link', { name: 'დასწრების წესები' }),
+      ).toHaveAttribute('href', '/admin/settings/attendance')
+      for (const name of [
+        'ადმინისტრირების მიმოხილვა',
+        'მოწვევები',
+        'როლები და უფლებები',
+        'კომპანიის პარამეტრები',
+        'ინტეგრაციები',
+        'მოქმედებების ჟურნალი',
+      ]) {
+        expect(screen.queryByRole('link', { name })).not.toBeInTheDocument()
+      }
       expect(
         screen.getByRole('link', { name: 'სამუშაო სივრცეში დაბრუნება' }),
       ).toHaveAttribute('href', '/dashboard')
