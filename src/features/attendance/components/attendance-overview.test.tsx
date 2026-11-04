@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AttendanceOverview } from './attendance-overview'
 import { ClockTimer } from './attendance-clock'
 import { FinishWorkConfirmation } from './finish-work-confirmation'
+import { DailyGoalWidget } from './daily-goal-widget'
 import { ModalProvider } from '#/providers/modal-provider'
 import {
   attendanceStatus,
@@ -112,6 +113,83 @@ afterEach(() => {
 })
 
 describe('persisted attendance dashboard', () => {
+  it('advances the daily goal with the live session and completes only at eight recorded hours', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] })
+    const state = working()
+    if (!state.today) throw new Error('Missing working fixture')
+    state.today.seconds = 8 * 3600 - 1
+    render(<DailyGoalWidget overview={state} />)
+    const progress = screen.getByRole('progressbar', {
+      name: 'დღის მიზნის შესრულება',
+    })
+    expect(progress).toHaveAttribute('aria-valuenow', '99')
+    expect(screen.getByText('00:01')).toBeVisible()
+    expect(screen.queryByText('მიზანი მიღწეულია')).not.toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(1000))
+    expect(progress).toHaveAttribute('aria-valuenow', '100')
+    expect(screen.getByText('00:00')).toBeVisible()
+    expect(screen.getByText('მიზანი მიღწეულია')).toBeVisible()
+  })
+  it("keeps yesterday's open session out of today's progress", () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] })
+    const state = working()
+    state.workday.date = '2026-11-05'
+    state.today = null
+    render(<DailyGoalWidget overview={state} />)
+    act(() => vi.advanceTimersByTime(60000))
+    expect(
+      screen.getByRole('progressbar', { name: 'დღის მიზნის შესრულება' }),
+    ).toHaveAttribute('aria-valuenow', '0')
+    expect(screen.getByText('08:00')).toBeVisible()
+  })
+  it('caps completed daily progress without negative remaining time', () => {
+    const state = working()
+    if (!state.today) throw new Error('Missing working fixture')
+    state.today.seconds = 10 * 3600
+    state.openSession = null
+    render(<DailyGoalWidget overview={state} />)
+    expect(
+      screen.getByRole('progressbar', { name: 'დღის მიზნის შესრულება' }),
+    ).toHaveAttribute('aria-valuenow', '100')
+    expect(screen.getByText('00:00')).toBeVisible()
+  })
+  it.each(['day_off', 'unconfigured'] as const)(
+    'does not invent a daily work target for %s',
+    (kind) => {
+      const state = overview()
+      state.workday.kind = kind
+      render(<DailyGoalWidget overview={state} />)
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+      expect(
+        screen.getByText(
+          kind === 'day_off'
+            ? 'დღეს დასვენების დღეა.'
+            : 'მიზნის საჩვენებლად საჭიროა სამუშაო განრიგი.',
+        ),
+      ).toBeVisible()
+    },
+  )
+  it('adds the Georgian current-day widget only to the compact dashboard layout', async () => {
+    calls.read.mockResolvedValue({ ok: true, value: overview() })
+    const view = (dashboardLayout: boolean) => (
+      <ModalProvider>
+        <AttendanceOverview
+          actorId="employee"
+          dashboardLayout={dashboardLayout}
+        />
+      </ModalProvider>
+    )
+    const { rerender } = render(view(false))
+    await screen.findByRole('button', { name: 'სამუშაოს დაწყება' })
+    expect(screen.queryByText('დღევანდელი თარიღი')).not.toBeInTheDocument()
+    rerender(view(true))
+    expect(screen.getByText('დღევანდელი თარიღი')).toBeVisible()
+    expect(screen.getByRole('grid', { name: 'ნოემბერი 2026' })).toBeVisible()
+    expect(
+      screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
+    ).toHaveTextContent('00:00:00')
+    expect(calls.read).toHaveBeenCalledOnce()
+  })
   it.each([true, false])(
     'hides internal pending-review status on employee screens while running=%s',
     async (running) => {

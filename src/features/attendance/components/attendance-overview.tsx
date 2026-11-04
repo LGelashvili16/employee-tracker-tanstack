@@ -14,29 +14,79 @@ import { attendanceOptions } from '../attendance.queries'
 import { AttendanceClock } from './attendance-clock'
 import { AttendanceDayWidgets } from './attendance-day-widgets'
 import { RecentAttendance } from './recent-attendance'
+import { CurrentDayWidget } from './current-day-widget'
+import { DailyGoalWidget } from './daily-goal-widget'
+import { cn } from '#/lib/utils'
 
-export function AttendanceOverview({ actorId }: { actorId: string }) {
+export function AttendanceOverview({
+  actorId,
+  dashboardLayout = false,
+}: {
+  actorId: string
+  dashboardLayout?: boolean
+}) {
   // Keep this employee cache scoped to the mounted private page, including across account changes.
   const [client] = useState(() => new QueryClient())
   return (
     <QueryClientProvider client={client}>
-      <OverviewContent actorId={actorId} />
+      <OverviewContent actorId={actorId} dashboardLayout={dashboardLayout} />
     </QueryClientProvider>
   )
 }
 
-function OverviewContent({ actorId }: { actorId: string }) {
+function OverviewContent({
+  actorId,
+  dashboardLayout,
+}: {
+  actorId: string
+  dashboardLayout: boolean
+}) {
   const query = useQuery(attendanceOptions(actorId))
   const reducedMotion = useReducedMotion()
   if (query.isPending)
     return (
       <div role="status" aria-busy="true" aria-label="დასწრება იტვირთება">
         <div aria-hidden="true" className="flex flex-col gap-4">
-          <div className="grid gap-4 xl:grid-cols-3">
-            <Skeleton className="h-96 rounded-2xl xl:col-span-2 xl:h-full" />
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              <Skeleton className="h-56 rounded-2xl" />
-              <Skeleton className="h-60 rounded-2xl" />
+          <div
+            className={cn(
+              'grid gap-4',
+              dashboardLayout ? 'xl:grid-cols-2' : 'xl:grid-cols-3',
+            )}
+          >
+            <Skeleton
+              className={cn(
+                'h-96 rounded-2xl xl:h-full',
+                !dashboardLayout && 'xl:col-span-2',
+              )}
+            />
+            <div className="@container min-w-0">
+              <div
+                className={cn(
+                  'grid gap-4',
+                  dashboardLayout
+                    ? '@md:grid-cols-2'
+                    : 'sm:grid-cols-2 xl:grid-cols-1',
+                )}
+              >
+                {dashboardLayout ? (
+                  <Skeleton className="h-56 rounded-2xl" />
+                ) : null}
+                <Skeleton
+                  className={cn(
+                    'rounded-2xl',
+                    dashboardLayout ? 'h-48' : 'h-56',
+                  )}
+                />
+                {dashboardLayout ? (
+                  <Skeleton className="h-48 rounded-2xl" />
+                ) : null}
+                <Skeleton
+                  className={cn(
+                    'rounded-2xl',
+                    dashboardLayout ? 'h-48' : 'h-60',
+                  )}
+                />
+              </div>
             </div>
           </div>
           <Skeleton className="h-52 rounded-2xl" />
@@ -81,11 +131,43 @@ function OverviewContent({ actorId }: { actorId: string }) {
         transition={{ duration: reducedMotion ? 0 : 0.2 }}
         className="flex flex-col gap-4"
       >
-        <div className="grid gap-4 xl:grid-cols-3">
-          <div className="min-w-0 xl:col-span-2">
-            <AttendanceClock overview={result.value} actorId={actorId} />
+        <div
+          className={cn(
+            'grid gap-4',
+            dashboardLayout ? 'xl:grid-cols-2' : 'xl:grid-cols-3',
+          )}
+        >
+          <div className={cn('min-w-0', !dashboardLayout && 'xl:col-span-2')}>
+            <AttendanceClock
+              overview={result.value}
+              actorId={actorId}
+              compact={dashboardLayout}
+            />
           </div>
-          <AttendanceDayWidgets overview={result.value} />
+          <div className="@container min-w-0">
+            <div
+              className={cn(
+                dashboardLayout ? 'grid gap-4 @md:grid-cols-2' : 'contents',
+              )}
+            >
+              {dashboardLayout ? (
+                <CurrentDayWidget
+                  date={result.value.workday.date}
+                  timezone={result.value.workday.timezone}
+                />
+              ) : null}
+              <AttendanceDayWidgets
+                overview={result.value}
+                compact={dashboardLayout}
+              />
+              {dashboardLayout ? (
+                <DailyGoalWidget
+                  key={result.value.serverNow}
+                  overview={result.value}
+                />
+              ) : null}
+            </div>
+          </div>
         </div>
         <RecentAttendance overview={result.value} />
       </motion.div>

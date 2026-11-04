@@ -22,15 +22,19 @@ import {
   attendanceStatus,
   workDurationStatus,
 } from '../attendance.presentation'
+import { cn } from '#/lib/utils'
+import { AttendanceClockPattern } from './attendance-clock-pattern'
 
 const digitFormat = { minimumIntegerDigits: 2, maximumFractionDigits: 0 }
 
 export function AttendanceClock({
   overview,
   actorId,
+  compact = false,
 }: {
   overview: AttendanceOverview
   actorId: string
+  compact?: boolean
 }) {
   const action = useAttendanceActions(actorId, overview)
   const { openModal } = useModal()
@@ -54,7 +58,12 @@ export function AttendanceClock({
     : (overview.today?.seconds ?? 0)
 
   return (
-    <Card className="h-full rounded-2xl shadow-sm [--card-spacing:--spacing(5)] sm:[--card-spacing:--spacing(6)]">
+    <Card
+      className={cn(
+        'h-full rounded-2xl shadow-sm [--card-spacing:--spacing(5)]',
+        !compact && 'sm:[--card-spacing:--spacing(6)]',
+      )}
+    >
       <CardHeader className="flex flex-wrap items-center justify-between gap-3">
         <CardTitle className="flex items-center gap-2">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
@@ -66,13 +75,22 @@ export function AttendanceClock({
         </CardTitle>
         <Badge variant={status.variant}>{status.label}</Badge>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-6">
-        <div className="flex flex-1 items-center justify-center rounded-xl border border-border/60 bg-muted/30 px-3 py-7 sm:py-10">
+      <CardContent
+        className={cn('flex flex-1 flex-col', compact ? 'gap-4' : 'gap-6')}
+      >
+        <div
+          className={cn(
+            '@container/clock relative flex flex-1 items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-muted/30 px-3',
+            compact ? 'min-h-48 py-5 sm:py-6' : 'py-7 sm:py-10',
+          )}
+        >
+          {compact ? <AttendanceClockPattern /> : null}
           <ClockTimer
             key={`${overview.serverNow}:${open?.id ?? 'stopped'}`}
             seconds={initialSeconds}
             running={open !== null}
             onStart={recordClockStart}
+            compact={compact}
           />
         </div>
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -156,10 +174,12 @@ export function ClockTimer({
   seconds,
   running,
   onStart,
+  compact = false,
 }: {
   seconds: number
   running: boolean
   onStart?: (startedAt: number) => void
+  compact?: boolean
 }) {
   const total = seconds + useElapsedSeconds(running, undefined, onStart)
   const durationStatus = workDurationStatus(total)
@@ -170,7 +190,10 @@ export function ClockTimer({
   ]
   return (
     <div
-      className="flex flex-col items-center gap-2"
+      className={cn(
+        'relative flex flex-col items-center',
+        compact ? 'gap-3 @lg/clock:gap-4' : 'gap-2',
+      )}
       role="timer"
       aria-live="off"
       aria-label="ნამუშევარი დრო"
@@ -180,7 +203,12 @@ export function ClockTimer({
         {values.map((value, index) => (
           <div key={index} className="flex items-start gap-3 sm:gap-5">
             {index > 0 ? (
-              <span className="pt-1 text-4xl text-muted-foreground sm:text-6xl">
+              <span
+                className={cn(
+                  'pt-1 text-4xl text-muted-foreground',
+                  compact ? 'sm:text-6xl @lg/clock:text-7xl' : 'sm:text-6xl',
+                )}
+              >
                 :
               </span>
             ) : null}
@@ -189,8 +217,14 @@ export function ClockTimer({
                 value={value}
                 label={['საათი', 'წუთი', 'წამი'][index]}
                 formatOptions={digitFormat}
-                valueClassName="text-4xl font-semibold tracking-tight sm:text-6xl"
-                labelClassName="text-xs text-muted-foreground"
+                valueClassName={cn(
+                  'text-4xl font-semibold tracking-tight',
+                  compact ? 'sm:text-6xl @lg/clock:text-7xl' : 'sm:text-6xl',
+                )}
+                labelClassName={cn(
+                  'text-xs text-muted-foreground',
+                  compact && '@lg/clock:text-sm',
+                )}
               />
             </div>
           </div>

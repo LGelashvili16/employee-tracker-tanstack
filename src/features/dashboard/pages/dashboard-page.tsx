@@ -7,7 +7,7 @@ export function DashboardPage({ actorId }: { actorId: string }) {
       <h1 className="text-2xl font-semibold tracking-tight">
         {dashboardContent.dashboard.title}
       </h1>
-      <AttendanceOverview key={actorId} actorId={actorId} />
+      <AttendanceOverview key={actorId} actorId={actorId} dashboardLayout />
     </section>
   )
 }
