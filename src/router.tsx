@@ -5,6 +5,7 @@ export function getRouter() {
   const router = createTanStackRouter({
     routeTree,
     scrollRestoration: true,
+    scrollToTopSelectors: ['#main-content'],
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
   })

@@ -26,7 +26,10 @@ export function DailyGoalWidget({
     Math.max(0, Math.floor((total / DAILY_WORK_TARGET_SECONDS) * 100)),
   )
   return (
-    <Card className="h-full rounded-2xl bg-gradient-to-br from-badge-green/10 via-card to-card shadow-sm [--card-spacing:--spacing(4)]">
+    <Card
+      size="sm"
+      className="h-full rounded-2xl bg-gradient-to-br from-badge-green/10 via-card to-card shadow-sm"
+    >
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-badge-green text-badge-green-foreground">
@@ -102,7 +105,7 @@ export function DailyGoalWidget({
                 მიზანი მიღწეულია
               </p>
             ) : null}
-            <div className="mt-auto flex flex-col gap-2 border-t border-badge-green-foreground/10 pt-3">
+            <div className="mt-auto flex flex-col gap-1 border-t border-badge-green-foreground/10 pt-2">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs text-muted-foreground">
                   დღეს აღრიცხულია

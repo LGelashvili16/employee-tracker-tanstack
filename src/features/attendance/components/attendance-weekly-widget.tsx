@@ -41,11 +41,10 @@ export function AttendanceWeeklyWidget({
   const late = overview.week.lateSeconds > 0
   return (
     <Card
+      size={compact ? 'sm' : 'default'}
       className={cn(
-        'h-full rounded-2xl bg-gradient-to-br from-primary/5 via-card to-card shadow-sm',
-        compact
-          ? '[--card-spacing:--spacing(4)]'
-          : '[--card-spacing:--spacing(5)]',
+        '@container/weekly h-full rounded-2xl bg-gradient-to-br from-primary/5 via-card to-card shadow-sm',
+        !compact && '[--card-spacing:--spacing(5)]',
       )}
     >
       <CardHeader>
@@ -58,7 +57,13 @@ export function AttendanceWeeklyWidget({
           ამ კვირაში
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4">
+      <CardContent
+        className={cn(
+          compact
+            ? 'grid flex-1 content-between gap-3 @min-[20rem]/weekly:grid-cols-2 @min-[20rem]/weekly:items-center'
+            : 'flex flex-1 flex-col gap-4',
+        )}
+      >
         <div className="flex flex-col">
           <ChartStatFlow
             value={Math.floor(seconds / 60) / 60}
@@ -125,7 +130,12 @@ export function AttendanceWeeklyWidget({
             </ol>
           </figure>
         ) : null}
-        <dl className="mt-auto grid grid-cols-2 gap-3">
+        <dl
+          className={cn(
+            'grid grid-cols-2 gap-3',
+            compact ? '@min-[20rem]/weekly:col-span-2' : 'mt-auto',
+          )}
+        >
           <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-border/60 bg-card/40 p-3">
             <dt className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
               <IconCalendarCheck

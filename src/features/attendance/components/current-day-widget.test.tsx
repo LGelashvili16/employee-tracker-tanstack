@@ -12,7 +12,7 @@ describe('company-local current day widget', () => {
         screen.getByLabelText('ხუთშაბათი, 5 ნოემბერი 2026'),
       ).toHaveAttribute('datetime', '2026-11-05')
       expect(screen.getByText('ხუთშაბათი')).toBeVisible()
-      expect(screen.getByText(timezone)).toBeVisible()
+      expect(screen.queryByText(timezone)).not.toBeInTheDocument()
       const calendar = screen.getByRole('grid', { name: 'ნოემბერი 2026' })
       expect(
         within(calendar).getByRole('gridcell', {

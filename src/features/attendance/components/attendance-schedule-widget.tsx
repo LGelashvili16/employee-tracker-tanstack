@@ -18,10 +18,11 @@ export function AttendanceScheduleWidget({
 }) {
   return (
     <Card
+      size={compact ? 'sm' : 'default'}
       className={cn(
-        'rounded-2xl shadow-sm',
+        'h-full rounded-2xl shadow-sm',
         compact
-          ? 'bg-gradient-to-br from-muted/50 via-card to-card [--card-spacing:--spacing(4)]'
+          ? 'bg-gradient-to-br from-muted/50 via-card to-card'
           : '[--card-spacing:--spacing(5)]',
       )}
     >
@@ -36,14 +37,14 @@ export function AttendanceScheduleWidget({
         </CardTitle>
       </CardHeader>
       <CardContent
-        className={cn('flex flex-1 flex-col', compact ? 'gap-4' : 'gap-5')}
+        className={cn('flex flex-1 flex-col', compact ? 'gap-3' : 'gap-5')}
       >
         {workday.kind === 'scheduled' ? (
           <div
             className={cn(
               'rounded-xl',
               compact
-                ? 'bg-muted/40 p-4'
+                ? 'bg-muted/40 p-3'
                 : 'border border-border/60 bg-muted/30 p-4',
             )}
           >
@@ -80,13 +81,13 @@ export function AttendanceScheduleWidget({
         workday.endsAt ? (
           <>
             <dl className="grid grid-cols-2 gap-3">
-              <div className="flex min-w-0 flex-col gap-1 rounded-xl border border-border/60 bg-card/40 p-3">
+              <div className="flex min-w-0 flex-col gap-1 rounded-xl border border-border/60 bg-card/40 p-2">
                 <dt className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
                   <IconClock
                     className="mt-0.5 size-4 shrink-0"
                     aria-hidden="true"
                   />
-                  <span>ცვლის ხანგრძლივობა</span>
+                  <span>მუშაობის ხანგრძლივობა</span>
                 </dt>
                 <dd className="pl-6 text-lg font-semibold tabular-nums">
                   {formatAttendanceDuration(
@@ -94,13 +95,13 @@ export function AttendanceScheduleWidget({
                   )}
                 </dd>
               </div>
-              <div className="flex min-w-0 flex-col gap-1 rounded-xl border border-badge-orange-foreground/10 bg-badge-orange/20 p-3">
+              <div className="flex min-w-0 flex-col gap-1 rounded-xl border border-badge-orange-foreground/10 bg-badge-orange/20 p-2">
                 <dt className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
                   <IconCoffee
                     className="mt-0.5 size-4 shrink-0 text-badge-orange-foreground"
                     aria-hidden="true"
                   />
-                  <span>შესვენების ნორმა</span>
+                  <span>შესვენების დრო</span>
                 </dt>
                 <dd className="pl-6 text-lg font-semibold tabular-nums">
                   {formatAttendanceDuration(DAILY_BREAK_ALLOWANCE_SECONDS)}

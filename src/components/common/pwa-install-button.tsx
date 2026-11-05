@@ -47,7 +47,7 @@ export function PwaInstallButton() {
         <Button
           variant="outline"
           depth="raised"
-          className="h-10 min-w-10 sm:h-8"
+          className="fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 h-10 min-w-10 shadow-lg"
           onClick={() => void install()}
           disabled={pending}
           aria-busy={pending}

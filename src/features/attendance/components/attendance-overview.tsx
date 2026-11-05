@@ -18,6 +18,13 @@ import { CurrentDayWidget } from './current-day-widget'
 import { DailyGoalWidget } from './daily-goal-widget'
 import { cn } from '#/lib/utils'
 import { TimeGreeting } from '#/components/common/time-greeting'
+import { AttendanceScheduleWidget } from './attendance-schedule-widget'
+import { AttendanceWeeklyWidget } from './attendance-weekly-widget'
+
+// Share row heights across the compact widgets, with the clock spanning both rows.
+const dashboardGrid = 'sm:grid-cols-2 xl:auto-rows-fr xl:grid-cols-4'
+const dashboardClock = 'sm:col-span-2 xl:row-span-2'
+const dashboardSummary = 'min-w-0'
 
 export function AttendanceOverview({
   actorId,
@@ -74,44 +81,32 @@ function OverviewContent({
           <div
             className={cn(
               'grid gap-4',
-              dashboardLayout ? 'xl:grid-cols-2' : 'xl:grid-cols-3',
+              dashboardLayout ? dashboardGrid : 'xl:grid-cols-3',
             )}
           >
             <Skeleton
               className={cn(
                 'h-96 rounded-2xl xl:h-full',
-                !dashboardLayout && 'xl:col-span-2',
+                dashboardLayout ? dashboardClock : 'xl:col-span-2',
               )}
             />
-            <div className="@container min-w-0">
-              <div
-                className={cn(
-                  'grid gap-4',
-                  dashboardLayout
-                    ? '@md:grid-cols-2'
-                    : 'sm:grid-cols-2 xl:grid-cols-1',
-                )}
-              >
-                {dashboardLayout ? (
-                  <Skeleton className="h-56 rounded-2xl" />
-                ) : null}
+            {dashboardLayout ? (
+              <>
+                <Skeleton className="h-64 rounded-2xl" />
+                <Skeleton className="h-64 rounded-2xl" />
                 <Skeleton
-                  className={cn(
-                    'rounded-2xl',
-                    dashboardLayout ? 'h-48' : 'h-56',
-                  )}
+                  className={cn('h-64 rounded-2xl', dashboardSummary)}
                 />
-                {dashboardLayout ? (
-                  <Skeleton className="h-48 rounded-2xl" />
-                ) : null}
                 <Skeleton
-                  className={cn(
-                    'rounded-2xl',
-                    dashboardLayout ? 'h-48' : 'h-60',
-                  )}
+                  className={cn('h-64 rounded-2xl', dashboardSummary)}
                 />
+              </>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                <Skeleton className="h-56 rounded-2xl" />
+                <Skeleton className="h-60 rounded-2xl" />
               </div>
-            </div>
+            )}
           </div>
           <Skeleton className="h-52 rounded-2xl" />
         </div>
@@ -160,40 +155,54 @@ function OverviewContent({
         <div
           className={cn(
             'grid gap-4',
-            dashboardLayout ? 'xl:grid-cols-2' : 'xl:grid-cols-3',
+            dashboardLayout ? dashboardGrid : 'xl:grid-cols-3',
           )}
         >
-          <div className={cn('min-w-0', !dashboardLayout && 'xl:col-span-2')}>
+          <div
+            className={cn(
+              'min-w-0',
+              dashboardLayout ? dashboardClock : 'xl:col-span-2',
+            )}
+          >
             <AttendanceClock
               overview={result.value}
               actorId={actorId}
               compact={dashboardLayout}
             />
           </div>
-          <div className="@container min-w-0">
-            <div
-              className={cn(
-                dashboardLayout ? 'grid gap-4 @md:grid-cols-2' : 'contents',
-              )}
-            >
-              {dashboardLayout ? (
+          {dashboardLayout ? (
+            <>
+              <div className="min-w-0">
                 <CurrentDayWidget
                   date={result.value.workday.date}
                   timezone={result.value.workday.timezone}
                 />
-              ) : null}
-              <AttendanceDayWidgets
-                overview={result.value}
-                compact={dashboardLayout}
-              />
-              {dashboardLayout ? (
+              </div>
+              <div className="min-w-0">
+                <AttendanceScheduleWidget
+                  workday={result.value.workday}
+                  compact
+                />
+              </div>
+              <div className={dashboardSummary}>
+                <AttendanceWeeklyWidget
+                  key={result.value.serverNow}
+                  overview={result.value}
+                  compact
+                />
+              </div>
+              <div className={dashboardSummary}>
                 <DailyGoalWidget
                   key={result.value.serverNow}
                   overview={result.value}
                 />
-              ) : null}
+              </div>
+            </>
+          ) : (
+            <div className="min-w-0">
+              <AttendanceDayWidgets overview={result.value} />
             </div>
-          </div>
+          )}
         </div>
         <RecentAttendance overview={result.value} />
       </motion.div>

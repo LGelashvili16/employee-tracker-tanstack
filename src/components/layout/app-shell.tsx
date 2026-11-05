@@ -48,8 +48,11 @@ export function AppShell({ actor }: { actor: Actor }) {
     }
   }
   return (
-    <SidebarProvider>
-      <a className="sr-only focus:not-sr-only" href="#main-content">
+    <SidebarProvider className="h-dvh min-h-0 overflow-hidden">
+      <a
+        className="sr-only focus:absolute focus:top-3 focus:left-3 focus:z-30 focus:not-sr-only focus:rounded-md focus:bg-background focus:p-3"
+        href="#main-content"
+      >
         მთავარ შიგთავსზე გადასვლა
       </a>
       <AppSidebar
@@ -63,8 +66,8 @@ export function AppShell({ actor }: { actor: Actor }) {
           />
         }
       />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+      <SidebarInset className="m-2 min-h-0 min-w-0 overflow-hidden rounded-xl">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
           <SidebarTrigger aria-label="მენიუს გახსნა ან დახურვა" />
           <Separator
             orientation="vertical"
@@ -94,18 +97,19 @@ export function AppShell({ actor }: { actor: Actor }) {
             >
               <IconBell aria-hidden="true" />
             </Button>
-            <PwaInstallButton />
             <ThemeToggle />
           </div>
         </header>
         <div
           id="main-content"
+          data-scroll-restoration-id="app-content"
           tabIndex={-1}
-          className="flex flex-1 flex-col gap-4 p-4 md:p-8"
+          className="app-scrollbar flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain p-4 md:p-8"
         >
           <Outlet />
         </div>
       </SidebarInset>
+      <PwaInstallButton />
     </SidebarProvider>
   )
 }
