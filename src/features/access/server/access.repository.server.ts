@@ -1,5 +1,5 @@
 import '@tanstack/react-start/server-only'
-import { and, asc, count, eq, gt, sql } from 'drizzle-orm'
+import { and, asc, count, eq, gt, ne, sql } from 'drizzle-orm'
 import { db } from '#/db'
 import {
   account,
@@ -184,4 +184,65 @@ export async function auditAccess(
   values: typeof accessAudit.$inferInsert,
 ) {
   await tx.insert(accessAudit).values(values)
+}
+export async function emailInUse(
+  tx: AccessTransaction,
+  email: string,
+  exceptUserId: string,
+) {
+  const rows = await tx
+    .select({ id: user.id })
+    .from(user)
+    .where(and(eq(user.email, email), ne(user.id, exceptUserId)))
+    .limit(1)
+  return rows.length > 0
+}
+export async function updateEmployeeDetails(
+  tx: AccessTransaction,
+  userId: string,
+  values: {
+    name: string
+    contactEmail: string
+    jobTitle: string
+    phone: string
+    /** Set only when the account's login email must follow the contact email. */
+    loginEmail: string | null
+  },
+) {
+  await tx
+    .update(employee)
+    .set({
+      fullName: values.name,
+      contactEmail: values.contactEmail || null,
+      jobTitle: values.jobTitle || null,
+      phone: values.phone || null,
+    })
+    .where(eq(employee.userId, userId))
+  await tx
+    .update(user)
+    .set({
+      name: values.name,
+      ...(values.loginEmail ? { email: values.loginEmail } : {}),
+    })
+    .where(eq(user.id, userId))
+}
+export async function readOwnProfile(userId: string) {
+  return db
+    .select({
+      code: employee.code,
+      jobTitle: employee.jobTitle,
+      phone: employee.phone,
+    })
+    .from(employee)
+    .where(eq(employee.userId, userId))
+    .then((rows) => rows.at(0) ?? null)
+}
+/** Conditional on active employment so a concurrent termination cannot be overwritten. */
+export async function updateOwnPhone(userId: string, phone: string | null) {
+  const updated = await db
+    .update(employee)
+    .set({ phone })
+    .where(and(eq(employee.userId, userId), eq(employee.status, 'active')))
+    .returning({ id: employee.id })
+  return updated.length === 1
 }

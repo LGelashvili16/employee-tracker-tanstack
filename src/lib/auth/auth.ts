@@ -7,6 +7,10 @@ import { APIError } from 'better-auth/api'
 import { accountUserFields, employeeUsername } from './account-options.server'
 import { employeeAccessPlugin } from '#/features/access/server/access-auth-plugin.server'
 import { getLoginAccess } from '#/features/access/server/access.service.server'
+import {
+  maxPasswordLength,
+  minPasswordLength,
+} from '#/features/access/access.rules'
 
 export const auth = betterAuth({
   advanced: { disableOriginCheck: false, disableCSRFCheck: false },
@@ -20,8 +24,8 @@ export const auth = betterAuth({
     enabled: true,
     // Only the private administrative provisioning instance can create identities.
     disableSignUp: true,
-    minPasswordLength: 12,
-    maxPasswordLength: 128,
+    minPasswordLength,
+    maxPasswordLength,
     revokeSessionsOnPasswordReset: true,
   },
   // Authorization reads current database grants rather than a cached role snapshot.
@@ -53,6 +57,7 @@ export const auth = betterAuth({
       '/sign-in/email': { window: 60, max: 10 },
       '/employee-activate': { window: 60, max: 5 },
       '/employee-reset': { window: 60, max: 5 },
+      '/change-password': { window: 60, max: 5 },
     },
   },
   plugins: [employeeUsername(), employeeAccessPlugin(), tanstackStartCookies()],

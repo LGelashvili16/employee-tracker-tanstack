@@ -48,7 +48,7 @@ describe('employee account activation', () => {
     submit.mockResolvedValue({ data: { status: true }, error: null })
     const user = userEvent.setup()
     render(<RegisterPage />)
-    await user.type(screen.getByLabelText('ერთჯერადი კოდი'), 'A'.repeat(43))
+    await user.type(screen.getByLabelText('ერთჯერადი კოდი'), 'A'.repeat(12))
     await user.type(
       screen.getByLabelText('ახალი პაროლი'),
       'example-password-123',
@@ -62,7 +62,7 @@ describe('employee account activation', () => {
     )
     expect(submit).toHaveBeenCalledWith('/employee-activate', {
       method: 'POST',
-      body: { code: 'A'.repeat(43), newPassword: 'example-password-123' },
+      body: { code: 'A'.repeat(12), newPassword: 'example-password-123' },
     })
     expect(await screen.findByRole('status')).toHaveTextContent(
       'პაროლი შენახულია',
@@ -79,7 +79,7 @@ describe('employee account activation', () => {
     )
     const user = userEvent.setup()
     render(<RegisterPage />)
-    await user.type(screen.getByLabelText('ერთჯერადი კოდი'), 'A'.repeat(43))
+    await user.type(screen.getByLabelText('ერთჯერადი კოდი'), 'A'.repeat(12))
     await user.type(
       screen.getByLabelText('ახალი პაროლი'),
       'example-password-123',

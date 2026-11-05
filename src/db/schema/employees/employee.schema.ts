@@ -53,7 +53,7 @@ export const accountSetup = pgTable(
     userId: text('user_id')
       .primaryKey()
       .references(() => user.id, { onDelete: 'restrict' }),
-    /** SHA-256 digest of a cryptographically random 256-bit code; the raw code is returned only once. */
+    /** SHA-256 digest of a random 12-character one-time code; the raw code is returned only once. */
     codeHash: text('code_hash').notNull().unique(),
     /** Separates initial activation from resetting an existing password. */
     purpose: text('purpose').notNull(),

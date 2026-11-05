@@ -10,11 +10,11 @@ import {
   DropdownMenuTrigger,
 } from '#/components/ui/dropdown-menu'
 import { parseRoles, roleLabels } from '#/lib/authorization/permissions'
-import { accountActionLabels } from './account-action-dialog'
+import { accountActionContent } from './account-action-content'
+import type { AccountAction } from './account-action-content'
 import type { EmployeeAccountRecord } from '../access.types'
 import type { Actor } from '#/lib/authorization/actor'
 
-type Action = keyof typeof accountActionLabels
 const stateLabels: Record<string, string> = {
   invited: 'გასააქტიურებელი',
   active: 'აქტიური',
@@ -25,13 +25,15 @@ export function EmployeeAccountRow({
   record,
   actor,
   onAction,
+  onEdit,
 }: {
   record: EmployeeAccountRecord
   actor: Actor
-  onAction: (action: Action) => void
+  onAction: (action: AccountAction) => void
+  onEdit: () => void
 }) {
   const targetRoles = parseRoles(record.roles)
-  const actions: Array<Action> =
+  const actions: Array<AccountAction> =
     record.state === 'suspended'
       ? ['restore']
       : record.state === 'invited'
@@ -99,7 +101,7 @@ export function EmployeeAccountRow({
             ? 'დასაქმება შეჩერებულია'
             : (stateLabels[record.state] ?? 'მიუწვდომელი')}
         </Badge>
-        {canManage && permittedActions.length > 0 ? (
+        {canManage ? (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button variant="outline" size="sm" />}
@@ -108,15 +110,21 @@ export function EmployeeAccountRow({
               მოქმედებები
               <IconChevronDown data-icon="inline-end" aria-hidden="true" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent
+              align="end"
+              className="w-auto min-w-(--anchor-width) whitespace-nowrap"
+            >
               <DropdownMenuGroup>
+                <DropdownMenuItem onClick={onEdit}>
+                  მონაცემების რედაქტირება
+                </DropdownMenuItem>
                 {permittedActions.map((action) => (
                   <DropdownMenuItem
                     key={action}
                     variant={action === 'suspend' ? 'destructive' : 'default'}
                     onClick={() => onAction(action)}
                   >
-                    {accountActionLabels[action]}
+                    {accountActionContent[action].label}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuGroup>

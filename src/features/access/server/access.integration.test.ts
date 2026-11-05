@@ -167,6 +167,92 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
     ).rejects.toThrow()
   })
 
+  it('lets an administrator edit details, keeps the login email in step, and audits the reason', async () => {
+    await service.provisionEmployee(owner, {
+      code: 'edit-worker',
+      name: 'რედაქტირების თანამშრომელი',
+      contactEmail: 'edit-worker@example.com',
+      role: 'employee',
+    })
+    await provision('edit-plain')
+    const record = await identity('edit-worker')
+    const edit = (userId: string, overrides: Record<string, string> = {}) =>
+      service.editEmployeeDetails(owner, {
+        userId,
+        name: 'ახალი სახელი',
+        contactEmail: 'moved@example.com',
+        jobTitle: 'მენეჯერი',
+        phone: '+995 555 00 00 00',
+        reason: 'მონაცემების გასწორება',
+        ...overrides,
+      })
+    await edit(record.id)
+    const updated = await identity('edit-worker')
+    expect(updated).toMatchObject({
+      name: 'ახალი სახელი',
+      email: 'moved@example.com',
+    })
+    const [person] = await testDatabase()
+      .select()
+      .from(tables.employee)
+      .where(eq(tables.employee.userId, record.id))
+    expect(person).toMatchObject({
+      fullName: 'ახალი სახელი',
+      contactEmail: 'moved@example.com',
+      jobTitle: 'მენეჯერი',
+      phone: '+995 555 00 00 00',
+    })
+    const [audit] = await testDatabase()
+      .select({ reason: tables.accessAudit.reason })
+      .from(tables.accessAudit)
+      .where(
+        and(
+          eq(tables.accessAudit.targetId, record.id),
+          eq(tables.accessAudit.action, 'account.details_updated'),
+        ),
+      )
+    expect(audit.reason).toBe('მონაცემების გასწორება')
+    await expect(edit(record.id, { contactEmail: '' })).rejects.toThrow(
+      /წაშლა შეუძლებელია/,
+    )
+    const plain = await identity('edit-plain')
+    await expect(
+      edit(plain.id, { contactEmail: 'moved@example.com' }),
+    ).rejects.toThrow(/უკვე უკავია/)
+    await edit(plain.id, { contactEmail: 'plain@example.com' })
+    expect((await identity('edit-plain')).email).toMatch(
+      /@accounts\.teamwork\.invalid$/,
+    )
+    await expect(edit(owner.id)).rejects.toThrow()
+  })
+
+  it('lets an active employee change only their own phone number', async () => {
+    const issued = await provision('phone-worker')
+    await service.completeEmployeeSetup(
+      { code: issued.code, newPassword: password },
+      'activation',
+      hashPassword,
+    )
+    const record = await identity('phone-worker')
+    const worker: Actor = {
+      id: record.id,
+      name: record.name,
+      email: null,
+      emailVerified: false,
+      roles: ['employee'],
+    }
+    await service.updateOwnPhone(worker, { phone: ' +995 599 11 22 33 ' })
+    expect(await service.readOwnProfile(worker)).toMatchObject({
+      code: 'phone-worker',
+      phone: '+995 599 11 22 33',
+    })
+    await service.updateOwnPhone(worker, { phone: '' })
+    expect((await service.readOwnProfile(worker))?.phone).toBeNull()
+    await expect(
+      service.updateOwnPhone(worker, { phone: 'not a phone' }),
+    ).rejects.toThrow()
+  })
+
   it('rejects duplicate employees under concurrent creation without orphan accounts', async () => {
     const before = (
       await testDatabase().select({ count: count() }).from(tables.user)
@@ -248,14 +334,12 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
   })
 
   it('creates an employee and its initial schedule assignment atomically', async () => {
-    await testDatabase()
-      .insert(tables.companySchedule)
-      .values({
-        effectiveFrom: '2026-01-01',
-        timezone: 'Asia/Tbilisi',
-        lateGraceMinutes: 0,
-        earlyDepartureGraceMinutes: 0,
-      })
+    await testDatabase().insert(tables.companySchedule).values({
+      effectiveFrom: '2026-01-01',
+      timezone: 'Asia/Tbilisi',
+      lateGraceMinutes: 0,
+      earlyDepartureGraceMinutes: 0,
+    })
     await testDatabase()
       .insert(tables.companyScheduleDay)
       .values(
@@ -493,7 +577,7 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
     expect(replay.status).toBe(400)
     const attempts = []
     for (let index = 0; index < 6; index++)
-      attempts.push((await auth.handler(request('A'.repeat(43), base))).status)
+      attempts.push((await auth.handler(request('A'.repeat(12), base))).status)
     expect(attempts).toContain(429)
   })
   it('lets a database operator recover the existing owner without provisioning another identity', async () => {

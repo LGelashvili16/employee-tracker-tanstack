@@ -6,10 +6,12 @@ import { AuthorizationError } from '#/lib/authorization/authorization-error'
 import {
   accountActionSchema,
   accountListSchema,
+  employeeDetailsSchema,
   provisionAccountSchema,
 } from './access.schemas'
 import {
   AccountWorkflowError,
+  editEmployeeDetails,
   listEmployeeAccounts,
   manageEmployeeAccount,
   provisionEmployee,
@@ -48,4 +50,10 @@ export const updateEmployeeAccount = createServerFn({ method: 'POST' })
   .validator(accountActionSchema)
   .handler(({ data, context }) =>
     safeAccessAction(() => manageEmployeeAccount(context.actor, data)),
+  )
+export const updateEmployeeDetails = createServerFn({ method: 'POST' })
+  .middleware([administrator])
+  .validator(employeeDetailsSchema)
+  .handler(({ data, context }) =>
+    safeAccessAction(() => editEmployeeDetails(context.actor, data)),
   )

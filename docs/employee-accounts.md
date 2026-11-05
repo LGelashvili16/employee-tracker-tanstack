@@ -18,7 +18,7 @@ database advisory lock so two operators cannot bootstrap separate owners concurr
 
 The command deliberately displays a new activation code once to the operator. Treat
 this output as a credential; do not capture it in shared logs or commit it. Open
-`/auth/register`, enter that code, and choose a password of at least 12 characters.
+`/auth/register`, enter that code, and choose a password of at least 8 characters.
 Then log in with the username and that password. No initial password is shared.
 
 If the original owner code expires or the owner loses access, a database operator
@@ -50,6 +50,12 @@ the employee roster remains the source for identifying people, not email address
 The first activation code expires after 24 hours. It is shown only in the response
 dialog and is not persisted in Query or browser storage. Close the dialog to discard
 the UI copy. Deliver the code privately after verifying the employee's identity.
+
+Codes are 12 characters from a 32-symbol alphabet without look-alikes (no I, O, 0, 1),
+about 60 bits of randomness, displayed as `XXXX-XXXX-XXXX`. Employees may type them in
+lowercase, with or without dashes or spaces. That is ample because a code is single-use,
+stored only as a SHA-256 hash, expires within hours, and the redeem endpoints are
+rate limited. The rules live in `access.rules.ts`.
 
 - An invited employee can receive a replacement activation code.
 - An active employee can receive a password-reset code that expires after 15 minutes.
@@ -87,6 +93,24 @@ New accounts with email use the normalized email as their auth identity as well 
 Better Auth enforces email uniqueness; activation is still required before either sign-in method works.
 Existing accounts retain their current auth email; older contact-only addresses are not silently promoted to login identities.
 Email is not marked verified by provisioning. Email delivery is not configured; recovery still uses administrator-issued codes.
+
+## Editing details after creation
+
+Who may change what:
+
+- **Administrators** (`admin.access` and `users.manage`) edit full name, email, job title and
+  phone from the row menu on `/admin/users` ("მონაცემების რედაქტირება"). A reason is required
+  and audited as `account.details_updated`. The username and role cannot be edited here, and the
+  usual target rules apply (not yourself, owner required for admin/owner accounts).
+- **Employees** edit only their own phone number on `/settings/profile`. The subject is always
+  the signed-in account; no identifier is accepted from the browser.
+- **Email** changes are administrator-only because email is not verified yet. For accounts that
+  sign in with email, the login email follows the contact email, must stay unique, and cannot be
+  removed. For email-less accounts the address is stored as contact information only.
+- **Passwords** are changed by the employee on `/settings/security` (current password required,
+  other devices are signed out, five attempts per minute). A forgotten password goes through
+  `/auth/forgot-password`: the administrator issues a reset code and the employee redeems it on
+  `/auth/reset-password`.
 
 ## Assigned working week
 

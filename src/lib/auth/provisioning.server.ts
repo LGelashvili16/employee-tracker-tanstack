@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import * as schema from '#/db/schema'
+import { syntheticAuthEmailSuffix } from '#/features/access/access.rules'
 import { accountUserFields, employeeUsername } from './account-options.server'
 import type { AccessTransaction } from '#/features/access/server/access.repository.server'
 
@@ -35,7 +36,7 @@ export async function provisionIdentity(
       name,
       email:
         contactEmail ||
-        `employee-${randomBytes(16).toString('hex')}@accounts.teamwork.invalid`,
+        `employee-${randomBytes(16).toString('hex')}${syntheticAuthEmailSuffix}`,
       username: code,
       password: randomBytes(48).toString('base64url'),
     },

@@ -1,5 +1,5 @@
 import '@tanstack/react-start/server-only'
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, randomInt } from 'node:crypto'
 import { sql } from 'drizzle-orm'
 import { user } from '#/db/schema'
 import { assertPermissions } from '#/lib/authorization/access'
@@ -14,9 +14,17 @@ import {
   accountActionSchema,
   accountListSchema,
   completeAccountSchema,
+  employeeDetailsSchema,
+  ownPhoneSchema,
   provisionAccountSchema,
   ownerRecoverySchema,
 } from '../access.schemas'
+import {
+  isSyntheticAuthEmail,
+  setupCodeAlphabet,
+  setupCodeLength,
+  setupCodeLifetimeMinutes,
+} from '../access.rules'
 import * as repository from './access.repository.server'
 import type { Actor } from '#/lib/authorization/actor'
 import type { z } from 'zod'
@@ -28,6 +36,13 @@ const invalidCode = () =>
 export const hashSetupCode = (code: string) =>
   createHash('sha256').update(code).digest('hex')
 export const getLoginAccess = repository.readAccountAccess
+
+// randomInt is unbiased, unlike mapping raw random bytes onto a 32-symbol alphabet by modulo.
+const generateSetupCode = () =>
+  Array.from(
+    { length: setupCodeLength },
+    () => setupCodeAlphabet[randomInt(setupCodeAlphabet.length)],
+  ).join('')
 
 async function currentAdministrator(
   tx: repository.AccessTransaction,
@@ -60,9 +75,9 @@ async function issueChallenge(
   issuer: string | null,
   purpose: 'activation' | 'reset',
 ) {
-  const code = randomBytes(32).toString('base64url')
+  const code = generateSetupCode()
   const expiresAt = new Date(
-    Date.now() + (purpose === 'activation' ? 24 * 60 : 15) * 60_000,
+    Date.now() + setupCodeLifetimeMinutes[purpose] * 60_000,
   )
   await repository.storeChallenge(tx, {
     userId,
@@ -197,6 +212,60 @@ export async function manageEmployeeAccount(
     })
     return challenge
   })
+}
+
+export async function editEmployeeDetails(
+  actor: Actor,
+  untrusted: z.input<typeof employeeDetailsSchema>,
+) {
+  const input = employeeDetailsSchema.parse(untrusted)
+  return repository.transactAccounts(async (tx) => {
+    const administrator = await currentAdministrator(tx, actor)
+    const target = await repository.lockedAccount(tx, input.userId)
+    if (!target?.person)
+      throw new AccountWorkflowError('თანამშრომლის ანგარიში ვერ მოიძებნა.')
+    checkTarget(administrator, input.userId, parseRoles(target.identity.roles))
+    // An email-based account signs in with this address, so it follows the contact email;
+    // contact-only addresses of email-less accounts never become login identities.
+    const usesLoginEmail = !isSyntheticAuthEmail(target.identity.email)
+    if (usesLoginEmail && !input.contactEmail)
+      throw new AccountWorkflowError(
+        'ამ ანგარიშში ელფოსტა შესვლის მონაცემია და მისი წაშლა შეუძლებელია.',
+      )
+    if (
+      input.contactEmail &&
+      (await repository.emailInUse(tx, input.contactEmail, input.userId))
+    )
+      throw new AccountWorkflowError('ეს ელფოსტა სხვა ანგარიშს უკვე უკავია.')
+    await repository.updateEmployeeDetails(tx, input.userId, {
+      name: input.name,
+      contactEmail: input.contactEmail,
+      jobTitle: input.jobTitle,
+      phone: input.phone,
+      loginEmail: usesLoginEmail ? input.contactEmail : null,
+    })
+    await repository.auditAccess(tx, {
+      actorId: administrator.id,
+      targetId: input.userId,
+      action: 'account.details_updated',
+      reason: input.reason,
+    })
+  })
+}
+
+export async function readOwnProfile(actor: Actor) {
+  return repository.readOwnProfile(actor.id)
+}
+
+/** The subject is always the authenticated actor; no employee identifier is accepted from the client. */
+export async function updateOwnPhone(
+  actor: Actor,
+  untrusted: z.input<typeof ownPhoneSchema>,
+) {
+  const { phone } = ownPhoneSchema.parse(untrusted)
+  if (!(await repository.updateOwnPhone(actor.id, phone || null)))
+    throw new AccountWorkflowError('თანამშრომლის პროფილი ვერ მოიძებნა.')
+  return { phone }
 }
 
 /** Called by a Better Auth endpoint; hashing uses its configured password implementation. */

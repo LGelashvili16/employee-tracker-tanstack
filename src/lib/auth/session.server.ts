@@ -7,6 +7,7 @@ import { auth } from './auth'
 import { parseRoles } from '#/lib/authorization/permissions'
 import type { Actor } from '#/lib/authorization/actor'
 import { getLoginAccess } from '#/features/access/server/access.service.server'
+import { isSyntheticAuthEmail } from '#/features/access/access.rules'
 
 export async function readActor(): Promise<Actor | null> {
   setResponseHeader('Cache-Control', 'private, no-store')
@@ -21,7 +22,7 @@ export async function readActor(): Promise<Actor | null> {
   return {
     id: session.user.id,
     name: session.user.name,
-    email: session.user.email.endsWith('@accounts.teamwork.invalid')
+    email: isSyntheticAuthEmail(session.user.email)
       ? access.contactEmail
       : session.user.email,
     emailVerified: session.user.emailVerified,

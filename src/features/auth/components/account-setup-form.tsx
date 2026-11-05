@@ -20,7 +20,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from '#/components/ui/field'
-import { RegistrationPasswordInput } from './registration-password-input'
+import { PasswordInput } from '#/components/common/password-input'
 import { authContent } from '../auth.content'
 
 const setupFields = [
@@ -115,10 +115,11 @@ export function AccountSetupForm({
                             }
                             aria-invalid={invalid}
                             aria-describedby={`${id}-error`}
-                            className="h-10 font-mono"
+                            className="h-10 font-mono uppercase tracking-wider"
+                            placeholder="XXXX-XXXX-XXXX"
                           />
                         ) : (
-                          <RegistrationPasswordInput
+                          <PasswordInput
                             id={id}
                             name={name}
                             label={label}

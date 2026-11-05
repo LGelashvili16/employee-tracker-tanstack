@@ -3,6 +3,11 @@ export interface IssuedAccountCode {
   expiresAt: string
   purpose: 'activation' | 'reset'
 }
+export interface OwnEmployeeProfile {
+  code: string
+  jobTitle: string | null
+  phone: string | null
+}
 export interface EmployeeAccountRecord {
   userId: string
   name: string

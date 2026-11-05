@@ -27,22 +27,24 @@ const employee: EmployeeAccountRecord = {
 
 function renderRow(record: EmployeeAccountRecord, currentActor = actor) {
   const onAction = vi.fn()
+  const onEdit = vi.fn()
   render(
     <ul>
       <EmployeeAccountRow
         record={record}
         actor={currentActor}
         onAction={onAction}
+        onEdit={onEdit}
       />
     </ul>,
   )
-  return onAction
+  return { onAction, onEdit }
 }
 
 describe('employee account actions', () => {
   it('offers activation and suspension for an invited employee', async () => {
     const user = userEvent.setup()
-    const onAction = renderRow(employee)
+    const { onAction } = renderRow(employee)
     expect(screen.getByText('გასააქტიურებელი')).toBeVisible()
     await user.click(
       screen.getByRole('button', { name: 'ანა მაისურაძე: მოქმედებები' }),
@@ -70,19 +72,40 @@ describe('employee account actions', () => {
     },
   )
 
-  it('does not offer restoration when employment is inactive', () => {
+  it('does not offer restoration when employment is inactive', async () => {
+    const user = userEvent.setup()
     renderRow({
       ...employee,
       state: 'suspended',
       employmentStatus: 'terminated',
     })
     expect(screen.getByText('დასაქმება შეჩერებულია')).toBeVisible()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: 'ანა მაისურაძე: მოქმედებები' }),
+    )
+    expect(
+      await screen.findByRole('menuitem', { name: 'მონაცემების რედაქტირება' }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole('menuitem', { name: 'წვდომის აღდგენა' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('opens the details editor', async () => {
+    const user = userEvent.setup()
+    const { onEdit } = renderRow(employee)
+    await user.click(
+      screen.getByRole('button', { name: 'ანა მაისურაძე: მოქმედებები' }),
+    )
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'მონაცემების რედაქტირება' }),
+    )
+    expect(onEdit).toHaveBeenCalledOnce()
   })
 
   it('lets an owner open the restoration action for another privileged account', async () => {
     const user = userEvent.setup()
-    const onAction = renderRow(
+    const { onAction } = renderRow(
       { ...employee, roles: 'admin', state: 'suspended' },
       { ...actor, roles: ['owner'] },
     )

@@ -78,7 +78,7 @@ describe('administrative account provisioning', () => {
     const user = userEvent.setup()
     const onCode = vi.fn()
     const secret = {
-      code: 'A'.repeat(43),
+      code: 'A'.repeat(12),
       expiresAt: '2026-11-05T00:00:00Z',
       purpose: 'activation',
     }

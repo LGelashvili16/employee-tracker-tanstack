@@ -22,11 +22,12 @@ import { ProvisionAccountForm } from './provision-account-form'
 import { AccountCodeDialog } from './account-code-dialog'
 import { EmployeeAccountRow } from './employee-account-row'
 import { AccountActionDialog } from './account-action-dialog'
-import type { accountActionLabels } from './account-action-dialog'
+import { EmployeeDetailsDialog } from './employee-details-dialog'
+import type { AccountAction } from './account-action-content'
 import type { EmployeeAccountRecord, IssuedAccountCode } from '../access.types'
 import type { Actor } from '#/lib/authorization/actor'
 
-type Action = keyof typeof accountActionLabels
+type Action = AccountAction
 
 export function EmployeeAccounts({
   page,
@@ -48,6 +49,7 @@ export function EmployeeAccounts({
     target: EmployeeAccountRecord
     action: Action
   } | null>(null)
+  const [editing, setEditing] = useState<EmployeeAccountRecord | null>(null)
   const data = query.data?.ok ? query.data.value : null
   return (
     <div className="flex flex-col gap-6">
@@ -106,6 +108,7 @@ export function EmployeeAccounts({
                     onAction={(action) =>
                       setSelected({ target: record, action })
                     }
+                    onEdit={() => setEditing(record)}
                   />
                 ))}
               </ul>
@@ -147,6 +150,12 @@ export function EmployeeAccounts({
           action={selected.action}
           onClose={() => setSelected(null)}
           onCode={setIssuedCode}
+        />
+      ) : null}
+      {editing ? (
+        <EmployeeDetailsDialog
+          target={editing}
+          onClose={() => setEditing(null)}
         />
       ) : null}
       {issuedCode ? (
