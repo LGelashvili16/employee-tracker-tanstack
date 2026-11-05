@@ -1,24 +1,20 @@
-import { Link } from '@tanstack/react-router'
-import { FeaturePage } from '#/components/common/feature-page'
-import { Button } from '#/components/ui/button'
-import { ClockControls } from '#/features/attendance/components/clock-controls'
-import { dashboardContent } from '../dashboard.content'
+import { AttendanceOverview } from '#/features/attendance/components/attendance-overview'
 
-export function DashboardPage() {
+export function DashboardPage({
+  actorId,
+  actorName,
+}: {
+  actorId: string
+  actorName: string
+}) {
   return (
-    <FeaturePage {...dashboardContent.dashboard}>
-      <ClockControls />
-      <nav aria-label="სწრაფი გადასვლა" className="flex flex-wrap gap-3">
-        <Button variant="outline" render={<Link to="/schedule" />}>
-          ჩემი განრიგი
-        </Button>
-        <Button variant="outline" render={<Link to="/jobs" />}>
-          ჩემი სამუშაოები
-        </Button>
-        <Button variant="outline" render={<Link to="/timesheets" />}>
-          სამუშაო საათები
-        </Button>
-      </nav>
-    </FeaturePage>
+    <section className="flex flex-col gap-6">
+      <AttendanceOverview
+        key={actorId}
+        actorId={actorId}
+        dashboardLayout
+        greetingName={actorName}
+      />
+    </section>
   )
 }

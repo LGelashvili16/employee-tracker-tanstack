@@ -15,6 +15,48 @@
       "when": 1793715485354,
       "tag": "0001_user_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793737296214,
+      "tag": "0002_amused_red_hulk",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793786734780,
+      "tag": "0003_company_work_schedules",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793787292122,
+      "tag": "0004_schedule_creation_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793794182142,
+      "tag": "0005_checkout_reminders",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793800289911,
+      "tag": "0006_attendance_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793823889290,
+      "tag": "0007_attendance_review",
+      "breakpoints": true
     }
   ]
 }

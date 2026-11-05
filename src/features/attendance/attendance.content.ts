@@ -1,7 +1,7 @@
 export const attendanceContent = {
   attendance: {
     title: 'დასწრება',
-    description: 'სამუშაო დღის დაწყება, დასრულება და შესვენებების აღრიცხვა.',
+    description: 'სამუშაო დღის დაწყება, დასრულება და დასწრების მიმოხილვა.',
   },
   attendanceHistory: {
     title: 'დასწრების ისტორია',
@@ -23,6 +23,7 @@ export const attendanceContent = {
   },
   attendanceSettings: {
     title: 'დასწრების წესები',
-    description: 'სამუშაო დროის, შესვენებებისა და შესწორებების წესები.',
+    description:
+      'კომპანიის სამუშაო განრიგი და შესვლისა და გასვლის შეხსენებები.',
   },
 } as const

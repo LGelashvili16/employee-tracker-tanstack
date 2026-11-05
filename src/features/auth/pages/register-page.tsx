@@ -1,6 +1,5 @@
-import { FeaturePage } from '#/components/common/feature-page'
-import { authContent } from '../auth.content'
+import { AccountSetupForm } from '../components/account-setup-form'
 
 export function RegisterPage() {
-  return <FeaturePage {...authContent.register} />
+  return <AccountSetupForm purpose="activation" />
 }

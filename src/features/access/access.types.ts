@@ -1,0 +1,14 @@
+export interface IssuedAccountCode {
+  code: string
+  expiresAt: string
+  purpose: 'activation' | 'reset'
+}
+export interface EmployeeAccountRecord {
+  userId: string
+  name: string
+  code: string
+  contactEmail: string | null
+  roles: string
+  state: string
+  employmentStatus: string
+}

@@ -9,5 +9,10 @@ export const Route = createFileRoute('/_authenticated/attendance/')({
       attendanceContent.attendance.title,
       attendanceContent.attendance.description,
     ),
-  component: AttendancePage,
+  component: AttendanceRoute,
 })
+
+function AttendanceRoute() {
+  const { actor } = Route.useRouteContext()
+  return <AttendancePage actorId={actor.id} />
+}

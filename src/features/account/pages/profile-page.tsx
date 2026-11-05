@@ -21,7 +21,7 @@ export function ProfilePage() {
             </div>
             <div>
               <dt className="text-muted-foreground">ელფოსტა</dt>
-              <dd>{actor.email}</dd>
+              <dd>{actor.email ?? 'არ არის მითითებული'}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">როლები</dt>

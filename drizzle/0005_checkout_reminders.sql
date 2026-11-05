@@ -1,0 +1,2 @@
+ALTER TABLE "company_schedule" ADD COLUMN "checkout_reminder_minutes_before" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "company_schedule" ADD CONSTRAINT "company_schedule_checkout_reminder_valid" CHECK ("company_schedule"."checkout_reminder_minutes_before" between 0 and 60);

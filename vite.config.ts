@@ -8,8 +8,15 @@ import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
+import { pwaPlugins } from './scripts/pwa.ts'
 
 const config = defineConfig({
+  // Keep Start's optimizer artifacts separate from standalone local previews.
+  cacheDir: 'node_modules/.vite/teamwork-start',
+  optimizeDeps: {
+    // Account management is lazy-loaded; prebundle Query before navigating there.
+    include: ['@tanstack/react-query'],
+  },
   resolve: {
     // Explicit filesystem aliases also resolve in Nitro's SSR module runner on Windows.
     alias: {
@@ -19,11 +26,19 @@ const config = defineConfig({
   },
   plugins: [
     devtools(),
-    nitro({ rollupConfig: { external: [/^@sentry\//] } }),
+    nitro({
+      rollupConfig: { external: [/^@sentry\//] },
+      routeRules: {
+        '/service-worker.js': { headers: { 'Cache-Control': 'no-cache' } },
+        '/manifest.webmanifest': { headers: { 'Cache-Control': 'no-cache' } },
+        '/offline.html': { headers: { 'Cache-Control': 'no-cache' } },
+      },
+    }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
     babel({ presets: [reactCompilerPreset()] }),
+    ...pwaPlugins(),
   ],
 })
 

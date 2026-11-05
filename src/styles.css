@@ -40,6 +40,12 @@
   --popover-foreground: #262626;
   --primary: #303030;
   --primary-foreground: #ffffff;
+  --button-highlight: rgb(255 255 255 / 24%);
+  --button-edge: rgb(0 0 0 / 30%);
+  --button-shadow: rgb(0 0 0 / 20%);
+  --control-highlight: rgb(255 255 255 / 85%);
+  --control-edge: rgb(0 0 0 / 12%);
+  --control-shadow: rgb(0 0 0 / 12%);
   --secondary: #eeeeee;
   --secondary-foreground: #262626;
   --muted: #eeeeee;
@@ -47,6 +53,18 @@
   --accent: #ebebeb;
   --accent-foreground: #303030;
   --destructive: oklch(0.577 0.245 27.325);
+  --switch-checked: #15803d;
+  --switch-checked-foreground: #ffffff;
+  --badge-default: var(--primary);
+  --badge-default-foreground: var(--primary-foreground);
+  --badge-green: #dcfce7;
+  --badge-green-foreground: #166534;
+  --badge-red: #fee2e2;
+  --badge-red-foreground: #991b1b;
+  --badge-yellow: #fef9c3;
+  --badge-yellow-foreground: #854d0e;
+  --badge-orange: #ffedd5;
+  --badge-orange-foreground: #9a3412;
   --border: #dedede;
   --input: #dedede;
   --ring: #303030;
@@ -133,6 +151,71 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.app-scrollbar {
+  scrollbar-gutter: stable;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 45%, transparent)
+    transparent;
+}
+
+*:hover,
+*:focus-within {
+  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 70%, transparent)
+    transparent;
+}
+
+/* Use precise sizing where supported; Firefox retains its native thin scrollbar. */
+@supports selector(::-webkit-scrollbar) {
+  *,
+  *:hover,
+  *:focus-within {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--muted-foreground) 70%,
+      transparent
+    );
+  }
+
+  *::-webkit-scrollbar-button {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  *,
+  *:hover,
+  *:focus-within {
+    scrollbar-color: auto;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: CanvasText;
+  }
+}
+
 body::before {
   content: '';
   position: fixed;
@@ -155,14 +238,15 @@ body::after {
   mask-image: radial-gradient(circle at 50% 30%, black, transparent 78%);
 }
 
-a {
+/* Button links use their variant colors, including on hover. */
+a:not([data-slot='button']) {
   color: var(--lagoon-deep);
   text-decoration-color: rgba(64, 64, 64, 0.4);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
 
-a:hover {
+a:not([data-slot='button']):hover {
   color: var(--primary);
 }
 
@@ -501,6 +585,19 @@ a {
 }
 
 @theme inline {
+  --shadow-control-raised:
+    inset 0 1px 1px var(--control-highlight),
+    inset 0 -2px 0 var(--control-edge), 0 2px 3px var(--control-shadow);
+  --shadow-control-pressed:
+    inset 0 2px 3px var(--control-edge), inset 0 -1px 0 var(--control-highlight);
+  --shadow-button-primary:
+    inset 0 1px 1px var(--button-highlight), inset 0 -2px 0 var(--button-edge),
+    0 2px 3px var(--button-shadow);
+  --shadow-button-primary-hover:
+    inset 0 1px 1px var(--button-highlight), inset 0 -2px 0 var(--button-edge),
+    0 3px 6px var(--button-shadow);
+  --shadow-button-primary-pressed:
+    inset 0 2px 3px var(--button-edge), inset 0 -1px 0 var(--button-highlight);
   --font-heading: var(--font-sans);
   --font-sans: 'Google Sans Variable', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -520,6 +617,18 @@ a {
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-switch-checked: var(--switch-checked);
+  --color-switch-checked-foreground: var(--switch-checked-foreground);
+  --color-badge-default: var(--badge-default);
+  --color-badge-default-foreground: var(--badge-default-foreground);
+  --color-badge-green: var(--badge-green);
+  --color-badge-green-foreground: var(--badge-green-foreground);
+  --color-badge-red: var(--badge-red);
+  --color-badge-red-foreground: var(--badge-red-foreground);
+  --color-badge-yellow: var(--badge-yellow);
+  --color-badge-yellow-foreground: var(--badge-yellow-foreground);
+  --color-badge-orange: var(--badge-orange);
+  --color-badge-orange-foreground: var(--badge-orange-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -552,6 +661,12 @@ a {
   --popover-foreground: #ededed;
   --primary: #d4d4d4;
   --primary-foreground: #171717;
+  --button-highlight: rgb(255 255 255 / 85%);
+  --button-edge: rgb(0 0 0 / 24%);
+  --button-shadow: rgb(0 0 0 / 36%);
+  --control-highlight: rgb(255 255 255 / 12%);
+  --control-edge: rgb(0 0 0 / 35%);
+  --control-shadow: rgb(0 0 0 / 30%);
   --secondary: #242424;
   --secondary-foreground: #ededed;
   --muted: #242424;
@@ -559,6 +674,18 @@ a {
   --accent: #2c2c2c;
   --accent-foreground: #ededed;
   --destructive: oklch(0.704 0.191 22.216);
+  --switch-checked: #16a34a;
+  --switch-checked-foreground: #ffffff;
+  --badge-default: var(--primary);
+  --badge-default-foreground: var(--primary-foreground);
+  --badge-green: #143624;
+  --badge-green-foreground: #86efac;
+  --badge-red: #451a1a;
+  --badge-red-foreground: #fca5a5;
+  --badge-yellow: #422e0b;
+  --badge-yellow-foreground: #fde047;
+  --badge-orange: #431f0d;
+  --badge-orange-foreground: #fdba74;
   --border: #333333;
   --input: #404040;
   --ring: #d4d4d4;

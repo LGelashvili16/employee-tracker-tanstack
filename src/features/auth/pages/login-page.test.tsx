@@ -6,7 +6,7 @@ import { LoginPage } from './login-page'
 
 const signIn = vi.hoisted(() => vi.fn())
 vi.mock('#/lib/auth/auth-client', () => ({
-  authClient: { signIn: { email: signIn } },
+  authClient: { signIn: { email: signIn, username: signIn } },
 }))
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({
@@ -29,10 +29,9 @@ describe('login interactions', () => {
   it('links to registration and allows deliberate password visibility', async () => {
     const user = userEvent.setup()
     render(<LoginPage />)
-    expect(screen.getByRole('link', { name: 'რეგისტრაცია' })).toHaveAttribute(
-      'href',
-      '/auth/register',
-    )
+    expect(
+      screen.getByRole('link', { name: 'ანგარიშის გააქტიურება' }),
+    ).toHaveAttribute('href', '/auth/register')
     const password = screen.getByLabelText('პაროლი', { exact: true })
     expect(password).toHaveAttribute('type', 'password')
     await user.click(screen.getByRole('button', { name: 'პაროლის ჩვენება' }))
@@ -43,7 +42,10 @@ describe('login interactions', () => {
     signIn.mockReturnValue(new Promise(() => {}))
     const user = userEvent.setup()
     render(<LoginPage />)
-    await user.type(screen.getByLabelText('ელფოსტა'), 'test@example.com')
+    await user.type(
+      screen.getByLabelText('მომხმარებლის სახელი'),
+      'test@example.com',
+    )
     await user.type(
       screen.getByLabelText('პაროლი', { exact: true }),
       'test-password',
@@ -56,5 +58,22 @@ describe('login interactions', () => {
     expect(pending).toHaveAttribute('aria-busy', 'true')
     expect(pending.querySelector('[data-slot="spinner"]')).not.toBeNull()
     expect(signIn).toHaveBeenCalledTimes(1)
+  })
+  it('uses normalized employee-code login without requiring an email', async () => {
+    signIn.mockResolvedValue({ error: null })
+    const user = userEvent.setup()
+    render(<LoginPage />)
+    await user.type(screen.getByLabelText('მომხმარებლის სახელი'), 'WORKER_01')
+    await user.type(
+      screen.getByLabelText('პაროლი', { exact: true }),
+      'example-password-123',
+    )
+    await user.click(screen.getByRole('button', { name: 'შესვლა' }))
+    await waitFor(() =>
+      expect(signIn).toHaveBeenCalledWith({
+        username: 'worker_01',
+        password: 'example-password-123',
+      }),
+    )
   })
 })

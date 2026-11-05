@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { createAccessControl } from 'better-auth/plugins/access'
 
 export const permissionSchema = z.enum(
   [
@@ -30,15 +31,34 @@ export const permissionSchema = z.enum(
   { error: 'წვდომის მოთხოვნა არასწორია.' },
 )
 export type Permission = z.infer<typeof permissionSchema>
-export const roleSchema = z.enum([
-  'employee',
-  'supervisor',
-  'operations_manager',
-  'hr_manager',
-  'admin',
-  'owner',
-])
+export const roleSchema = z.enum(
+  [
+    'employee',
+    'supervisor',
+    'operations_manager',
+    'hr_manager',
+    'admin',
+    'owner',
+  ],
+  { error: 'როლი არასწორია.' },
+)
 export type Role = z.infer<typeof roleSchema>
+
+const administrationPermissions = [
+  'admin.access',
+  'users.manage',
+  'invitations.manage',
+  'roles.manage',
+  'company.configure',
+  'attendance.configure',
+  'approvals.configure',
+  'leave.configure',
+  'security.configure',
+  'notifications.configure',
+  'locations.manage',
+  'integrations.manage',
+  'audit.read',
+] as const satisfies ReadonlyArray<Permission>
 
 const managementPermissions: Record<
   'supervisor' | 'operations_manager' | 'hr_manager',
@@ -74,21 +94,6 @@ const managementPermissions: Record<
     'reports.read',
   ],
 }
-const adminPermissions: ReadonlyArray<Permission> = [
-  'admin.access',
-  'users.manage',
-  'invitations.manage',
-  'roles.manage',
-  'company.configure',
-  'attendance.configure',
-  'approvals.configure',
-  'leave.configure',
-  'security.configure',
-  'notifications.configure',
-  'locations.manage',
-  'integrations.manage',
-  'audit.read',
-]
 export const roleLabels: Record<Role, string> = {
   employee: 'თანამშრომელი',
   supervisor: 'ჯგუფის ხელმძღვანელი',
@@ -105,14 +110,54 @@ export function parseRoles(value: string): Array<Role> {
     .safeParse(value.split(',').map((role) => role.trim()))
   return result.success ? [...new Set(result.data)] : []
 }
+
+// A single resource preserves the existing permission identifiers used by routes.
+// Better Auth handles role authorization; resource ownership stays in feature policies.
+export const accessControl = createAccessControl({
+  teamwork: permissionSchema.options,
+})
+export const roles = {
+  employee: accessControl.newRole({ teamwork: [] }),
+  supervisor: accessControl.newRole({
+    teamwork: managementPermissions.supervisor,
+  }),
+  operations_manager: accessControl.newRole({
+    teamwork: managementPermissions.operations_manager,
+  }),
+  hr_manager: accessControl.newRole({
+    teamwork: managementPermissions.hr_manager,
+  }),
+  // Platform administration does not imply authority over daily team operations.
+  admin: accessControl.newRole({ teamwork: administrationPermissions }),
+  owner: accessControl.newRole({ teamwork: permissionSchema.options }),
+} satisfies Record<Role, unknown>
+
 export function hasPermission(
-  roles: ReadonlyArray<Role>,
+  actorRoles: ReadonlyArray<Role>,
   permission: Permission,
 ) {
-  return roles.some((role) => {
-    if (role === 'owner') return true
-    if (role === 'admin') return adminPermissions.includes(permission)
-    if (role === 'employee') return false
-    return managementPermissions[role].includes(permission)
-  })
+  // Also deny malformed runtime values from legacy/imported records.
+  if (!permissionSchema.safeParse(permission).success) return false
+  return actorRoles.some(
+    (role) =>
+      roleSchema.safeParse(role).success &&
+      roles[role].authorize({ teamwork: [permission] }).success,
+  )
+}
+
+export function hasEveryPermission(
+  actorRoles: ReadonlyArray<Role>,
+  permissions: ReadonlyArray<Permission>,
+) {
+  return (
+    permissions.length > 0 &&
+    permissions.every((permission) => hasPermission(actorRoles, permission))
+  )
+}
+
+export function hasAnyPermission(
+  actorRoles: ReadonlyArray<Role>,
+  permissions: ReadonlyArray<Permission>,
+) {
+  return permissions.some((permission) => hasPermission(actorRoles, permission))
 }
