@@ -7,6 +7,10 @@ import { AuthorizationError } from '#/lib/authorization/authorization-error'
 import { parseRoles } from '#/lib/authorization/permissions'
 import { provisionIdentity } from '#/lib/auth/provisioning.server'
 import {
+  assignInitialEmployeeWeek,
+  ScheduleWorkflowError,
+} from '#/features/scheduling/server/scheduling.service.server'
+import {
   accountActionSchema,
   accountListSchema,
   completeAccountSchema,
@@ -76,13 +80,30 @@ async function createEmployee(
   actorId: string | null,
   role: Role,
 ) {
-  const userId = await provisionIdentity(tx, input.name, input.code)
-  await repository.insertEmployee(tx, {
+  const userId = await provisionIdentity(
+    tx,
+    input.name,
+    input.code,
+    input.contactEmail,
+  )
+  const person = await repository.insertEmployee(tx, {
     code: input.code,
     userId,
     fullName: input.name,
     contactEmail: input.contactEmail || null,
+    jobTitle: input.jobTitle || null,
+    phone: input.phone || null,
   })
+  if (input.workingWeek !== null) {
+    if (!person || !actorId) throw new AuthorizationError()
+    try {
+      await assignInitialEmployeeWeek(person.id, input.workingWeek, actorId, tx)
+    } catch (error) {
+      if (error instanceof ScheduleWorkflowError)
+        throw new AccountWorkflowError(error.message)
+      throw error
+    }
+  }
   await tx
     .update(user)
     .set({ roles: role })
@@ -93,14 +114,17 @@ async function createEmployee(
     actorId,
     targetId: userId,
     action: `account.provisioned.${role}`,
-    reason: input.reason,
+    reason:
+      role === 'owner'
+        ? 'კომპანიის პირველი მფლობელის პირველადი შექმნა.'
+        : 'თანამშრომლის ანგარიშის შექმნა.',
   })
   return challenge
 }
 
 export async function provisionEmployee(
   actor: Actor,
-  untrusted: z.infer<typeof provisionAccountSchema>,
+  untrusted: z.input<typeof provisionAccountSchema>,
 ) {
   const input = provisionAccountSchema.parse(untrusted)
   return repository.transactAccounts(async (tx) => {
@@ -229,7 +253,6 @@ export async function bootstrapOwner(
   const input = provisionAccountSchema.parse({
     ...untrusted,
     role: 'employee',
-    reason: 'კომპანიის პირველი მფლობელის პირველადი შექმნა.',
   })
   return repository.transactAccounts(async (tx) => {
     await tx.execute(

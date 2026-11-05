@@ -43,7 +43,7 @@ describe('login interactions', () => {
     const user = userEvent.setup()
     render(<LoginPage />)
     await user.type(
-      screen.getByLabelText('მომხმარებლის სახელი'),
+      screen.getByLabelText('მომხმარებლის სახელი ან ელფოსტა'),
       'test@example.com',
     )
     await user.type(
@@ -63,7 +63,10 @@ describe('login interactions', () => {
     signIn.mockResolvedValue({ error: null })
     const user = userEvent.setup()
     render(<LoginPage />)
-    await user.type(screen.getByLabelText('მომხმარებლის სახელი'), 'WORKER_01')
+    await user.type(
+      screen.getByLabelText('მომხმარებლის სახელი ან ელფოსტა'),
+      'WORKER_01',
+    )
     await user.type(
       screen.getByLabelText('პაროლი', { exact: true }),
       'example-password-123',

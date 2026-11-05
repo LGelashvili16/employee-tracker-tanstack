@@ -11,7 +11,7 @@ export const loginSchema = z.object({
       (value) =>
         employeeCodeSchema.safeParse(value).success ||
         z.email().safeParse(value).success,
-      'მიუთითეთ თანამშრომლის კოდი ან არსებული ანგარიშის ელფოსტა.',
+      'მიუთითეთ მომხმარებლის სახელი ან ელფოსტა.',
     ),
   password: z
     .string()

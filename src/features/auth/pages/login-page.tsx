@@ -81,14 +81,14 @@ export function LoginPage() {
               {(field) => (
                 <Field data-invalid={!field.state.meta.isValid}>
                   <FieldLabel htmlFor="identifier">
-                    მომხმარებლის სახელი
+                    მომხმარებლის სახელი ან ელფოსტა
                   </FieldLabel>
                   <Input
                     id="identifier"
                     name={field.name}
                     type="text"
                     className="h-10"
-                    placeholder="თანამშრომლის კოდი"
+                    placeholder="მომხმარებლის სახელი"
                     autoComplete="username"
                     autoCapitalize="none"
                     spellCheck={false}

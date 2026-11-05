@@ -7,15 +7,79 @@ import {
   companyScheduleAudit,
   user,
   employee,
+  employeeWorkSchedule,
 } from '#/db/schema'
 import type { CompanySchedule } from '../scheduling.schemas'
 import { companyLocalDate } from '../scheduling.rules'
 import type { CompanyWorkday } from '../scheduling.types'
+import { employeeWorkingWeekSchema } from '../scheduling.schemas'
 
 export type ScheduleTransaction = Parameters<
   Parameters<typeof db.transaction>[0]
 >[0]
 export const transactSchedules = db.transaction.bind(db)
+
+export async function insertEmployeeWeek(
+  tx: ScheduleTransaction,
+  employeeId: string,
+  days: typeof employeeWorkSchedule.$inferInsert.days,
+  actorId: string,
+) {
+  await tx
+    .insert(employeeWorkSchedule)
+    .values({ employeeId, days, assignedBy: actorId })
+}
+
+export async function employeeWorkdayAt(
+  now: Date,
+  employeeId: string,
+  tx: ScheduleTransaction,
+): Promise<CompanyWorkday> {
+  const base = await companyWorkdayAt(now, tx)
+  const assignment = (
+    await tx
+      .select()
+      .from(employeeWorkSchedule)
+      .where(eq(employeeWorkSchedule.employeeId, employeeId))
+      .limit(1)
+  ).at(0)
+  if (!assignment) return base
+  const empty: CompanyWorkday = {
+    ...base,
+    kind: 'unconfigured',
+    start: null,
+    end: null,
+    startsAt: null,
+    endsAt: null,
+  }
+  if (!base.effectiveFrom) return empty
+  const parsed = employeeWorkingWeekSchema.safeParse(assignment.days)
+  if (!parsed.success) return empty
+  const weekday = new Date(`${base.date}T12:00:00Z`).getUTCDay() || 7
+  const hours = parsed.data.find((day) => day.weekday === weekday)?.hours
+  if (!hours) return { ...empty, kind: 'day_off' }
+  const start = sql`(${base.date}::date + ${hours.start}::time) at time zone ${base.timezone}`
+  const end = sql`(${base.date}::date + ${hours.end}::time) at time zone ${base.timezone}`
+  const record = (
+    await tx
+      .select({
+        startsAt: sql<Date>`${start}`.mapWith(companySchedule.createdAt),
+        endsAt: sql<Date>`${end}`.mapWith(companySchedule.createdAt),
+        valid: sql<boolean>`to_char((${start}) at time zone ${base.timezone}, 'HH24:MI') = ${hours.start} and to_char((${end}) at time zone ${base.timezone}, 'HH24:MI') = ${hours.end}`,
+      })
+      .from(employeeWorkSchedule)
+      .where(eq(employeeWorkSchedule.employeeId, employeeId))
+  ).at(0)
+  if (!record?.valid || record.endsAt <= record.startsAt) return empty
+  return {
+    ...base,
+    kind: 'scheduled',
+    start: hours.start,
+    end: hours.end,
+    startsAt: record.startsAt.toISOString(),
+    endsAt: record.endsAt.toISOString(),
+  }
+}
 
 /** Shared singleton lock also serializes the first write, when there is no schedule row to lock. */
 export async function lockScheduleTimeline(tx: ScheduleTransaction) {

@@ -41,7 +41,7 @@ export function ScheduleWeekEditor({
       ),
     )
   return (
-    <FieldSet className="gap-0">
+    <FieldSet className="@container/week gap-0">
       <FieldLegend className="sr-only">
         კვირის სამუშაო დღეები და საათები
       </FieldLegend>
@@ -52,7 +52,7 @@ export function ScheduleWeekEditor({
         return (
           <div
             key={day.weekday}
-            className="grid gap-3 border-b py-4 first:pt-0 last:border-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-start"
+            className="grid gap-3 border-b py-4 first:pt-0 last:border-0 last:pb-0 @min-[32rem]/week:grid-cols-[minmax(0,1fr)_16rem] @min-[32rem]/week:items-start"
           >
             <Field orientation="horizontal" className="min-h-10 gap-3">
               <Switch

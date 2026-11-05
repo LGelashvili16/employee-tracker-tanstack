@@ -26,7 +26,7 @@ async function safeAccessAction<T>(action: () => Promise<T>) {
       message:
         error instanceof AccountWorkflowError
           ? error.message
-          : 'მოქმედება ვერ შესრულდა. გადაამოწმეთ კოდის უნიკალურობა და სცადეთ ხელახლა.',
+          : 'მოქმედება ვერ შესრულდა. გადაამოწმეთ მომხმარებლის სახელისა და ელფოსტის უნიკალურობა და სცადეთ ხელახლა.',
     }
   }
 }

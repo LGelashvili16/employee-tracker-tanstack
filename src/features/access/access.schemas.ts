@@ -1,11 +1,12 @@
 import { z } from 'zod'
+import { employeeWorkingWeekSchema } from '#/features/scheduling/scheduling.schemas'
 
 export const employeeCodeSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .min(3, 'კოდი უნდა შეიცავდეს მინიმუმ 3 სიმბოლოს.')
-  .max(32, 'კოდი ძალიან გრძელია.')
+  .min(3, 'მომხმარებლის სახელი უნდა შეიცავდეს მინიმუმ 3 სიმბოლოს.')
+  .max(32, 'მომხმარებლის სახელი ძალიან გრძელია.')
   .regex(
     /^[a-z0-9][a-z0-9._-]*$/,
     'გამოიყენეთ ლათინური ასოები, ციფრები, წერტილი, დეფისი ან ქვედა ტირე.',
@@ -26,12 +27,32 @@ export const provisionAccountSchema = z.object({
     .trim()
     .min(2, 'მიუთითეთ სახელი და გვარი.')
     .max(100, 'სახელი ძალიან გრძელია.'),
-  contactEmail: z.union([
-    z.literal(''),
-    z.email('ელფოსტა არასწორია.').max(254, 'ელფოსტა ძალიან გრძელია.'),
-  ]),
+  contactEmail: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .pipe(
+      z.union([
+        z.literal(''),
+        z.email('ელფოსტა არასწორია.').max(254, 'ელფოსტა ძალიან გრძელია.'),
+      ]),
+    ),
+  jobTitle: z
+    .string()
+    .trim()
+    .max(100, 'თანამდებობა ძალიან გრძელია.')
+    .default(''),
+  phone: z
+    .string()
+    .trim()
+    .max(32, 'ტელეფონის ნომერი ძალიან გრძელია.')
+    .refine(
+      (value) => value === '' || /^\+?[0-9][0-9 ()-]{5,30}[0-9]$/.test(value),
+      'მიუთითეთ სწორი ტელეფონის ნომერი.',
+    )
+    .default(''),
+  workingWeek: employeeWorkingWeekSchema.nullable().default(null),
   role: employeeRoleSchema,
-  reason: reasonSchema,
 })
 export const accountActionSchema = z.object({
   userId: z

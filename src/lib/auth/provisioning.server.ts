@@ -11,6 +11,7 @@ export async function provisionIdentity(
   tx: AccessTransaction,
   name: string,
   code: string,
+  contactEmail: string,
 ) {
   const provisioning = betterAuth({
     database: drizzleAdapter(tx, {
@@ -27,12 +28,14 @@ export async function provisionIdentity(
     user: { additionalFields: accountUserFields },
     plugins: [employeeUsername()],
   })
-  // Reserved .invalid addresses satisfy Better Auth's required email contract without inventing a deliverable employee email.
+  // Email-less employees retain a reserved .invalid identifier; supplied email uses Better Auth's native sign-in and uniqueness checks.
   // The random initial password is discarded. Invited accounts cannot authenticate before activation.
   const result = await provisioning.api.signUpEmail({
     body: {
       name,
-      email: `employee-${randomBytes(16).toString('hex')}@accounts.teamwork.invalid`,
+      email:
+        contactEmail ||
+        `employee-${randomBytes(16).toString('hex')}@accounts.teamwork.invalid`,
       username: code,
       password: randomBytes(48).toString('base64url'),
     },

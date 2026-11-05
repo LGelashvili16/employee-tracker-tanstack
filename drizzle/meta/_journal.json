@@ -57,6 +57,13 @@
       "when": 1793823889290,
       "tag": "0007_attendance_review",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793869920361,
+      "tag": "0008_clear_argent",
+      "breakpoints": true
     }
   ]
 }

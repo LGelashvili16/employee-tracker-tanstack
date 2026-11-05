@@ -19,7 +19,7 @@ database advisory lock so two operators cannot bootstrap separate owners concurr
 The command deliberately displays a new activation code once to the operator. Treat
 this output as a credential; do not capture it in shared logs or commit it. Open
 `/auth/register`, enter that code, and choose a password of at least 12 characters.
-Then log in with the company code and that password. No initial password is shared.
+Then log in with the username and that password. No initial password is shared.
 
 If the original owner code expires or the owner loses access, a database operator
 can recover the existing owner rather than create a duplicate:
@@ -35,11 +35,12 @@ It is never exposed by an HTTP route or server function.
 ## Administrator workflow
 
 Open `/admin/users`. The route and every server function independently require
-`admin.access` and `users.manage`. Choose an immutable employee code, full name,
-optional contact email, role, and administrative reason. Management-role assignment
+`admin.access` and `users.manage`. Choose an immutable username, full name,
+optional email, job title, phone number, and role. Account creation records an automatic audit reason;
+subsequent access changes still require an administrative reason. Management-role assignment
 also requires `roles.manage`. This screen cannot create administrators or owners.
 
-Employee codes are normalized to lowercase and become Better Auth usernames.
+Usernames are normalized to lowercase. Existing `code` columns and request keys retain their names for compatibility.
 Database constraints enforce unique codes, unique usernames, one employee record
 per auth account, and one credential record per auth account. Do not assign a new
 code to an existing person returning to work; restore their original record.
@@ -81,15 +82,27 @@ The main auth handler keeps public signup, public identity updates, and
 username-availability lookup disabled. Self-service password change remains under
 Better Auth's existing credential checks.
 
-The login page accepts a company code through Better Auth's username plugin. Existing
-accounts with real auth email can continue using email login. Stored real employee
-contact email is not automatically a login alias, verified identity, or recovery
-channel. Email delivery is not configured; recovery currently uses administrator codes.
+The login page accepts a username or email through Better Auth's native sign-in methods.
+New accounts with email use the normalized email as their auth identity as well as contact email.
+Better Auth enforces email uniqueness; activation is still required before either sign-in method works.
+Existing accounts retain their current auth email; older contact-only addresses are not silently promoted to login identities.
+Email is not marked verified by provisioning. Email delivery is not configured; recovery still uses administrator-issued codes.
+
+## Assigned working week
+
+New employees inherit the effective company schedule by default. An administrator with
+`attendance.configure` may instead assign a complete seven-day recurring week during creation.
+Each day specifies start/end hours or explicitly marks a day off. The company timezone
+remains authoritative, and an active company schedule must exist before a custom assignment.
+The assignment and account are saved in one transaction, with the assigning actor retained.
+For example, office staff can work Monday through Friday while another employee inherits Saturday work.
+Existing employees without an assignment continue using company defaults. Editing an existing
+assignment is not exposed by this creation flow. Open sessions retain their original expected times.
 
 ## Required auth email field
 
 Better Auth still requires an email-shaped protocol identifier. Newly provisioned
-employees receive a random `employee-<identifier>@accounts.teamwork.invalid`. The reserved `.invalid`
+employees without email receive a random `employee-<identifier>@accounts.teamwork.invalid`. The reserved `.invalid`
 domain cannot deliver mail and is never presented as an employee contact address.
 Real optional contact email lives on the employee record, and the application actor
 projection exposes that value or null. Do not send verification or recovery email

@@ -2,6 +2,10 @@
 
 Attendance measures actual check-in to check-out intervals. The company schedule is a reference for deviations, never an automatic timer start or stop. All displays use the timezone retained on the session, normally `Asia/Tbilisi`.
 
+Employees inherit company hours unless assigned an individual recurring working week at account creation.
+Individual assignments define working days and hours in the company timezone; the attendance snapshot
+retains the resolved expectations so subsequent schedule changes cannot rewrite past or open sessions.
+
 ## Workday ownership
 
 - A session belongs to the company-local date on which it starts, including all time after midnight.

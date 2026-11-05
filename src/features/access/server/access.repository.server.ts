@@ -49,6 +49,8 @@ export async function queryAccounts(page: number) {
         name: employee.fullName,
         code: employee.code,
         contactEmail: employee.contactEmail,
+        jobTitle: employee.jobTitle,
+        phone: employee.phone,
         roles: user.roles,
         state: user.accessState,
         employmentStatus: employee.status,
@@ -84,7 +86,9 @@ export async function insertEmployee(
   tx: AccessTransaction,
   values: typeof employee.$inferInsert,
 ) {
-  await tx.insert(employee).values(values)
+  return (
+    await tx.insert(employee).values(values).returning({ id: employee.id })
+  ).at(0)
 }
 export async function updateIdentity(
   tx: AccessTransaction,

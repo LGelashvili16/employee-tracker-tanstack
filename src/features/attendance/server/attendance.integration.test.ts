@@ -96,7 +96,7 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     time('2026-11-04T06:05:00Z')
     await sql().query(
-      'DELETE FROM attendance_audit; DELETE FROM attendance_reviewer; DELETE FROM attendance_setting; DELETE FROM attendance_session; DELETE FROM company_schedule_day; DELETE FROM company_schedule;',
+      'DELETE FROM employee_work_schedule; DELETE FROM attendance_audit; DELETE FROM attendance_reviewer; DELETE FROM attendance_setting; DELETE FROM attendance_session; DELETE FROM company_schedule_day; DELETE FROM company_schedule;',
     )
     await sql().query(
       `UPDATE "user" SET access_state = 'active'; UPDATE employee SET status = 'active';`,
@@ -146,6 +146,50 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     expect(
       (await sql().query('SELECT * FROM attendance_session')).rows,
     ).toHaveLength(0)
+  })
+
+  it('uses an assigned office week while another employee inherits Saturday work', async () => {
+    const days = Array.from({ length: 7 }, (_, index) => ({
+      weekday: index + 1,
+      hours: index < 5 ? { start: '09:00', end: '18:00' } : null,
+    }))
+    await sql().query(
+      'INSERT INTO employee_work_schedule (employee_id, days, assigned_by) VALUES ($1, $2::jsonb, $3)',
+      [employeeId, JSON.stringify(days), 'review-admin'],
+    )
+    time('2026-11-07T08:00:00Z')
+    expect((await service.getAttendanceOverview(actor)).workday.kind).toBe(
+      'day_off',
+    )
+    await expect(service.checkIn(actor, request())).rejects.toThrow()
+    expect((await service.getAttendanceOverview(other)).workday.start).toBe(
+      '10:00',
+    )
+    await service.checkIn(other, request())
+    time('2026-11-09T05:00:00Z')
+    const office = await service.getAttendanceOverview(actor)
+    expect(office.workday).toMatchObject({
+      kind: 'scheduled',
+      start: '09:00',
+      end: '18:00',
+      startsAt: '2026-11-09T05:00:00.000Z',
+    })
+    await service.checkIn(actor, request())
+    await sql().query(
+      'UPDATE employee_work_schedule SET days = $1::jsonb WHERE employee_id = $2',
+      [
+        JSON.stringify(
+          days.map((day) => ({
+            ...day,
+            hours: day.hours ? { start: '11:00', end: '20:00' } : null,
+          })),
+        ),
+        employeeId,
+      ],
+    )
+    expect(
+      (await service.getAttendanceOverview(actor)).openSession?.expectedStartAt,
+    ).toBe('2026-11-09T05:00:00.000Z')
   })
   it('respects explicit nonworking days', async () => {
     time('2026-11-08T06:05:00Z')

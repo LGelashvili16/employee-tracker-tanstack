@@ -99,7 +99,6 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
       name: 'ტესტის თანამშრომელი',
       contactEmail: '',
       role: 'employee',
-      reason: 'იზოლირებული ინტეგრაციის ტესტი.',
     })
   }
   async function identity(code: string) {
@@ -140,6 +139,22 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
       .from(tables.employee)
       .where(eq(tables.employee.userId, record.id))
     expect(person.contactEmail).toBeNull()
+    const [creationAudit] = await testDatabase()
+      .select({
+        actorId: tables.accessAudit.actorId,
+        reason: tables.accessAudit.reason,
+      })
+      .from(tables.accessAudit)
+      .where(
+        and(
+          eq(tables.accessAudit.targetId, record.id),
+          eq(tables.accessAudit.action, 'account.provisioned.employee'),
+        ),
+      )
+    expect(creationAudit).toEqual({
+      actorId: owner.id,
+      reason: 'თანამშრომლის ანგარიშის შექმნა.',
+    })
     const [challenge] = await testDatabase()
       .select()
       .from(tables.accountSetup)
@@ -175,6 +190,123 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
         fullName: 'დუბლიკატი',
       }),
     ).rejects.toThrow()
+  })
+
+  it('stores optional profile details and signs in using either email or username after activation', async () => {
+    const issued = await service.provisionEmployee(owner, {
+      code: 'email-worker',
+      name: 'ელფოსტის თანამშრომელი',
+      contactEmail: '  Worker@Example.com  ',
+      role: 'employee',
+      jobTitle: 'დიზაინერი',
+      phone: '+995 555 12 34 56',
+    })
+    const record = await identity('email-worker')
+    expect(record.email).toBe('worker@example.com')
+    await expect(
+      auth.api.signInEmail({ body: { email: 'worker@example.com', password } }),
+    ).rejects.toThrow()
+    await service.completeEmployeeSetup(
+      { code: issued.code, newPassword: password },
+      'activation',
+      hashPassword,
+    )
+    const byEmail = await auth.api.signInEmail({
+      body: { email: 'worker@example.com', password },
+    })
+    const byUsername = await auth.api.signInUsername({
+      body: { username: 'email-worker', password },
+    })
+    expect(byEmail.user.id).toBe(record.id)
+    expect(byUsername.user.id).toBe(record.id)
+    const person = (
+      await testDatabase()
+        .select()
+        .from(tables.employee)
+        .where(eq(tables.employee.userId, record.id))
+    )[0]
+    expect(person).toMatchObject({
+      jobTitle: 'დიზაინერი',
+      phone: '+995 555 12 34 56',
+      contactEmail: 'worker@example.com',
+    })
+    const before = (
+      await testDatabase().select({ count: count() }).from(tables.user)
+    )[0].count
+    await expect(
+      service.provisionEmployee(owner, {
+        code: 'email-duplicate',
+        name: 'დუბლიკატი',
+        contactEmail: 'WORKER@example.com',
+        role: 'employee',
+      }),
+    ).rejects.toThrow()
+    expect(
+      (await testDatabase().select({ count: count() }).from(tables.user))[0]
+        .count,
+    ).toBe(before)
+  })
+
+  it('creates an employee and its initial schedule assignment atomically', async () => {
+    await testDatabase()
+      .insert(tables.companySchedule)
+      .values({
+        effectiveFrom: '2026-01-01',
+        timezone: 'Asia/Tbilisi',
+        lateGraceMinutes: 0,
+        earlyDepartureGraceMinutes: 0,
+      })
+    await testDatabase()
+      .insert(tables.companyScheduleDay)
+      .values(
+        Array.from({ length: 7 }, (_, index) => ({
+          effectiveFrom: '2026-01-01',
+          weekday: index + 1,
+          startTime: index < 6 ? '10:00' : null,
+          endTime: index < 6 ? '19:00' : null,
+        })),
+      )
+    const days = Array.from({ length: 7 }, (_, index) => ({
+      weekday: index + 1,
+      hours: index < 5 ? { start: '09:00', end: '18:00' } : null,
+    }))
+    await service.provisionEmployee(owner, {
+      code: 'office-week',
+      name: 'ოფისის თანამშრომელი',
+      contactEmail: '',
+      role: 'employee',
+      workingWeek: days,
+    })
+    const record = await identity('office-week')
+    const person = (
+      await testDatabase()
+        .select()
+        .from(tables.employee)
+        .where(eq(tables.employee.userId, record.id))
+    )[0]
+    const assignment = (
+      await testDatabase()
+        .select()
+        .from(tables.employeeWorkSchedule)
+        .where(eq(tables.employeeWorkSchedule.employeeId, person.id))
+    )[0]
+    expect(assignment).toMatchObject({ assignedBy: owner.id, days })
+    const before = (
+      await testDatabase().select({ count: count() }).from(tables.user)
+    )[0].count
+    await expect(
+      service.provisionEmployee(owner, {
+        code: 'invalid-week',
+        name: 'არასწორი კვირა',
+        contactEmail: '',
+        role: 'employee',
+        workingWeek: days.map((day) => ({ ...day, weekday: 1 })),
+      }),
+    ).rejects.toThrow()
+    expect(
+      (await testDatabase().select({ count: count() }).from(tables.user))[0]
+        .count,
+    ).toBe(before)
   })
 
   it('allows only one concurrent consumption and authenticates through Better Auth username login', async () => {
@@ -258,7 +390,6 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
         name: 'ტესტი',
         contactEmail: '',
         role: 'employee',
-        reason: 'აკრძალული ანგარიშის შექმნა.',
       }),
     ).rejects.toThrow()
     await expect(

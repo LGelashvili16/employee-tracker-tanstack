@@ -20,14 +20,14 @@ export function AttendanceNavigation({ children }: { children: ReactNode }) {
       >
         <TabsList
           aria-label="დასწრების განყოფილებები"
-          className="w-max gap-1 rounded-xl border p-1 group-data-horizontal/tabs:h-auto"
+          className="w-max gap-1 rounded-xl border p-0.5 group-data-horizontal/tabs:h-auto"
         >
           {attendanceLinks.map((item) => (
             <TabsTrigger
               nativeButton={false}
               key={item.to}
               value={item.to}
-              className="h-10 flex-none rounded-lg px-4 motion-reduce:transition-none"
+              className="h-9 flex-none rounded-lg px-4 motion-reduce:transition-none"
               render={
                 <Link
                   to={item.to}

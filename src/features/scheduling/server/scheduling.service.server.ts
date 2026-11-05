@@ -1,10 +1,11 @@
 import '@tanstack/react-start/server-only'
 import { assertPermission } from '#/lib/authorization/access'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
-import { parseRoles } from '#/lib/authorization/permissions'
+import { parseRoles, hasPermission } from '#/lib/authorization/permissions'
 import {
   companyScheduleSchema,
   saveCompanyScheduleSchema,
+  employeeWorkingWeekSchema,
 } from '../scheduling.schemas'
 import { companyLocalDate, earliestScheduleDate } from '../scheduling.rules'
 import * as repository from './scheduling.repository.server'
@@ -12,6 +13,42 @@ import type { Actor } from '#/lib/authorization/actor'
 import type { ScheduleSettings } from '../scheduling.types'
 
 export class ScheduleWorkflowError extends Error {}
+
+/** Provisioning owns the account transaction; only current schedule administrators can assign a custom week. */
+export async function assignInitialEmployeeWeek(
+  employeeId: string,
+  days: unknown,
+  actorId: string,
+  tx: repository.ScheduleTransaction,
+) {
+  const { identity, person } = await repository.currentAccount(tx, actorId)
+  if (
+    !identity ||
+    identity.state !== 'active' ||
+    (person && person.status !== 'active')
+  )
+    throw new AuthorizationError()
+  if (!hasPermission(parseRoles(identity.roles), 'attendance.configure'))
+    throw new AuthorizationError()
+  const parsed = employeeWorkingWeekSchema.safeParse(days)
+  if (!parsed.success)
+    throw new ScheduleWorkflowError('გადაამოწმეთ თანამშრომლის სამუშაო კვირა.')
+  const current = await repository.companyWorkdayAt(new Date(), tx)
+  if (!current.effectiveFrom)
+    throw new ScheduleWorkflowError(
+      'ჯერ განსაზღვრეთ კომპანიის მოქმედი სამუშაო განრიგი.',
+    )
+  await repository.insertEmployeeWeek(tx, employeeId, parsed.data, actorId)
+}
+
+/** The attendance service establishes ownership and active employment before calling this interface. */
+export function getEmployeeWorkday(
+  now: Date,
+  employeeId: string,
+  tx: repository.ScheduleTransaction,
+) {
+  return repository.employeeWorkdayAt(now, employeeId, tx)
+}
 
 /** Internal attendance interface; the caller establishes the active employee before reading expectations. */
 export function getCompanyWorkday(

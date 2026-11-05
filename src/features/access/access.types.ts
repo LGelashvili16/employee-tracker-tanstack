@@ -8,6 +8,8 @@ export interface EmployeeAccountRecord {
   name: string
   code: string
   contactEmail: string | null
+  jobTitle: string | null
+  phone: string | null
   roles: string
   state: string
   employmentStatus: string

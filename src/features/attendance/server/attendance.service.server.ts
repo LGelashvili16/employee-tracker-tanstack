@@ -1,6 +1,6 @@
 import '@tanstack/react-start/server-only'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
-import { getCompanyWorkday } from '#/features/scheduling/server/scheduling.service.server'
+import { getEmployeeWorkday } from '#/features/scheduling/server/scheduling.service.server'
 import { checkInSchema, checkOutSchema } from '../attendance.schemas'
 import { startOfWorkWeek } from '../attendance.rules'
 import * as repository from './attendance.repository.server'
@@ -34,7 +34,7 @@ export async function getAttendanceOverview(
   return repository.transactAttendance(async (tx) => {
     const employeeId = await activeEmployee(tx, actor, false)
     const now = new Date()
-    const workday = await getCompanyWorkday(now, tx)
+    const workday = await getEmployeeWorkday(now, employeeId, tx)
     const open = await repository.openSession(tx, employeeId)
     const last = await repository.latestSession(tx, employeeId)
     const recent = await repository.attendanceDays(tx, employeeId, now)
@@ -98,7 +98,7 @@ export async function checkIn(actor: Actor | null, input: unknown) {
       throw new AttendanceWorkflowError(
         'დროის აღრიცხვა დროებით მიუწვდომელია. სცადეთ ხელახლა.',
       )
-    const workday = await getCompanyWorkday(now, tx)
+    const workday = await getEmployeeWorkday(now, employeeId, tx)
     if (
       workday.kind !== 'scheduled' ||
       !workday.startsAt ||

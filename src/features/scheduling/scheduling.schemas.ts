@@ -46,6 +46,18 @@ export const scheduleWeekdaySchema = z.object(
 const boundedMinutes = (label: string) =>
   z.number({ error: label }).int(label).min(0, label).max(60, label)
 
+export const employeeWorkingWeekSchema = z
+  .array(scheduleWeekdaySchema, { error: 'მიუთითეთ სამუშაო კვირა.' })
+  .length(7, 'მიუთითეთ კვირის შვიდივე დღე.')
+  .refine(
+    (days) => new Set(days.map((day) => day.weekday)).size === 7,
+    'კვირის დღეები არ უნდა მეორდებოდეს.',
+  )
+  .refine(
+    (days) => days.some((day) => day.hours !== null),
+    'აირჩიეთ მინიმუმ ერთი სამუშაო დღე.',
+  )
+
 /** Complete company default week; effective-date authorization belongs to the service. */
 export const companyScheduleSchema = z
   .object(
