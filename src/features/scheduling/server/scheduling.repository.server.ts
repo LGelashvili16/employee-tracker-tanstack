@@ -10,7 +10,7 @@ import {
   employeeWorkSchedule,
 } from '#/db/schema'
 import type { CompanySchedule } from '../scheduling.schemas'
-import { companyLocalDate } from '../scheduling.rules'
+import { companyLocalDate, sameWorkingWeek } from '../scheduling.rules'
 import type { CompanyWorkday } from '../scheduling.types'
 import { employeeWorkingWeekSchema } from '../scheduling.schemas'
 
@@ -28,6 +28,64 @@ export async function insertEmployeeWeek(
   await tx
     .insert(employeeWorkSchedule)
     .values({ employeeId, days, assignedBy: actorId })
+}
+
+/** Locks the existing row so concurrent edits of one employee cannot interleave; returns whether the stored week changed. */
+export async function replaceEmployeeWeek(
+  tx: ScheduleTransaction,
+  employeeId: string,
+  days: typeof employeeWorkSchedule.$inferInsert.days | null,
+  actorId: string,
+) {
+  const existing = (
+    await tx
+      .select({ days: employeeWorkSchedule.days })
+      .from(employeeWorkSchedule)
+      .where(eq(employeeWorkSchedule.employeeId, employeeId))
+      .for('update')
+  ).at(0)
+  if (days === null) {
+    if (!existing) return false
+    await tx
+      .delete(employeeWorkSchedule)
+      .where(eq(employeeWorkSchedule.employeeId, employeeId))
+    return true
+  }
+  if (existing && sameWorkingWeek(existing.days, days)) return false
+  await tx
+    .insert(employeeWorkSchedule)
+    .values({ employeeId, days, assignedBy: actorId })
+    .onConflictDoUpdate({
+      target: employeeWorkSchedule.employeeId,
+      set: { days, assignedBy: actorId, createdAt: new Date() },
+    })
+  return true
+}
+
+/** Employee records are linked to accounts one to one, so the signed-in account identifies the assignment. */
+export async function readEmployeeWeekByUser(
+  tx: ScheduleTransaction,
+  userId: string,
+) {
+  const row = (
+    await tx
+      .select({ days: employeeWorkSchedule.days })
+      .from(employee)
+      .innerJoin(
+        employeeWorkSchedule,
+        eq(employeeWorkSchedule.employeeId, employee.id),
+      )
+      .where(eq(employee.userId, userId))
+      .limit(1)
+  ).at(0)
+  return row?.days ?? null
+}
+
+export async function readCurrentCompanyWeek(tx: ScheduleTransaction) {
+  const today = (await companyWorkdayAt(new Date(), tx)).date
+  const { current } = await readVersions(tx, today)
+  const hydrated = (await hydrateVersions(tx, current ? [current] : [])).at(0)
+  return hydrated?.days ?? null
 }
 
 export async function employeeWorkdayAt(

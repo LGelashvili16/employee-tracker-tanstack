@@ -11,10 +11,13 @@ export function EmployeeScheduleField({
   value,
   onChange,
   disabled,
+  idPrefix = 'provision',
 }: {
   value: z.infer<typeof employeeWorkingWeekSchema> | null
   onChange: (value: z.infer<typeof employeeWorkingWeekSchema> | null) => void
   disabled: boolean
+  /** Keeps element ids unique when this field appears twice on one page. */
+  idPrefix?: string
 }) {
   const query = useQuery({
     queryKey: ['schedule-settings'],
@@ -26,7 +29,7 @@ export function EmployeeScheduleField({
     <div className="flex flex-col gap-4 rounded-xl border p-3">
       <Field orientation="horizontal">
         <div className="flex flex-1 flex-col gap-1">
-          <FieldLabel htmlFor="provision-inherit-schedule">
+          <FieldLabel htmlFor={`${idPrefix}-inherit-schedule`}>
             კომპანიის განრიგის გამოყენება
           </FieldLabel>
           <FieldDescription>
@@ -34,7 +37,7 @@ export function EmployeeScheduleField({
           </FieldDescription>
         </div>
         <Switch
-          id="provision-inherit-schedule"
+          id={`${idPrefix}-inherit-schedule`}
           checked={value === null}
           disabled={disabled || !current}
           onCheckedChange={(inherit) =>

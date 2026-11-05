@@ -25,6 +25,7 @@ import {
 } from '#/components/ui/dialog'
 import { updateEmployeeDetails } from '../access.functions'
 import { employeeDetailsSchema } from '../access.schemas'
+import { EmployeeScheduleField } from './employee-schedule-field'
 import type { z } from 'zod'
 import type { EmployeeAccountRecord } from '../access.types'
 
@@ -37,9 +38,12 @@ const detailFields = [
 
 export function EmployeeDetailsDialog({
   target,
+  canConfigureSchedule,
   onClose,
 }: {
   target: EmployeeAccountRecord
+  /** Editing the working week additionally requires the attendance.configure permission. */
+  canConfigureSchedule: boolean
   onClose: () => void
 }) {
   const client = useQueryClient()
@@ -56,6 +60,8 @@ export function EmployeeDetailsDialog({
     contactEmail: target.contactEmail ?? '',
     jobTitle: target.jobTitle ?? '',
     phone: target.phone ?? '',
+    // Undefined tells the server to leave the schedule untouched.
+    workingWeek: canConfigureSchedule ? target.workingWeek : undefined,
     reason: '',
   }
   const form = useForm({
@@ -91,7 +97,10 @@ export function EmployeeDetailsDialog({
         if (!open && !mutation.isPending) onClose()
       }}
     >
-      <DialogContent showCloseButton={false} className="gap-5 sm:max-w-md">
+      <DialogContent
+        showCloseButton={false}
+        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto sm:max-w-lg"
+      >
         <DialogHeader className="items-center gap-3 pt-2 text-center">
           <span
             aria-hidden="true"
@@ -139,6 +148,21 @@ export function EmployeeDetailsDialog({
                 )}
               </form.Field>
             ))}
+            {canConfigureSchedule ? (
+              <form.Field name="workingWeek">
+                {(field) => (
+                  <Field data-invalid={!field.state.meta.isValid}>
+                    <EmployeeScheduleField
+                      idPrefix="details"
+                      value={field.state.value ?? null}
+                      onChange={field.handleChange}
+                      disabled={mutation.isPending}
+                    />
+                    <FieldError errors={field.state.meta.errors} />
+                  </Field>
+                )}
+              </form.Field>
+            ) : null}
             <form.Field name="reason">
               {(field) => (
                 <Field data-invalid={!field.state.meta.isValid}>

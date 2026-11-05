@@ -3,7 +3,51 @@ import {
   companyLocalDate,
   earliestScheduleDate,
   followingDate,
+  formatDuration,
+  isoWeekday,
+  sameWorkingWeek,
+  shiftMinutes,
 } from './scheduling.rules'
+
+describe('week durations', () => {
+  it('formats shift lengths and finds the weekday of a date', () => {
+    expect(shiftMinutes({ start: '09:00', end: '17:30' })).toBe(510)
+    expect(formatDuration(510)).toBe('8 სთ 30 წთ')
+    expect(formatDuration(480)).toBe('8 სთ')
+    expect(isoWeekday('2026-11-05')).toBe(4)
+    expect(isoWeekday('2026-11-08')).toBe(7)
+  })
+})
+
+describe('working week comparison', () => {
+  const week = [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
+    weekday,
+    hours: weekday < 6 ? { start: '09:00', end: '18:00' } : null,
+  }))
+  it('ignores day order and detects changed hours', () => {
+    expect(sameWorkingWeek(week, [...week].reverse())).toBe(true)
+    expect(
+      sameWorkingWeek(
+        week,
+        week.map((day) =>
+          day.weekday === 1
+            ? { ...day, hours: { start: '10:00', end: '18:00' } }
+            : day,
+        ),
+      ),
+    ).toBe(false)
+    expect(
+      sameWorkingWeek(
+        week,
+        week.map((day) =>
+          day.weekday === 6
+            ? { ...day, hours: { start: '09:00', end: '13:00' } }
+            : day,
+        ),
+      ),
+    ).toBe(false)
+  })
+})
 
 describe('company-local schedule dates', () => {
   it('uses the company date across midnight instead of the UTC date', () => {

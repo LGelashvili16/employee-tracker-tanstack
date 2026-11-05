@@ -6,6 +6,7 @@ import { AuthorizationError } from '#/lib/authorization/authorization-error'
 import {
   accountActionSchema,
   accountListSchema,
+  accountLookupSchema,
   employeeDetailsSchema,
   provisionAccountSchema,
 } from './access.schemas'
@@ -15,6 +16,7 @@ import {
   listEmployeeAccounts,
   manageEmployeeAccount,
   provisionEmployee,
+  readEmployeeAccount,
 } from './server/access.service.server'
 
 async function safeAccessAction<T>(action: () => Promise<T>) {
@@ -38,6 +40,12 @@ export const listAccounts = createServerFn({ method: 'GET' })
   .validator(accountListSchema)
   .handler(({ data, context }) =>
     safeAccessAction(() => listEmployeeAccounts(context.actor, data)),
+  )
+export const getEmployeeAccount = createServerFn({ method: 'GET' })
+  .middleware([administrator])
+  .validator(accountLookupSchema)
+  .handler(({ data, context }) =>
+    safeAccessAction(() => readEmployeeAccount(context.actor, data)),
   )
 export const createEmployeeAccount = createServerFn({ method: 'POST' })
   .middleware([administrator])

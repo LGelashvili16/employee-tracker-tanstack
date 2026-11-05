@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import { IconClock, IconLogin, IconLogout } from '@tabler/icons-react'
+import { IconCirclePause, IconCirclePlay, IconClock } from '@tabler/icons-react'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -80,7 +80,7 @@ export function AttendanceClock({
       >
         <div
           className={cn(
-            '@container/clock relative flex flex-1 items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-muted/30 px-3',
+            '@container/clock relative flex flex-1 flex-col items-center justify-center gap-6 overflow-hidden rounded-xl border border-border/60 bg-muted/30 px-3',
             compact ? 'min-h-48 py-5 sm:py-6' : 'py-7 sm:py-10',
           )}
         >
@@ -92,6 +92,50 @@ export function AttendanceClock({
             onStart={recordClockStart}
             compact={compact}
           />
+          <Button
+            className="relative h-11 w-full sm:w-auto sm:min-w-52"
+            disabled={
+              action.pending || (!open && overview.workday.kind !== 'scheduled')
+            }
+            aria-busy={action.pending}
+            onClick={() => {
+              if (!open) void action.start()
+              else {
+                openModal(
+                  <FinishWorkConfirmation
+                    oldSession={oldSession}
+                    needsReview={needsReview}
+                    workDate={open.workDate}
+                    workedSeconds={initialSeconds}
+                    clockStartedAt={
+                      sampleReceivedAt.current ?? performance.now()
+                    }
+                    remainingSeconds={elapsedSeconds(
+                      overview.serverNow,
+                      open.expectedEndAt,
+                    )}
+                    finish={() => action.finish(true)}
+                    submitting={submitting}
+                  />,
+                  {
+                    title: 'სამუშაოს დასრულება',
+                    canClose: () => !submitting.current,
+                  },
+                )
+              }
+            }}
+          >
+            <span className="flex size-4 items-center justify-center">
+              {action.pending ? (
+                <Spinner aria-hidden="true" />
+              ) : open ? (
+                <IconCirclePause aria-hidden="true" />
+              ) : (
+                <IconCirclePlay aria-hidden="true" />
+              )}
+            </span>
+            {open ? 'სამუშაოს დასრულება' : 'სამუშაოს დაწყება'}
+          </Button>
         </div>
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
           <span>
@@ -123,48 +167,6 @@ export function AttendanceClock({
             </AlertDescription>
           </Alert>
         ) : null}
-        <Button
-          className="h-11 w-full sm:w-auto sm:self-start"
-          disabled={
-            action.pending || (!open && overview.workday.kind !== 'scheduled')
-          }
-          aria-busy={action.pending}
-          onClick={() => {
-            if (!open) void action.start()
-            else {
-              openModal(
-                <FinishWorkConfirmation
-                  oldSession={oldSession}
-                  needsReview={needsReview}
-                  workDate={open.workDate}
-                  workedSeconds={initialSeconds}
-                  clockStartedAt={sampleReceivedAt.current ?? performance.now()}
-                  remainingSeconds={elapsedSeconds(
-                    overview.serverNow,
-                    open.expectedEndAt,
-                  )}
-                  finish={() => action.finish(true)}
-                  submitting={submitting}
-                />,
-                {
-                  title: 'სამუშაოს დასრულება',
-                  canClose: () => !submitting.current,
-                },
-              )
-            }
-          }}
-        >
-          <span className="flex size-4 items-center justify-center">
-            {action.pending ? (
-              <Spinner aria-hidden="true" />
-            ) : open ? (
-              <IconLogout aria-hidden="true" />
-            ) : (
-              <IconLogin aria-hidden="true" />
-            )}
-          </span>
-          {open ? 'სამუშაოს დასრულება' : 'სამუშაოს დაწყება'}
-        </Button>
       </CardContent>
     </Card>
   )

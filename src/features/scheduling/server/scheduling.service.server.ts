@@ -10,16 +10,14 @@ import {
 import { companyLocalDate, earliestScheduleDate } from '../scheduling.rules'
 import * as repository from './scheduling.repository.server'
 import type { Actor } from '#/lib/authorization/actor'
-import type { ScheduleSettings } from '../scheduling.types'
+import type { OwnSchedule, ScheduleSettings } from '../scheduling.types'
 
 export class ScheduleWorkflowError extends Error {}
 
 /** Provisioning owns the account transaction; only current schedule administrators can assign a custom week. */
-export async function assignInitialEmployeeWeek(
-  employeeId: string,
-  days: unknown,
-  actorId: string,
+async function requireScheduleAdministrator(
   tx: repository.ScheduleTransaction,
+  actorId: string,
 ) {
   const { identity, person } = await repository.currentAccount(tx, actorId)
   if (
@@ -30,6 +28,12 @@ export async function assignInitialEmployeeWeek(
     throw new AuthorizationError()
   if (!hasPermission(parseRoles(identity.roles), 'attendance.configure'))
     throw new AuthorizationError()
+}
+
+async function parseCustomWeek(
+  days: unknown,
+  tx: repository.ScheduleTransaction,
+) {
   const parsed = employeeWorkingWeekSchema.safeParse(days)
   if (!parsed.success)
     throw new ScheduleWorkflowError('გადაამოწმეთ თანამშრომლის სამუშაო კვირა.')
@@ -38,7 +42,60 @@ export async function assignInitialEmployeeWeek(
     throw new ScheduleWorkflowError(
       'ჯერ განსაზღვრეთ კომპანიის მოქმედი სამუშაო განრიგი.',
     )
-  await repository.insertEmployeeWeek(tx, employeeId, parsed.data, actorId)
+  return parsed.data
+}
+
+export async function assignInitialEmployeeWeek(
+  employeeId: string,
+  days: unknown,
+  actorId: string,
+  tx: repository.ScheduleTransaction,
+) {
+  await requireScheduleAdministrator(tx, actorId)
+  const week = await parseCustomWeek(days, tx)
+  await repository.insertEmployeeWeek(tx, employeeId, week, actorId)
+}
+
+/**
+ * Replaces an employee's recurring week, or returns them to the company schedule when `days` is null.
+ * Open attendance sessions keep the expectations they started with; later days use the new week.
+ * Returns whether anything changed so callers audit real changes only.
+ */
+export async function replaceEmployeeWeek(
+  employeeId: string,
+  days: unknown,
+  actorId: string,
+  tx: repository.ScheduleTransaction,
+) {
+  await requireScheduleAdministrator(tx, actorId)
+  const week = days === null ? null : await parseCustomWeek(days, tx)
+  return repository.replaceEmployeeWeek(tx, employeeId, week, actorId)
+}
+
+/** Self-service read: the subject is always the authenticated actor, and only their effective week is returned. */
+export function readOwnSchedule(actor: Actor): Promise<OwnSchedule> {
+  return repository.transactSchedules(async (tx) => {
+    const workday = await repository.companyWorkdayAt(new Date(), tx)
+    const context = { timezone: workday.timezone, today: workday.date }
+    const stored = await repository.readEmployeeWeekByUser(tx, actor.id)
+    if (stored) {
+      const own = employeeWorkingWeekSchema.safeParse(stored)
+      return own.success
+        ? { ...context, source: 'individual', week: own.data }
+        : { ...context, source: 'none', week: null }
+    }
+    const company = await repository.readCurrentCompanyWeek(tx)
+    return company
+      ? { ...context, source: 'company', week: company }
+      : { ...context, source: 'none', week: null }
+  })
+}
+
+/** Read-only company week shown beside employees that inherit it; carries no administration or audit fields. */
+export function readCompanyWeek() {
+  return repository.transactSchedules((tx) =>
+    repository.readCurrentCompanyWeek(tx),
+  )
 }
 
 /** The attendance service establishes ownership and active employment before calling this interface. */

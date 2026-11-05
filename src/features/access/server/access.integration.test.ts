@@ -393,6 +393,75 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
     ).toBe(before)
   })
 
+  it('replaces or clears an employee working week and audits real changes only', async () => {
+    const record = await identity('office-week')
+    const person = (
+      await testDatabase()
+        .select()
+        .from(tables.employee)
+        .where(eq(tables.employee.userId, record.id))
+    )[0]
+    const saturdayShift = Array.from({ length: 7 }, (_, index) => ({
+      weekday: index + 1,
+      hours: index === 5 ? { start: '10:00', end: '14:00' } : null,
+    }))
+    const edit = (workingWeek?: typeof saturdayShift | null) =>
+      service.editEmployeeDetails(owner, {
+        userId: record.id,
+        name: person.fullName,
+        contactEmail: '',
+        jobTitle: '',
+        phone: '',
+        workingWeek,
+        reason: 'განრიგის შეცვლა',
+      })
+    const scheduleAudits = async () =>
+      (
+        await testDatabase()
+          .select({ id: tables.accessAudit.id })
+          .from(tables.accessAudit)
+          .where(
+            and(
+              eq(tables.accessAudit.targetId, record.id),
+              eq(tables.accessAudit.action, 'account.schedule_updated'),
+            ),
+          )
+      ).length
+    const storedWeek = async () =>
+      (
+        await testDatabase()
+          .select({ days: tables.employeeWorkSchedule.days })
+          .from(tables.employeeWorkSchedule)
+          .where(eq(tables.employeeWorkSchedule.employeeId, person.id))
+      ).at(0)?.days
+    await edit(saturdayShift)
+    expect(await storedWeek()).toEqual(saturdayShift)
+    expect(await scheduleAudits()).toBe(1)
+    await edit(saturdayShift)
+    expect(await scheduleAudits()).toBe(1)
+    await edit(undefined)
+    expect(await storedWeek()).toEqual(saturdayShift)
+    const custom = await service.readEmployeeAccount(owner, {
+      userId: record.id,
+    })
+    expect(custom?.record.workingWeek).toEqual(saturdayShift)
+    expect(custom?.companyWeek).toBeNull()
+    await edit(null)
+    expect(await storedWeek()).toBeUndefined()
+    expect(await scheduleAudits()).toBe(2)
+    const inherited = await service.readEmployeeAccount(owner, {
+      userId: record.id,
+    })
+    expect(inherited?.record.workingWeek).toBeNull()
+    expect(inherited?.companyWeek).toHaveLength(7)
+    expect(
+      await service.readEmployeeAccount(owner, { userId: 'missing-user' }),
+    ).toBeNull()
+    await expect(
+      edit(saturdayShift.map((day) => ({ ...day, hours: null }))),
+    ).rejects.toThrow()
+  })
+
   it('allows only one concurrent consumption and authenticates through Better Auth username login', async () => {
     const issued = await provision('worker-active')
     const outcomes = await Promise.allSettled(

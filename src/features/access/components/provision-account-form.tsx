@@ -118,7 +118,7 @@ export function ProvisionAccountForm({
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
             <IconUserPlus className="size-5" aria-hidden="true" />
           </span>
-          ახალი თანამშრომელი
+          ახალი მომხმარებელი
         </CardTitle>
       </CardHeader>
       <CardContent>

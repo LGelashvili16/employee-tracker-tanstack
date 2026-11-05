@@ -99,7 +99,8 @@ Email is not marked verified by provisioning. Email delivery is not configured; 
 Who may change what:
 
 - **Administrators** (`admin.access` and `users.manage`) edit full name, email, job title and
-  phone from the row menu on `/admin/users` ("მონაცემების რედაქტირება"). A reason is required
+  phone from the account page `/admin/users/$userId` (the lean list on `/admin/users` links to it;
+  button "რედაქტირება"). A reason is required
   and audited as `account.details_updated`. The username and role cannot be edited here, and the
   usual target rules apply (not yourself, owner required for admin/owner accounts).
 - **Employees** edit only their own phone number on `/settings/profile`. The subject is always
@@ -120,8 +121,16 @@ Each day specifies start/end hours or explicitly marks a day off. The company ti
 remains authoritative, and an active company schedule must exist before a custom assignment.
 The assignment and account are saved in one transaction, with the assigning actor retained.
 For example, office staff can work Monday through Friday while another employee inherits Saturday work.
-Existing employees without an assignment continue using company defaults. Editing an existing
-assignment is not exposed by this creation flow. Open sessions retain their original expected times.
+Existing employees without an assignment continue using company defaults. Open sessions retain
+their original expected times.
+
+An administrator with `attendance.configure` can later replace the week, or return the employee
+to the company schedule, from "რედაქტირება" on the account page `/admin/users/$userId`. The
+change reuses the required reason and is audited as `account.schedule_updated` only when the
+week really changed. Administrators without that permission do not see the schedule section and
+the server rejects the attempt. The account page shows the effective week as a seven-day strip,
+labelled "ინდივიდუალური" or "კომპანიის განრიგი". Employees see their own effective week, with
+today highlighted, on `/schedule`; it is read-only and is served for the signed-in account only.
 
 ## Required auth email field
 

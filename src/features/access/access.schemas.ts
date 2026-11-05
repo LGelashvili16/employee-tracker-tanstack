@@ -31,6 +31,7 @@ export const accountIdSchema = z
   .string()
   .min(1, 'ანგარიში არასწორია.')
   .max(128, 'ანგარიში არასწორია.')
+export const accountLookupSchema = z.object({ userId: accountIdSchema })
 export const fullNameSchema = z
   .string()
   .trim()
@@ -76,6 +77,8 @@ export const employeeDetailsSchema = z.object({
   contactEmail: contactEmailSchema,
   jobTitle: jobTitleSchema,
   phone: phoneSchema,
+  /** Omitted leaves the schedule untouched, null returns to the company schedule, an array assigns a custom week. */
+  workingWeek: employeeWorkingWeekSchema.nullable().optional(),
   reason: reasonSchema,
 })
 /** The only field employees may change themselves; everything else is administrator-controlled. */

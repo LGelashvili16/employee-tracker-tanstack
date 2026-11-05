@@ -20,14 +20,9 @@ import { hasPermission } from '#/lib/authorization/permissions'
 import { listAccounts } from '../access.functions'
 import { ProvisionAccountForm } from './provision-account-form'
 import { AccountCodeDialog } from './account-code-dialog'
-import { EmployeeAccountRow } from './employee-account-row'
-import { AccountActionDialog } from './account-action-dialog'
-import { EmployeeDetailsDialog } from './employee-details-dialog'
-import type { AccountAction } from './account-action-content'
-import type { EmployeeAccountRecord, IssuedAccountCode } from '../access.types'
+import { EmployeeAccountsTable } from './employee-accounts-table'
+import type { IssuedAccountCode } from '../access.types'
 import type { Actor } from '#/lib/authorization/actor'
-
-type Action = AccountAction
 
 export function EmployeeAccounts({
   page,
@@ -39,17 +34,12 @@ export function EmployeeAccounts({
   actor: Actor
 }) {
   const query = useQuery({
-    queryKey: ['employee-accounts', page],
+    queryKey: ['employee-accounts', 'list', page],
     queryFn: () => listAccounts({ data: { page } }),
     retry: false,
     staleTime: 0,
   })
   const [issuedCode, setIssuedCode] = useState<IssuedAccountCode | null>(null)
-  const [selected, setSelected] = useState<{
-    target: EmployeeAccountRecord
-    action: Action
-  } | null>(null)
-  const [editing, setEditing] = useState<EmployeeAccountRecord | null>(null)
   const data = query.data?.ok ? query.data.value : null
   return (
     <div className="flex flex-col gap-6">
@@ -81,7 +71,7 @@ export function EmployeeAccounts({
               >
                 <div aria-hidden="true" className="flex flex-col gap-3 p-5">
                   {[1, 2, 3].map((key) => (
-                    <Skeleton key={key} className="h-20 w-full rounded-xl" />
+                    <Skeleton key={key} className="h-12 w-full rounded-xl" />
                   ))}
                 </div>
               </div>
@@ -99,19 +89,10 @@ export function EmployeeAccounts({
                 <p>ამ გვერდზე თანამშრომლის ანგარიშები არ არის.</p>
               </div>
             ) : (
-              <ul className="divide-y">
-                {data.records.map((record) => (
-                  <EmployeeAccountRow
-                    key={record.userId}
-                    record={record}
-                    actor={actor}
-                    onAction={(action) =>
-                      setSelected({ target: record, action })
-                    }
-                    onEdit={() => setEditing(record)}
-                  />
-                ))}
-              </ul>
+              <EmployeeAccountsTable
+                records={data.records}
+                actorId={actor.id}
+              />
             )}
           </CardContent>
           <CardFooter className="flex items-center justify-between gap-3 border-t py-3">
@@ -144,20 +125,6 @@ export function EmployeeAccounts({
           canAssignRoles={hasPermission(actor.roles, 'roles.manage')}
         />
       </div>
-      {selected ? (
-        <AccountActionDialog
-          target={selected.target}
-          action={selected.action}
-          onClose={() => setSelected(null)}
-          onCode={setIssuedCode}
-        />
-      ) : null}
-      {editing ? (
-        <EmployeeDetailsDialog
-          target={editing}
-          onClose={() => setEditing(null)}
-        />
-      ) : null}
       {issuedCode ? (
         <AccountCodeDialog
           value={issuedCode}

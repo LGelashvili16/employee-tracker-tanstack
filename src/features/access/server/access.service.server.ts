@@ -8,11 +8,14 @@ import { parseRoles } from '#/lib/authorization/permissions'
 import { provisionIdentity } from '#/lib/auth/provisioning.server'
 import {
   assignInitialEmployeeWeek,
+  readCompanyWeek,
+  replaceEmployeeWeek,
   ScheduleWorkflowError,
 } from '#/features/scheduling/server/scheduling.service.server'
 import {
   accountActionSchema,
   accountListSchema,
+  accountLookupSchema,
   completeAccountSchema,
   employeeDetailsSchema,
   ownPhoneSchema,
@@ -159,6 +162,21 @@ export async function listEmployeeAccounts(
   return repository.queryAccounts(page)
 }
 
+export async function readEmployeeAccount(
+  actor: Actor,
+  untrusted: z.input<typeof accountLookupSchema>,
+) {
+  assertPermissions(actor, ['admin.access', 'users.manage'])
+  const { userId } = accountLookupSchema.parse(untrusted)
+  const record = await repository.queryAccount(userId)
+  if (!record) return null
+  return {
+    record,
+    // Only needed (and only fetched) when the employee inherits the company week.
+    companyWeek: record.workingWeek ? null : await readCompanyWeek(),
+  }
+}
+
 export async function manageEmployeeAccount(
   actor: Actor,
   untrusted: z.infer<typeof accountActionSchema>,
@@ -250,6 +268,28 @@ export async function editEmployeeDetails(
       action: 'account.details_updated',
       reason: input.reason,
     })
+    if (input.workingWeek === undefined) return
+    // Schedule rights are separate from account management; replaceEmployeeWeek rechecks them against the database.
+    assertPermissions(administrator, ['attendance.configure'])
+    try {
+      const changed = await replaceEmployeeWeek(
+        target.person.id,
+        input.workingWeek,
+        administrator.id,
+        tx,
+      )
+      if (changed)
+        await repository.auditAccess(tx, {
+          actorId: administrator.id,
+          targetId: input.userId,
+          action: 'account.schedule_updated',
+          reason: input.reason,
+        })
+    } catch (error) {
+      if (error instanceof ScheduleWorkflowError)
+        throw new AccountWorkflowError(error.message)
+      throw error
+    }
   })
 }
 

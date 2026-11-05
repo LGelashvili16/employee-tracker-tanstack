@@ -6,6 +6,7 @@ import {
   user,
   session,
   employee,
+  employeeWorkSchedule,
   accountSetup,
   accessAudit,
 } from '#/db/schema'
@@ -41,20 +42,20 @@ export async function lockedAccount(tx: AccessTransaction, userId: string) {
     .then((rows) => rows.at(0))
   return { identity, person }
 }
+const accountSummaryColumns = {
+  userId: user.id,
+  name: employee.fullName,
+  code: employee.code,
+  jobTitle: employee.jobTitle,
+  roles: user.roles,
+  state: user.accessState,
+  employmentStatus: employee.status,
+}
+/** Lean list rows: contact details and the working week are read on the single-account page only. */
 export async function queryAccounts(page: number) {
   const [records, totals] = await Promise.all([
     db
-      .select({
-        userId: user.id,
-        name: employee.fullName,
-        code: employee.code,
-        contactEmail: employee.contactEmail,
-        jobTitle: employee.jobTitle,
-        phone: employee.phone,
-        roles: user.roles,
-        state: user.accessState,
-        employmentStatus: employee.status,
-      })
+      .select(accountSummaryColumns)
       .from(employee)
       .innerJoin(user, eq(employee.userId, user.id))
       .orderBy(asc(employee.code))
@@ -63,6 +64,24 @@ export async function queryAccounts(page: number) {
     db.select({ count: count() }).from(employee),
   ])
   return { records, total: totals.at(0)?.count ?? 0 }
+}
+export async function queryAccount(userId: string) {
+  return db
+    .select({
+      ...accountSummaryColumns,
+      contactEmail: employee.contactEmail,
+      phone: employee.phone,
+      workingWeek: employeeWorkSchedule.days,
+    })
+    .from(employee)
+    .innerJoin(user, eq(employee.userId, user.id))
+    .leftJoin(
+      employeeWorkSchedule,
+      eq(employeeWorkSchedule.employeeId, employee.id),
+    )
+    .where(eq(user.id, userId))
+    .limit(1)
+    .then((rows) => rows.at(0) ?? null)
 }
 export async function readAccountAccess(userId: string) {
   const result = await db
