@@ -77,7 +77,7 @@ beforeEach(() => {
         {
           userId: 'worker',
           name: 'ანა',
-          code: 'worker-1',
+          username: 'worker-1',
           state: 'active',
           sessionCount: 0,
         },
@@ -104,7 +104,7 @@ beforeEach(() => {
         userId: 'worker',
         employeeId: 'employee',
         name: 'ანა',
-        code: 'worker-1',
+        username: 'worker-1',
       },
       days: ['2026-11-05', '2026-11-04'],
       totalDays: 11,
@@ -142,8 +142,8 @@ describe('company attendance navigation', () => {
     expect(linkSearch('შემდეგი გვერდი').get('page')).toBe('3')
     expect(linkSearch('შემდეგი გვერდი').get('q')).toBe('ანა')
     expect(linkSearch('შემდეგი გვერდი').get('sort')).toBe('name-asc')
-    expect(linkSearch('კოდი').get('sort')).toBe('code-asc')
-    expect(linkSearch('კოდი').get('page')).toBe('1')
+    expect(linkSearch('მომხმარებლის სახელი').get('sort')).toBe('username-asc')
+    expect(linkSearch('მომხმარებლის სახელი').get('page')).toBe('1')
   })
   it('validates search and resets pagination for a new query', async () => {
     const user = userEvent.setup()
@@ -152,14 +152,15 @@ describe('company attendance navigation', () => {
     const input = screen.getByLabelText('თანამშრომლის ძიება')
     await user.clear(input)
     await user.type(input, 'ბექა')
-    await user.click(screen.getByRole('button', { name: 'ძებნა' }))
+    await user.keyboard('{Enter}')
     expect(calls.navigate).toHaveBeenCalledWith({
-      search: { page: 1, q: 'ბექა', sort: 'name-asc' },
+      search: { page: 1, q: 'ბექა', state: undefined, sort: 'name-asc' },
+      replace: false,
     })
     calls.navigate.mockClear()
     await user.clear(input)
     await user.type(input, 'ა'.repeat(101))
-    await user.click(screen.getByRole('button', { name: 'ძებნა' }))
+    await user.keyboard('{Enter}')
     expect(
       await screen.findByText('ძიება მაქსიმუმ 100 სიმბოლოს უნდა შეიცავდეს.'),
     ).toBeVisible()

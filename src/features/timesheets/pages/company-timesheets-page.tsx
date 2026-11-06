@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CompanyAttendanceNavigation } from '#/features/attendance/components/company-attendance-navigation'
-import { TimesheetsWorkspace } from '../components/timesheets-workspace'
+import { CompanyTimesheetsWorkspace } from '../components/company-timesheets-workspace'
+import type { ReactNode } from 'react'
 
 const route = getRouteApi('/_authenticated/admin/timesheets')
 export function CompanyTimesheetsPage() {
@@ -8,17 +11,25 @@ export function CompanyTimesheetsPage() {
   const search = route.useSearch()
   const navigate = route.useNavigate()
   return (
-    <div className="flex flex-col gap-6">
-      <CompanyAttendanceNavigation userId={search.userId} />
-      <TimesheetsWorkspace
-        key={actor.id}
-        actor={actor}
-        company
-        search={search}
-        onSearchChange={(value) => {
-          void navigate({ search: value })
-        }}
-      />
-    </div>
+    <section className="flex min-w-0 flex-col gap-6">
+      <h1 className="text-2xl font-semibold tracking-tight">
+        თანამშრომლების სამუშაო საათები
+      </h1>
+      <CompanyAttendanceNavigation userId={search.userId}>
+        <CompanyTimesheetCache key={actor.id}>
+          <CompanyTimesheetsWorkspace
+            actorId={actor.id}
+            search={search}
+            onChange={(value, replace = false) => {
+              void navigate({ search: value, replace })
+            }}
+          />
+        </CompanyTimesheetCache>
+      </CompanyAttendanceNavigation>
+    </section>
   )
+}
+function CompanyTimesheetCache({ children }: { children: ReactNode }) {
+  const [client] = useState(() => new QueryClient())
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
 }

@@ -272,7 +272,7 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
     await expect(
       testDatabase().insert(tables.employee).values({
         userId: record.id,
-        code: 'other-code',
+        username: 'other-code',
         fullName: 'დუბლიკატი',
       }),
     ).rejects.toThrow()

@@ -18,7 +18,7 @@ export const user = pgTable('user', {
   name: text('name').notNull(),
   /** Auth protocol identifier. Provisioned employees use a reserved .invalid address; real optional email belongs to their employee record. */
   email: text('email').notNull().unique(),
-  /** Immutable normalized login name, equal to the company employee code; null for legacy email accounts. */
+  /** Immutable normalized login name, equal to the company employee username; null for legacy email accounts. */
   username: text('username').unique(),
   /** Server-controlled account lifecycle: invited, active, or suspended. Existing accounts remain active. */
   accessState: text('access_state').notNull().default('active'),

@@ -29,17 +29,24 @@ export async function companyAttendanceUsers(
   // Treat SQL LIKE metacharacters as literal search text.
   const pattern = `%${input.q.replace(/[\\%_]/g, '\\$&')}%`
   const name = sql<string>`coalesce(${employee.fullName}, ${user.name})`
-  const code = sql<string>`coalesce(${employee.code}, ${user.username}, '')`
-  const where = input.q
-    ? or(ilike(name, pattern), ilike(code, pattern))
-    : undefined
+  const username = sql<string>`coalesce(${user.username}, '')`
+  const where = and(
+    input.q ? or(ilike(name, pattern), ilike(username, pattern)) : undefined,
+    input.state && input.state !== 'all'
+      ? eq(user.accessState, input.state)
+      : undefined,
+  )
   const order = input.sort.endsWith('desc') ? desc : asc
-  const sortField = input.sort.startsWith('code') ? code : name
+  // Preserve existing code-sort URLs as aliases for the username column.
+  const sortField =
+    input.sort.startsWith('code') || input.sort.startsWith('username')
+      ? username
+      : name
   const items = await tx
     .select({
       userId: user.id,
       name,
-      code,
+      username,
       state: user.accessState,
       sessionCount:
         sql<number>`(select count(*) from ${attendanceSession} where ${attendanceSession.employeeId} = ${employee.id})`.mapWith(
@@ -74,7 +81,7 @@ export async function companyAttendanceUser(
       .select({
         userId: user.id,
         name: sql<string>`coalesce(${employee.fullName}, ${user.name})`,
-        code: sql<string>`coalesce(${employee.code}, ${user.username}, '')`,
+        code: sql<string>`coalesce(${employee.username}, ${user.username}, '')`,
         employeeId: employee.id,
       })
       .from(user)

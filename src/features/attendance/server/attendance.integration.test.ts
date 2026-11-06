@@ -73,13 +73,37 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     await connection.connect()
     for (const file of readdirSync('drizzle')
       .filter((value) => /^\d+.*\.sql$/.test(value))
-      .sort())
+      .sort()) {
+      if (file === '0010_employee_username.sql') {
+        await connection.query(
+          `INSERT INTO "user" (id, name, email, username) VALUES ('migration-check', 'Migration fixture', 'migration@attendance.invalid', 'migration-check')`,
+        )
+        await connection.query(
+          `INSERT INTO employee (code, user_id, full_name) VALUES ('migration-check', 'migration-check', 'Migration fixture')`,
+        )
+      }
       await connection.query(
         readFileSync(`drizzle/${file}`, 'utf8').replaceAll(
           '--> statement-breakpoint',
           '',
         ),
       )
+      if (file === '0010_employee_username.sql') {
+        expect(
+          (
+            await connection.query(
+              `SELECT username FROM employee WHERE user_id = 'migration-check'`,
+            )
+          ).rows,
+        ).toEqual([{ username: 'migration-check' }])
+        await connection.query(
+          `DELETE FROM employee WHERE user_id = 'migration-check'`,
+        )
+        await connection.query(
+          `DELETE FROM "user" WHERE id = 'migration-check'`,
+        )
+      }
+    }
     process.env.DATABASE_URL = target.toString()
     service = await import('./attendance.service.server')
     review = await import('./attendance-review.service.server')
@@ -93,7 +117,7 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
       `INSERT INTO "user" (id, name, email, roles) VALUES ('attendance-a', 'ანა', 'a@attendance.invalid', 'employee'), ('attendance-b', 'ბექა', 'b@attendance.invalid', 'employee'), ('review-manager', 'ხელმძღვანელი', 'manager@attendance.invalid', 'supervisor'), ('review-admin', 'ადმინისტრატორი', 'admin@attendance.invalid', 'admin')`,
     )
     const employees = await sql().query(
-      `INSERT INTO employee (code, user_id, full_name) VALUES ('attendance-a', 'attendance-a', 'ანა'), ('attendance-b', 'attendance-b', 'ბექა'), ('review-manager', 'review-manager', 'ხელმძღვანელი'), ('review-admin', 'review-admin', 'ადმინისტრატორი') RETURNING id, user_id`,
+      `INSERT INTO employee (username, user_id, full_name) VALUES ('attendance-a', 'attendance-a', 'ანა'), ('attendance-b', 'attendance-b', 'ბექა'), ('review-manager', 'review-manager', 'ხელმძღვანელი'), ('review-admin', 'review-admin', 'ადმინისტრატორი') RETURNING id, user_id`,
     )
     employeeId = employees.rows.find(
       (row: { user_id: string }) => row.user_id === actor.id,
@@ -538,10 +562,26 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     )
     expect(first.rows).toHaveLength(50)
     expect(first.hasMore).toBe(true)
+    expect(first.total).toBe(52)
+    expect(first.pageSize).toBe(50)
     expect(second.rows).toHaveLength(2)
     expect(second.hasMore).toBe(false)
     expect(first.totals.seconds).toBe(52 * 3600)
     expect(second.totals.seconds).toBe(52 * 3600)
+    const filtered = await timesheets.readTimesheets(
+      manager,
+      {
+        month: '2026-11',
+        q: actor.name,
+        sort: 'date-desc',
+        status: 'pending',
+      },
+      'team',
+    )
+    expect(filtered.total).toBe(26)
+    expect(filtered.rows[0].date).toBe('2026-11-26')
+    expect(filtered.rows.every((row) => row.userId === actor.id)).toBe(true)
+    expect(filtered.totals.seconds).toBe(26 * 3600)
     expect(
       (
         await timesheets.readTimesheets(
@@ -558,6 +598,52 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
       (await timesheets.readTimesheets(manager, { month: '2026-11' }, 'team'))
         .totals.seconds,
     ).toBe(0)
+  })
+
+  it('filters complete timesheet days and keeps their hours and totals together', async () => {
+    await sql()
+      .query(`INSERT INTO attendance_session (employee_id, request_id, work_date, timezone, schedule_effective_from, expected_start_at, expected_end_at, started_at, ended_at, review_state)
+      SELECT e.id, uuidv7(), date '2026-11-04' + v.day, 'Asia/Tbilisi', date '2026-01-01',
+        timestamptz '2026-11-04 06:00:00+00' + v.day * interval '1 day', timestamptz '2026-11-04 15:00:00+00' + v.day * interval '1 day',
+        timestamptz '2026-11-04 06:00:00+00' + v.day * interval '1 day' + v.hour * interval '1 hour',
+        timestamptz '2026-11-04 06:00:00+00' + v.day * interval '1 day' + (v.hour + v.duration) * interval '1 hour', v.state
+      FROM employee e CROSS JOIN (VALUES (0, 0, 1, 'pending'), (0, 2, 1, 'approved'), (1, 0, 3, 'approved'), (2, 0, 4, 'rejected')) AS v(day, hour, duration, state)
+      WHERE e.user_id = 'attendance-a'`)
+    const pending = await timesheets.readTimesheets(
+      administrator,
+      { month: '2026-11', status: 'pending' },
+      'company',
+    )
+    expect(pending.total).toBe(1)
+    expect(pending.rows[0].seconds).toBe(7200)
+    expect(pending.totals.seconds).toBe(7200)
+    const approved = await timesheets.readTimesheets(
+      administrator,
+      { month: '2026-11', status: 'approved' },
+      'company',
+    )
+    expect(approved.total).toBe(1)
+    expect(approved.totals.seconds).toBe(10800)
+    const rejected = await timesheets.readTimesheets(
+      administrator,
+      { month: '2026-11', status: 'rejected' },
+      'company',
+    )
+    expect(rejected.total).toBe(1)
+    expect(rejected.totals.seconds).toBe(14400)
+    const sorted = await timesheets.readTimesheets(
+      administrator,
+      { month: '2026-11', sort: 'seconds-desc' },
+      'company',
+    )
+    expect(sorted.rows.map((row) => row.seconds)).toEqual([14400, 10800, 7200])
+    const noMatch = await timesheets.readTimesheets(
+      administrator,
+      { month: '2026-11', q: '%' },
+      'company',
+    )
+    expect(noMatch.total).toBe(0)
+    expect(noMatch.totals.seconds).toBe(0)
   })
 
   it('defaults the timesheet month using company timezone rather than browser or host time', async () => {
@@ -649,6 +735,26 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
   })
 
   it('lists all attendance accounts including empty accounts with server search, sorting and pagination', async () => {
+    await sql().query(
+      `UPDATE employee SET username = 'separate-employee-code' WHERE user_id = 'attendance-a'`,
+    )
+    await sql().query(
+      `UPDATE "user" SET username = 'separate-login-name' WHERE id = 'attendance-a'`,
+    )
+    const byUsername = await companyAttendance.listCompanyAttendanceUsers(
+      administrator,
+      { q: 'separate-login-name', sort: 'username-asc' },
+    )
+    expect(byUsername.items.map((item) => item.username)).toEqual([
+      'separate-login-name',
+    ])
+    expect(
+      (
+        await companyAttendance.listCompanyAttendanceUsers(administrator, {
+          q: 'separate-employee-code',
+        })
+      ).total,
+    ).toBe(0)
     await expect(
       companyAttendance.listCompanyAttendanceUsers(null, {}),
     ).rejects.toThrow()
@@ -675,20 +781,44 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
       expect(first.items).toHaveLength(20)
       expect(second.items).toHaveLength(2)
       expect(first.total).toBe(22)
-      expect(first.items[0].code).toBe('list-00')
+      expect(first.items[0].username).toBe('list-00')
       expect(first.items[0].sessionCount).toBe(0)
       expect(Object.keys(first.items[0]).sort()).toEqual([
-        'code',
         'name',
         'sessionCount',
         'state',
         'userId',
+        'username',
       ])
       const reversed = await companyAttendance.listCompanyAttendanceUsers(
         administrator,
         { q: 'list-', sort: 'code-desc' },
       )
-      expect(reversed.items[0].code).toBe('list-21')
+      expect(reversed.items[0].username).toBe('list-21')
+      await sql().query(
+        `UPDATE "user" SET access_state = 'suspended' WHERE id = 'attendance-list-00'`,
+      )
+      expect(
+        (
+          await companyAttendance.listCompanyAttendanceUsers(administrator, {
+            q: 'list-',
+            state: 'suspended',
+          })
+        ).total,
+      ).toBe(1)
+      expect(
+        (
+          await companyAttendance.listCompanyAttendanceUsers(administrator, {
+            q: 'list-',
+            state: 'active',
+          })
+        ).total,
+      ).toBe(21)
+      await expect(
+        companyAttendance.listCompanyAttendanceUsers(administrator, {
+          state: 'invalid',
+        }),
+      ).rejects.toThrow()
       expect(
         (
           await companyAttendance.listCompanyAttendanceUsers(administrator, {

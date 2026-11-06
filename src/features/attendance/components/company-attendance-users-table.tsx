@@ -5,7 +5,13 @@ import {
   tableFeatures,
   useTable,
 } from '@tanstack/react-table'
-import { IconArrowsSort } from '@tabler/icons-react'
+import {
+  IconArrowsSort,
+  IconChevronRight,
+  IconArrowUp,
+  IconArrowDown,
+} from '@tabler/icons-react'
+import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import {
@@ -30,14 +36,14 @@ export function CompanyAttendanceUsersTable({
   items: Array<CompanyAttendanceAccount>
   search: CompanyAttendanceSearch
 }) {
-  const sort = search.sort ?? 'name-asc'
+  const sort = (search.sort ?? 'name-asc').replace('code-', 'username-')
   const columns = useMemo(
     () =>
       helper.columns([
         helper.accessor('name', {
           header: () => (
             <Button
-              variant="ghost"
+              variant="link"
               size="sm"
               nativeButton={false}
               role="link"
@@ -53,23 +59,44 @@ export function CompanyAttendanceUsersTable({
               }
             >
               თანამშრომელი
-              <IconArrowsSort data-icon="inline-end" aria-hidden="true" />
+              {sort.startsWith('name') ? (
+                sort.endsWith('desc') ? (
+                  <IconArrowDown data-icon="inline-end" aria-hidden="true" />
+                ) : (
+                  <IconArrowUp data-icon="inline-end" aria-hidden="true" />
+                )
+              ) : (
+                <IconArrowsSort data-icon="inline-end" aria-hidden="true" />
+              )}
             </Button>
           ),
           cell: ({ row }) => (
             <Link
-              className="font-medium underline underline-offset-4"
+              className="group flex min-w-48 items-center gap-3 rounded-md font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
               to="/admin/attendance/$userId"
               params={{ userId: row.original.userId }}
             >
-              {row.original.name}
+              <Avatar aria-hidden="true">
+                <AvatarFallback>
+                  {row.original.name
+                    .trim()
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((part) => part[0])
+                    .join('')
+                    .toLocaleUpperCase('ka-GE')}
+                </AvatarFallback>
+              </Avatar>
+              <span className="group-hover:underline group-hover:underline-offset-4">
+                {row.original.name}
+              </span>
             </Link>
           ),
         }),
-        helper.accessor('code', {
+        helper.accessor('username', {
           header: () => (
             <Button
-              variant="ghost"
+              variant="link"
               size="sm"
               nativeButton={false}
               role="link"
@@ -79,16 +106,31 @@ export function CompanyAttendanceUsersTable({
                   search={{
                     ...search,
                     page: 1,
-                    sort: sort === 'code-asc' ? 'code-desc' : 'code-asc',
+                    sort:
+                      sort === 'username-asc'
+                        ? 'username-desc'
+                        : 'username-asc',
                   }}
                 />
               }
             >
-              კოდი
-              <IconArrowsSort data-icon="inline-end" aria-hidden="true" />
+              მომხმარებლის სახელი
+              {sort.startsWith('username') ? (
+                sort.endsWith('desc') ? (
+                  <IconArrowDown data-icon="inline-end" aria-hidden="true" />
+                ) : (
+                  <IconArrowUp data-icon="inline-end" aria-hidden="true" />
+                )
+              ) : (
+                <IconArrowsSort data-icon="inline-end" aria-hidden="true" />
+              )}
             </Button>
           ),
-          cell: ({ row }) => row.original.code || 'არ არის მითითებული',
+          cell: ({ row }) => (
+            <span className="font-mono text-sm text-muted-foreground">
+              {row.original.username || 'არ არის მითითებული'}
+            </span>
+          ),
         }),
         helper.accessor('state', {
           header: 'ანგარიშის სტატუსი',
@@ -99,7 +141,7 @@ export function CompanyAttendanceUsersTable({
                   ? 'green'
                   : row.original.state === 'suspended'
                     ? 'red'
-                    : 'secondary'
+                    : 'yellow'
               }
             >
               {row.original.state === 'active'
@@ -110,14 +152,21 @@ export function CompanyAttendanceUsersTable({
             </Badge>
           ),
         }),
-        helper.accessor('sessionCount', { header: 'სესიების რაოდენობა' }),
+        helper.accessor('sessionCount', {
+          header: 'სესიები',
+          cell: ({ row }) => (
+            <span className="block text-right tabular-nums">
+              {row.original.sessionCount}
+            </span>
+          ),
+        }),
         helper.display({
           id: 'details',
           header: 'დასწრება',
           cell: ({ row }) => (
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon-sm"
               nativeButton={false}
               role="link"
               render={
@@ -128,7 +177,7 @@ export function CompanyAttendanceUsersTable({
                 />
               }
             >
-              სესიების ნახვა
+              <IconChevronRight aria-hidden="true" />
             </Button>
           ),
         }),
@@ -142,13 +191,19 @@ export function CompanyAttendanceUsersTable({
     getRowId: (row) => row.userId,
   })
   return (
-    <Table>
-      <TableHeader>
+    <Table className="min-w-[42rem]">
+      <TableHeader className="bg-muted/40">
         {table.getHeaderGroups().map((group) => (
           <TableRow key={group.id}>
             {group.headers.map((header) => (
               <TableHead
                 key={header.id}
+                className={
+                  header.column.id === 'sessionCount' ||
+                  header.column.id === 'details'
+                    ? 'h-12 px-4 text-right'
+                    : 'h-12 px-4'
+                }
                 aria-sort={
                   sort.startsWith(header.column.id)
                     ? sort.endsWith('desc')
@@ -167,7 +222,14 @@ export function CompanyAttendanceUsersTable({
         {table.getRowModel().rows.map((row) => (
           <TableRow key={row.id}>
             {row.getAllCells().map((cell) => (
-              <TableCell key={cell.id}>
+              <TableCell
+                key={cell.id}
+                className={
+                  cell.column.id === 'details'
+                    ? 'px-4 py-4 text-right'
+                    : 'px-4 py-4'
+                }
+              >
                 <table.FlexRender cell={cell} />
               </TableCell>
             ))}

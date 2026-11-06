@@ -105,7 +105,7 @@ async function createEmployee(
     input.contactEmail,
   )
   const person = await repository.insertEmployee(tx, {
-    code: input.code,
+    username: input.code,
     userId,
     fullName: input.name,
     contactEmail: input.contactEmail || null,

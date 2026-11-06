@@ -7,6 +7,11 @@ const page = z
   .min(1, 'გვერდი არასწორია.')
   .max(100000, 'გვერდი არასწორია.')
 export const companyAttendanceSearchSchema = z.object({
+  state: z
+    .enum(['all', 'active', 'invited', 'suspended'], {
+      error: 'სტატუსი არასწორია.',
+    })
+    .optional(),
   page: page.optional(),
   q: z
     .string({ error: 'ძიება არასწორია.' })
@@ -14,9 +19,19 @@ export const companyAttendanceSearchSchema = z.object({
     .max(100, 'ძიება მაქსიმუმ 100 სიმბოლოს უნდა შეიცავდეს.')
     .optional(),
   sort: z
-    .enum(['name-asc', 'name-desc', 'code-asc', 'code-desc'], {
-      error: 'დალაგება არასწორია.',
-    })
+    .enum(
+      [
+        'name-asc',
+        'name-desc',
+        'username-asc',
+        'username-desc',
+        'code-asc',
+        'code-desc',
+      ],
+      {
+        error: 'დალაგება არასწორია.',
+      },
+    )
     .optional(),
   // Preserve old filtered links by redirecting them to the employee detail route.
   userId: recordIdSchema.optional(),
@@ -42,4 +57,5 @@ export const companyAttendanceUserSchema =
   })
 export const companyAttendanceQuerySchema = z.object({
   q: companyAttendanceSearchSchema.shape.q.unwrap(),
+  state: companyAttendanceSearchSchema.shape.state.unwrap(),
 })

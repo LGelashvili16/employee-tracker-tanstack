@@ -1,5 +1,17 @@
 import '@tanstack/react-start/server-only'
-import { and, asc, eq, gte, lt, ne, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  gte,
+  ilike,
+  lt,
+  ne,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { db } from '#/db'
 import {
   attendanceReviewer,
@@ -7,6 +19,8 @@ import {
   employee,
   user,
 } from '#/db/schema'
+import type { z } from 'zod'
+import type { timesheetRequestSchema } from '../timesheets.schemas'
 
 export const transactTimesheets = db.transaction.bind(db)
 export type TimesheetTransaction = Parameters<
@@ -37,8 +51,7 @@ export async function readPeriod(
   scope: 'self' | 'team' | 'company',
   start: string,
   end: string,
-  page: number,
-  userId: string | undefined,
+  input: z.infer<typeof timesheetRequestSchema>,
   now: Date,
 ) {
   const condition = and(
@@ -50,7 +63,13 @@ export async function readPeriod(
             ne(employee.userId, actorId),
             sql`exists (select 1 from ${attendanceReviewer} where ${attendanceReviewer.reviewerId} = ${actorId} and ${attendanceReviewer.employeeId} = ${attendanceSession.employeeId})`,
           ),
-    userId ? eq(employee.userId, userId) : undefined,
+    input.userId ? eq(employee.userId, input.userId) : undefined,
+    input.q
+      ? or(
+          ilike(employee.fullName, `%${input.q.replace(/[\\%_]/g, '\\$&')}%`),
+          ilike(employee.username, `%${input.q.replace(/[\\%_]/g, '\\$&')}%`),
+        )
+      : undefined,
     gte(attendanceSession.workDate, start),
     lt(attendanceSession.workDate, end),
   )
@@ -75,24 +94,24 @@ export async function readPeriod(
     sql<number>`coalesce(sum(${attendanceSession.approvedOutsideSeconds}), 0)`.mapWith(
       Number,
     )
-  const rows = await tx
+  const days = tx
     .select({
       employeeId: employee.id,
       userId: employee.userId,
       employeeName: employee.fullName,
       date: attendanceSession.workDate,
       timezone: attendanceSession.timezone,
-      firstIn: sql<Date>`min(${attendanceSession.startedAt})`.mapWith(
-        attendanceSession.startedAt,
-      ),
-      lastOut: sql<Date | null>`max(${attendanceSession.endedAt})`.mapWith(
-        (value: string | null) => (value ? new Date(value) : null),
-      ),
-      seconds,
-      pending,
-      rejected,
-      open,
-      approvedOutsideSeconds: outside,
+      firstIn: sql<Date>`min(${attendanceSession.startedAt})`
+        .mapWith(attendanceSession.startedAt)
+        .as('first_in'),
+      lastOut: sql<Date | null>`max(${attendanceSession.endedAt})`
+        .mapWith((value: string | null) => (value ? new Date(value) : null))
+        .as('last_out'),
+      seconds: seconds.as('seconds'),
+      pending: pending.as('pending'),
+      rejected: rejected.as('rejected'),
+      open: open.as('open'),
+      approvedOutsideSeconds: outside.as('outside_seconds'),
     })
     .from(attendanceSession)
     .innerJoin(employee, eq(employee.id, attendanceSession.employeeId))
@@ -104,27 +123,60 @@ export async function readPeriod(
       attendanceSession.workDate,
       attendanceSession.timezone,
     )
+    .as('timesheet_days')
+  // Filter complete day aggregates so a pending session does not hide other hours from that day.
+  const status =
+    input.status === 'open'
+      ? gt(days.open, 0)
+      : input.status === 'pending'
+        ? gt(days.pending, 0)
+        : input.status === 'rejected'
+          ? gt(days.rejected, 0)
+          : input.status === 'approved'
+            ? and(eq(days.open, 0), eq(days.pending, 0), eq(days.rejected, 0))
+            : undefined
+  const sort = input.sort ?? 'name-asc'
+  const primary =
+    sort === 'date-desc'
+      ? desc(days.date)
+      : sort === 'date-asc'
+        ? asc(days.date)
+        : sort === 'name-desc'
+          ? desc(days.employeeName)
+          : sort === 'seconds-desc'
+            ? desc(days.seconds)
+            : sort === 'seconds-asc'
+              ? asc(days.seconds)
+              : asc(days.employeeName)
+  const rows = await tx
+    .select()
+    .from(days)
+    .where(status)
     .orderBy(
-      asc(employee.fullName),
-      asc(employee.userId),
-      asc(attendanceSession.workDate),
-      asc(attendanceSession.timezone),
+      primary,
+      asc(days.employeeName),
+      asc(days.employeeId),
+      asc(days.date),
+      asc(days.timezone),
     )
     .limit(51)
-    .offset(page * 50)
+    .offset(input.page * 50)
   const [totals] = await tx
     .select({
-      seconds,
-      pending,
-      rejected,
-      open,
-      approvedOutsideSeconds: outside,
-      days: sql<number>`count(distinct (${attendanceSession.employeeId}, ${attendanceSession.workDate}))`.mapWith(
+      seconds: sql<number>`coalesce(sum(${days.seconds}), 0)`.mapWith(Number),
+      pending: sql<number>`coalesce(sum(${days.pending}), 0)`.mapWith(Number),
+      rejected: sql<number>`coalesce(sum(${days.rejected}), 0)`.mapWith(Number),
+      open: sql<number>`coalesce(sum(${days.open}), 0)`.mapWith(Number),
+      approvedOutsideSeconds:
+        sql<number>`coalesce(sum(${days.approvedOutsideSeconds}), 0)`.mapWith(
+          Number,
+        ),
+      records: sql<number>`count(*)`.mapWith(Number),
+      days: sql<number>`count(distinct (${days.employeeId}, ${days.date}))`.mapWith(
         Number,
       ),
     })
-    .from(attendanceSession)
-    .innerJoin(employee, eq(employee.id, attendanceSession.employeeId))
-    .where(condition)
+    .from(days)
+    .where(status)
   return { rows, totals }
 }

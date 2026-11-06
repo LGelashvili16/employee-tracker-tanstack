@@ -47,12 +47,13 @@ export async function readTimesheets(
         scope,
         start,
         end,
-        data.page,
-        data.userId,
+        data,
         now,
       )
       return {
         month,
+        total: result.totals.records,
+        pageSize: 50,
         totals: result.totals,
         hasMore: result.rows.length > 50,
         rows: result.rows.slice(0, 50).map((row) => ({

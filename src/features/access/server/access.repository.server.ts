@@ -45,7 +45,7 @@ export async function lockedAccount(tx: AccessTransaction, userId: string) {
 const accountSummaryColumns = {
   userId: user.id,
   name: employee.fullName,
-  code: employee.code,
+  code: employee.username,
   jobTitle: employee.jobTitle,
   roles: user.roles,
   state: user.accessState,
@@ -58,7 +58,7 @@ export async function queryAccounts(page: number) {
       .select(accountSummaryColumns)
       .from(employee)
       .innerJoin(user, eq(employee.userId, user.id))
-      .orderBy(asc(employee.code))
+      .orderBy(asc(employee.username))
       .limit(20)
       .offset((page - 1) * 20),
     db.select({ count: count() }).from(employee),
@@ -248,7 +248,7 @@ export async function updateEmployeeDetails(
 export async function readOwnProfile(userId: string) {
   return db
     .select({
-      code: employee.code,
+      code: employee.username,
       jobTitle: employee.jobTitle,
       phone: employee.phone,
     })

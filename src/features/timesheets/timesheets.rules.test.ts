@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { shiftTimesheetMonth, timesheetMonthBounds } from './timesheets.rules'
+import {
+  formatTimesheetMonth,
+  shiftTimesheetMonth,
+  timesheetMonthBounds,
+} from './timesheets.rules'
 import { timesheetRequestSchema } from './timesheets.schemas'
 
 describe('timesheet periods', () => {
@@ -13,6 +17,7 @@ describe('timesheet periods', () => {
       end: '2027-01-01',
     })
     expect(shiftTimesheetMonth('2026-01', -1)).toBe('2025-12')
+    expect(formatTimesheetMonth('2026-11')).toBe('ნოემბერი 2026')
   })
   it('rejects invalid periods, identifiers and unbounded pagination', () => {
     for (const input of [
@@ -20,6 +25,9 @@ describe('timesheet periods', () => {
       { month: '1999-12' },
       { month: '2026-11', page: -1 },
       { month: '2026-11', userId: '../private' },
+      { q: 'ა'.repeat(101) },
+      { sort: 'unsafe' },
+      { status: 'unsafe' },
     ]) {
       expect(timesheetRequestSchema.safeParse(input).success).toBe(false)
     }

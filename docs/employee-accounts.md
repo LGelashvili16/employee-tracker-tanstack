@@ -40,11 +40,11 @@ optional email, job title, phone number, and role. Account creation records an a
 subsequent access changes still require an administrative reason. Management-role assignment
 also requires `roles.manage`. This screen cannot create administrators or owners.
 
-Usernames are normalized to lowercase. Existing `code` columns and request keys retain their names for compatibility.
-Database constraints enforce unique codes, unique usernames, one employee record
+Usernames are normalized to lowercase. Migration `0010_employee_username.sql` renames `employee.code` to `employee.username`, including its unique index and normalization constraint, without recreating employee records. Better Auth's username plugin is already enabled on the server, provisioning instance, and client; its auth-owned `user.username` column and typed SDK require no regeneration for this employee-table rename. Existing administrative request/response keys named `code` remain compatibility aliases for the username; activation and reset codes remain separate secrets.
+Database constraints enforce unique usernames in each table, one employee record
 per auth account, and one credential record per auth account. Do not assign a new
-code to an existing person returning to work; restore their original record.
-An administrator can still mistakenly enter the same person under another code;
+username to an existing person returning to work; restore their original record.
+An administrator can still mistakenly enter the same person under another username;
 the employee roster remains the source for identifying people, not email addresses.
 
 The first activation code expires after 24 hours. It is shown only in the response

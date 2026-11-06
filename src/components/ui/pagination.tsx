@@ -45,6 +45,7 @@ function PaginationLink({
         'aria-current': isActive ? 'page' : undefined,
         className: cn(
           buttonVariants({
+            depth: 'raised',
             variant: isActive ? 'outline' : 'ghost',
             size: 'icon',
           }),

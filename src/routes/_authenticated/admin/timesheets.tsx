@@ -10,7 +10,7 @@ export const Route = createFileRoute('/_authenticated/admin/timesheets')({
     requirePagePermission({ data: { permission: 'attendance.read.all' } }),
   head: () =>
     pageHead(
-      'ყველა თანამშრომლის სამუშაო საათები',
+      'თანამშრომლების სამუშაო საათები',
       'კომპანიის ყოველთვიური სამუშაო საათები.',
     ),
   component: CompanyTimesheetsPage,

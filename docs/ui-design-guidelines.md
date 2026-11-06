@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 2. Last updated: 2026-11-06.
+Status: required project instructions. Version: 4. Last updated: 2026-11-06.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -34,6 +34,7 @@ Typography, hierarchy, spacing and density, color and contrast, iconography, con
 - Reserve medium/semibold weight for headings, labels, and meaningful emphasis. Use tabular numerals for comparable durations and numeric columns where appropriate.
 - Keep readable line height. Allow names, Georgian labels, validation messages, and long user content to wrap deliberately. Do not truncate essential information without an accessible way to obtain it.
 - Visible page headers contain the title and relevant actions, without a routine descriptive paragraph underneath. Do not add generic sentences that restate the page name.
+- When labels, layout, and familiar controls make an interaction intuitive, omit extra instructional text. Add helper copy only to resolve real ambiguity, explain a constraint, or prevent a likely mistake. Preserve accessible names and essential context.
 - Necessary timezone information, permission/scope restrictions, field help, warnings, and empty/error explanations belong beside the affected control, table, or section. Do not remove information needed to make a safe decision in the name of minimalism.
 - Preserve document metadata and accessible descriptions. A title-only visible header does not mean deleting metadata, field help, or dialog descriptions.
 
@@ -131,6 +132,7 @@ Use variants from `src/components/ui/badge.tsx`. Map each feature's states to la
 - Use the installed TanStack Table version and types. Do not paste incompatible v8 or Radix examples into this Base UI project.
 - Keep headers, row padding, borders, hover states, badges, sort indicators, and action placement consistent. Place row actions in a predictable final column; do not make every cell look like a button.
 - Sortable headers must be recognizable, keyboard accessible, and explicit about direction through `aria-sort` where applicable.
+- Sortable column titles use link styling with sort indicators, without a raised button surface or shadow. Keep the subtle 3D treatment for action buttons rather than table headings.
 - Align numeric comparisons consistently. Format durations, dates, statuses, and missing values with shared helpers and Georgian labels.
 - Distinguish initial loading, no records, no matches, forbidden access, and failed loading. No search matches must not imply that the company has no employees.
 - Overall totals must cover the full authorized filter scope, not just the currently displayed page.
@@ -251,3 +253,5 @@ When the user changes a shared UI standard, update this file instead of creating
 | ------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1       | 2026-11-06 | Established mandatory design quality, shadcn Data Tables and pagination, debounced server lists with URL state, title-first approved tabs, title-only page headers, and shared subtle 3D buttons.              |
 | 2       | 2026-11-06 | Added explicit Sonner success/error feedback, semantic badge colors, persistent alerts, shared-component requirements, task-flow safeguards, visual restraint, realistic edge cases, and rendered-UI evidence. |
+| 3       | 2026-11-06 | Use link-style sortable table headings with direction indicators instead of raised button surfaces.                                                                                                            |
+| 4       | 2026-11-06 | Omit redundant instructional text from intuitive interfaces; retain helper copy only for meaningful ambiguity, constraints, or error prevention.                                                               |
