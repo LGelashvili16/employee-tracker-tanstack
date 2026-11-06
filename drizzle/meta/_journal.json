@@ -78,6 +78,41 @@
       "when": 1793958156236,
       "tag": "0010_employee_username",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793959801346,
+      "tag": "0011_keen_charles_xavier",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793976058546,
+      "tag": "0012_happy_wallflower",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793984907205,
+      "tag": "0013_optional_job_coordinates",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793992711520,
+      "tag": "0014_generic_job_kind",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1794002338472,
+      "tag": "0015_job_deadline",
+      "breakpoints": true
     }
   ]
 }

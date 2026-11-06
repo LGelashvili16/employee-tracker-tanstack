@@ -7,7 +7,6 @@ import { AdministrationPage } from '#/features/company-settings/pages/administra
 import { WorkspaceUserMenu } from './workspace-user-menu'
 import { AttendanceNavigation } from '#/features/attendance/components/attendance-navigation'
 import { TeamAttendanceNavigation } from '#/features/attendance/components/team-attendance-navigation'
-import { ManageJobsPage } from '#/features/jobs/pages/manage-jobs-page'
 import type { AnchorHTMLAttributes } from 'react'
 import type { Role } from '#/lib/authorization/permissions'
 
@@ -185,12 +184,9 @@ describe('workspace navigation', () => {
     expect(
       screen.getByRole('link', { name: 'დასწრების გამონაკლისები' }),
     ).toHaveAttribute('aria-current', 'page')
-    render(<ManageJobsPage />)
-    expect(screen.getByRole('link', { name: 'ახალი სამუშაო' })).toHaveAttribute(
-      'href',
-      '/manage/jobs/new',
-    )
-    expect(screen.getByText('ეს განყოფილება მზადდება')).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'სამუშაოების რუკა' }),
+    ).toHaveAttribute('href', '/jobs')
   })
   it('does not show attendance review navigation to read-only operations managers', () => {
     render(<TeamAttendanceNavigation roles={['operations_manager']} />)
@@ -238,7 +234,7 @@ describe('workspace navigation', () => {
       'მთავარი გვერდი',
       'დასწრება',
       'ჩემი განრიგი',
-      'ჩემი სამუშაოები',
+      'სამუშაოების რუკა',
       'შვებულება და გაცდენა',
     ]) {
       expect(screen.getByRole('link', { name })).toBeInTheDocument()

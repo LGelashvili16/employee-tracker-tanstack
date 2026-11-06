@@ -130,6 +130,21 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
     ).toBe(1)
   })
 
+  it.each(['sales_manager', 'production_specialist'] as const)(
+    'provisions and stores the %s role through the employee workflow',
+    async (role) => {
+      const code = `test-${role}`
+      await service.provisionEmployee(owner, {
+        code,
+        name: 'ტესტის თანამშრომელი',
+        contactEmail: '',
+        role,
+      })
+      const record = await identity(code)
+      expect(record.roles).toBe(role)
+      expect(record.accessState).toBe('invited')
+    },
+  )
   it('creates an email-optional account, stores only a code hash, and blocks invited login', async () => {
     const issued = await provision('worker-one')
     const record = await identity('worker-one')

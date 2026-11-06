@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 4. Last updated: 2026-11-06.
+Status: required project instructions. Version: 8. Last updated: 2026-11-07.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -36,7 +36,8 @@ Typography, hierarchy, spacing and density, color and contrast, iconography, con
 - Visible page headers contain the title and relevant actions, without a routine descriptive paragraph underneath. Do not add generic sentences that restate the page name.
 - When labels, layout, and familiar controls make an interaction intuitive, omit extra instructional text. Add helper copy only to resolve real ambiguity, explain a constraint, or prevent a likely mistake. Preserve accessible names and essential context.
 - Necessary timezone information, permission/scope restrictions, field help, warnings, and empty/error explanations belong beside the affected control, table, or section. Do not remove information needed to make a safe decision in the name of minimalism.
-- Preserve document metadata and accessible descriptions. A title-only visible header does not mean deleting metadata, field help, or dialog descriptions.
+- Simple form dialogs, including the job editor, use a title-only header when the fields make the task clear. Omit routine descriptions that repeat the title; retain descriptions needed to understand consequences, permissions, or constraints. Preserve document metadata and relevant field help.
+- Mark mandatory form labels with a visible `*` and expose the requirement through native or ARIA semantics. Hide the decorative asterisk from assistive technology to keep accessible names clear. Optional fields use plain labels without an optional suffix.
 
 Required vertical order:
 
@@ -69,6 +70,10 @@ Place the page title outside and above a route-aware tabs wrapper when that wrap
 - Use `@tabler/icons-react`. Let shared controls determine icon size and follow their `data-icon` convention. Match stroke weight and scale in comparable contexts.
 - Hide decorative icons from assistive technology. Icon-only actions need concise Georgian accessible names and tooltips where their meaning is not obvious.
 - An unread dot is a status indicator, not a numeric badge. Preserve its accessible unread meaning. Notification row dots sit beside the corresponding bell icon, as established in the notification UI.
+
+### Map cartography
+
+Map cartography has its own reference palette, maintained in `src/components/ui/map-styles.ts`. Dark maps use the approved slate terrain (`#314256`), deep blue water (`#1c347a`), teal parks (`#00615e`), and muted gray road/building hierarchy with colored place labels. Apply the palette to geographic layers rather than tinting the canvas with a CSS filter. Map controls, search, dialogs, job markers and statuses continue to use the existing application tokens. Light map colors remain provider-owned.
 
 ## Shared components are the default
 
@@ -116,11 +121,13 @@ Use variants from `src/components/ui/badge.tsx`. Map each feature's states to la
 - Keep colors consistent across features, labels explicit, and contrast sufficient in both themes. Never rely on color alone.
 - A count is not inherently success or danger. Reserve strong color for meaningful state rather than coloring every number.
 - Do not invent colors for every status. If a new semantic variant is necessary, implement it once in the shared component and verify both themes.
+- Job map pins identify installation with blue, measurement with purple and other work with neutral tokens. Keep a separate status badge visible on each pin so category colors do not hide completion, rejection or progress. Reuse the shared type mapping for badges and the map legend; include type and status in accessible labels.
 
 ### Alerts
 
-- Compose existing `Alert`, `AlertTitle`, `AlertDescription`, and `AlertAction` as appropriate. Use supported variants: `destructive` for errors, `info` for relevant information, and default for neutral context.
+- Compose existing `Alert`, `AlertTitle`, `AlertDescription`, and `AlertAction` as appropriate. Use supported variants: `destructive` for errors, `warning` for orange cautions, `info` for relevant information, and default for neutral context. The address-lookup fallback uses a compact `warning` alert beside its field, with polite status semantics.
 - Place alerts beside affected content. Keep messages concise and give a supported next step, such as retrying, correcting input, or returning to an available view.
+- Automatically filled map addresses show a compact info Alert asking users to verify the street and building number. Hide it after manual address editing and when editing an existing saved job; keep the orange warning for missing or ambiguous lookup results.
 - Do not substitute an inline success banner for the required action toast. Avoid decorative alerts and permanently repeated information.
 - Reserve assertive announcements for urgent errors. Routine informational notes must not repeatedly interrupt screen readers; use suitable non-urgent semantics when composing them.
 - Add a shared semantic variant for a genuinely missing warning treatment instead of coloring a custom page callout.
@@ -255,3 +262,7 @@ When the user changes a shared UI standard, update this file instead of creating
 | 2       | 2026-11-06 | Added explicit Sonner success/error feedback, semantic badge colors, persistent alerts, shared-component requirements, task-flow safeguards, visual restraint, realistic edge cases, and rendered-UI evidence. |
 | 3       | 2026-11-06 | Use link-style sortable table headings with direction indicators instead of raised button surfaces.                                                                                                            |
 | 4       | 2026-11-06 | Omit redundant instructional text from intuitive interfaces; retain helper copy only for meaningful ambiguity, constraints, or error prevention.                                                               |
+| 5       | 2026-11-06 | Use title-only headers for simple form dialogs, visible required-field asterisks with accessible semantics, and plain optional-field labels.                                                                   |
+| 6       | 2026-11-06 | Added the shared orange warning Alert variant; address-lookup fallback uses its compact layout and polite status semantics.                                                                                    |
+| 7       | 2026-11-06 | Show address-verification info alerts only for automatic fills; manual edits and existing saved jobs do not show this reminder.                                                                                |
+| 8       | 2026-11-07 | Give job types distinct blue/purple/neutral colors while retaining a separate status indicator and accessible labels on map pins.                                                                              |

@@ -208,3 +208,7 @@ Files prefixed with `demo` can be safely deleted. They are there to provide a st
 You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
 
 For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+
+# Commands
+
+docker compose --env-file .env.docker -f compose.yaml -f compose.dev.yaml up -d db

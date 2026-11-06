@@ -1,15 +1,16 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { JobDetailPage } from '#/features/jobs/pages/job-detail-page'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { jobsContent } from '#/features/jobs/jobs.content'
 import { pageHead } from '#/lib/page-head'
 import { z } from 'zod'
-import { recordIdSchema } from '#/lib/route-schemas'
+import { jobIdSchema } from '#/features/jobs/jobs.schemas'
 
 export const Route = createFileRoute('/_authenticated/jobs/$jobId')({
   params: {
-    parse: (params) => z.object({ jobId: recordIdSchema }).parse(params),
+    parse: (params) => z.object({ jobId: jobIdSchema }).parse(params),
   },
   head: () =>
     pageHead(jobsContent.jobDetail.title, jobsContent.jobDetail.description),
-  component: JobDetailPage,
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: '/jobs', search: { pin: params.jobId } })
+  },
 })

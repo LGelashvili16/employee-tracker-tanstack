@@ -20,8 +20,15 @@ describe('role and permission boundaries', () => {
         expect(hasPermission(roles, permission)).toBe(false)
     }
   })
+  it('gives production specialists only the explicit job-claim grant', () => {
+    for (const permission of permissionSchema.options)
+      expect(hasPermission(['production_specialist'], permission)).toBe(
+        permission === 'jobs.claim',
+      )
+  })
   it('grants administrators platform configuration and company reads without review grants', () => {
     const platformPermissions = [
+      'jobs.claim',
       'attendance.read.all',
       'admin.access',
       'users.manage',

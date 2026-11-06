@@ -5,7 +5,6 @@ import {
   IconClockEdit,
   IconCalendarStats,
   IconCalendarWeek,
-  IconBriefcase,
   IconCalendarOff,
   IconBell,
   IconUserCircle,
@@ -79,8 +78,8 @@ export const navigationItems = [
   },
   {
     to: '/jobs',
-    icon: IconBriefcase,
-    label: 'ჩემი სამუშაოები',
+    icon: IconMapPin,
+    label: 'სამუშაოების რუკა',
     permission: null,
   },
   {

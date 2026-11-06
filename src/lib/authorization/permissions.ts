@@ -10,6 +10,7 @@ export const permissionSchema = z.enum(
     'timesheets.review.team',
     'schedule.manage',
     'jobs.manage',
+    'jobs.claim',
     'employees.read',
     'employees.manage',
     'teams.manage',
@@ -35,8 +36,10 @@ export type Permission = z.infer<typeof permissionSchema>
 export const roleSchema = z.enum(
   [
     'employee',
+    'production_specialist',
     'supervisor',
     'operations_manager',
+    'sales_manager',
     'hr_manager',
     'admin',
     'owner',
@@ -46,6 +49,7 @@ export const roleSchema = z.enum(
 export type Role = z.infer<typeof roleSchema>
 
 const administrationPermissions = [
+  'jobs.claim',
   'attendance.read.all',
   'admin.access',
   'users.manage',
@@ -98,8 +102,10 @@ const managementPermissions: Record<
 }
 export const roleLabels: Record<Role, string> = {
   employee: 'თანამშრომელი',
+  production_specialist: 'წარმოების სპეციალისტი',
   supervisor: 'ჯგუფის ხელმძღვანელი',
   operations_manager: 'ოპერაციების მენეჯერი',
+  sales_manager: 'გაყიდვების მენეჯერი',
   hr_manager: 'პერსონალის მენეჯერი',
   admin: 'ადმინისტრატორი',
   owner: 'კომპანიის მფლობელი',
@@ -120,11 +126,15 @@ export const accessControl = createAccessControl({
 })
 export const roles = {
   employee: accessControl.newRole({ teamwork: [] }),
+  production_specialist: accessControl.newRole({ teamwork: ['jobs.claim'] }),
   supervisor: accessControl.newRole({
     teamwork: managementPermissions.supervisor,
   }),
   operations_manager: accessControl.newRole({
     teamwork: managementPermissions.operations_manager,
+  }),
+  sales_manager: accessControl.newRole({
+    teamwork: ['manage.access', 'jobs.manage'],
   }),
   hr_manager: accessControl.newRole({
     teamwork: managementPermissions.hr_manager,

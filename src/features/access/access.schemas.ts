@@ -19,7 +19,14 @@ export const employeeCodeSchema = z
     'გამოიყენეთ ლათინური ასოები, ციფრები, წერტილი, დეფისი ან ქვედა ტირე.',
   )
 export const employeeRoleSchema = z.enum(
-  ['employee', 'supervisor', 'operations_manager', 'hr_manager'],
+  [
+    'employee',
+    'production_specialist',
+    'supervisor',
+    'operations_manager',
+    'sales_manager',
+    'hr_manager',
+  ],
   { error: 'თანამშრომლის როლი არასწორია.' },
 )
 export const reasonSchema = z

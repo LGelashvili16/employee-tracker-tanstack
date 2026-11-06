@@ -65,6 +65,10 @@
   --badge-yellow-foreground: #854d0e;
   --badge-orange: #ffedd5;
   --badge-orange-foreground: #9a3412;
+  --badge-blue: #dbeafe;
+  --badge-blue-foreground: #1e40af;
+  --badge-purple: #ede9fe;
+  --badge-purple-foreground: #5b21b6;
   --border: #dedede;
   --input: #dedede;
   --ring: #303030;
@@ -629,6 +633,10 @@ a {
   --color-badge-yellow-foreground: var(--badge-yellow-foreground);
   --color-badge-orange: var(--badge-orange);
   --color-badge-orange-foreground: var(--badge-orange-foreground);
+  --color-badge-blue: var(--badge-blue);
+  --color-badge-blue-foreground: var(--badge-blue-foreground);
+  --color-badge-purple: var(--badge-purple);
+  --color-badge-purple-foreground: var(--badge-purple-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -686,6 +694,10 @@ a {
   --badge-yellow-foreground: #fde047;
   --badge-orange: #431f0d;
   --badge-orange-foreground: #fdba74;
+  --badge-blue: #172554;
+  --badge-blue-foreground: #93c5fd;
+  --badge-purple: #2e1065;
+  --badge-purple-foreground: #c4b5fd;
   --border: #333333;
   --input: #404040;
   --ring: #d4d4d4;

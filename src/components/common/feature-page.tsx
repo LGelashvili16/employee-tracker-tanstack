@@ -12,16 +12,12 @@ export type PageContent = { title: string; description?: string }
 /** Presentation only: feature pages own their content and eventual data/workflows. */
 export function FeaturePage({
   title,
-  description,
   children,
 }: PageContent & { children?: ReactNode }) {
   return (
     <section className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {/* <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-          {description}
-        </p> */}
       </div>
       {children ?? (
         <Card>

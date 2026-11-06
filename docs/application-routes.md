@@ -12,6 +12,8 @@ This project serves one company. Payroll, finance, CRM, and sales functionality 
 
 ## Current functionality
 
+The shared `/jobs` workspace implements installation and measurement pins, map/list views, creation, editing, claims, arrival, completion, rejection and reopening. Existing management/detail URLs lead into the shared feature. See [the jobs map](jobs-map.md) for permissions, state transitions, map limits and persistence.
+
 Administration includes `/admin/attendance` and `/admin/timesheets` for read-only company-wide attendance. Administrators and owners can view every employee without reviewer assignments through the explicit `attendance.read.all` permission. Review and correction remain under the existing assigned management scope. Admin profile shortcuts open the company views filtered to that employee.
 
 Personal and management timesheets now show monthly totals and paginated daily attendance rows. Admin profile shortcuts preserve the selected employee in both attendance and timesheet filters. Period approval/submission remains outside this read workflow; session review and corrections use the existing attendance service. See [attendance-based timesheets](timesheets.md) for scope, timezone rules and verification.
@@ -44,7 +46,7 @@ Role grants are comma-separated validated identifiers provisioned only by truste
 | `/timesheets`                     | `timesheets`       | სამუშაო საათები                    | Authenticated account                                       |
 | `/timesheets/$timesheetId`        | `timesheets`       | საათების დეტალები                  | Authenticated account                                       |
 | `/schedule`                       | `scheduling`       | ჩემი განრიგი                       | Authenticated account                                       |
-| `/jobs`                           | `jobs`             | ჩემი სამუშაოები                    | Authenticated account                                       |
+| `/jobs`                           | `jobs`             | სამუშაოების რუკა                   | Authenticated account                                       |
 | `/jobs/$jobId`                    | `jobs`             | სამუშაოს დეტალები                  | Authenticated account                                       |
 | `/leave`                          | `leave`            | შვებულება და გაცდენა               | Authenticated account                                       |
 | `/notifications`                  | `notifications`    | შეტყობინებები                      | Authenticated account                                       |
