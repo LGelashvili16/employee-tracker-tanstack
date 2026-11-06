@@ -12,6 +12,10 @@ This project serves one company. Payroll, finance, CRM, and sales functionality 
 
 ## Current functionality
 
+Administration includes `/admin/attendance` and `/admin/timesheets` for read-only company-wide attendance. Administrators and owners can view every employee without reviewer assignments through the explicit `attendance.read.all` permission. Review and correction remain under the existing assigned management scope. Admin profile shortcuts open the company views filtered to that employee.
+
+Personal and management timesheets now show monthly totals and paginated daily attendance rows. Admin profile shortcuts preserve the selected employee in both attendance and timesheet filters. Period approval/submission remains outside this read workflow; session review and corrections use the existing attendance service. See [attendance-based timesheets](timesheets.md) for scope, timezone rules and verification.
+
 Login uses Better Auth with a TanStack Form/Zod form and accepts an employee code or legacy auth email. `/admin/users` provisions employee accounts, issues activation/reset codes, and suspends or restores existing accounts. `/auth/register` redeems an activation code; `/auth/reset-password` redeems a reset code. `/admin/settings/attendance` saves company schedules. `/dashboard` and `/attendance` share persisted self-service check-in/out, a live server-derived timer, today's schedule, weekly totals, and five recent attendance days. Check-in requires an active linked employee and a configured working day. Every checkout requires confirmation. Overnight sessions remain assigned to their starting day; only excessive session length triggers review warnings. Manager review, separate overtime approval and audited corrections are implemented under explicit reviewer assignments. Personal correction requests, recorded breaks, notifications and external delivery remain unavailable. See [attendance sessions and review](attendance-review.md) for setup, examples and limits.
 
 Email delivery, email verification, and MFA are not configured. Account activation and recovery use expiring, single-use administrator-issued codes. Public signup remains disabled on the server. Initial owner creation and emergency owner recovery are operator-only commands, never public routes. See [employee accounts](employee-accounts.md).
@@ -24,57 +28,60 @@ Role grants are comma-separated validated identifiers provisioned only by truste
 
 ## Pages
 
-| URL                               | Feature module     | Page                        | Access                                                      |
-| --------------------------------- | ------------------ | --------------------------- | ----------------------------------------------------------- |
-| `/auth/login`                     | `auth`             | შესვლა                      | Public; no private domain data                              |
-| `/auth/register`                  | `auth`             | ანგარიშის გააქტიურება       | Public; valid single-use administrator-issued code required |
-| `/auth/accept-invitation`         | `auth`             | მოწვევის მიღება             | Public; no private domain data                              |
-| `/auth/forgot-password`           | `auth`             | პაროლის აღდგენა             | Public; no private domain data                              |
-| `/auth/reset-password`            | `auth`             | ახალი პაროლი                | Public; no private domain data                              |
-| `/auth/verify-email`              | `auth`             | ელფოსტის დადასტურება        | Public; no private domain data                              |
-| `/auth/mfa`                       | `auth`             | დამატებითი დადასტურება      | Public; no private domain data                              |
-| `/dashboard`                      | `dashboard`        | მთავარი გვერდი              | Authenticated account                                       |
-| `/attendance`                     | `attendance`       | დასწრება                    | Authenticated account                                       |
-| `/attendance/history`             | `attendance`       | დასწრების ისტორია           | Authenticated account                                       |
-| `/attendance/corrections`         | `attendance`       | დროის შესწორებები           | Authenticated account                                       |
-| `/timesheets`                     | `timesheets`       | სამუშაო საათები             | Authenticated account                                       |
-| `/timesheets/$timesheetId`        | `timesheets`       | საათების დეტალები           | Authenticated account                                       |
-| `/schedule`                       | `scheduling`       | ჩემი განრიგი                | Authenticated account                                       |
-| `/jobs`                           | `jobs`             | ჩემი სამუშაოები             | Authenticated account                                       |
-| `/jobs/$jobId`                    | `jobs`             | სამუშაოს დეტალები           | Authenticated account                                       |
-| `/leave`                          | `leave`            | შვებულება და გაცდენა        | Authenticated account                                       |
-| `/notifications`                  | `notifications`    | შეტყობინებები               | Authenticated account                                       |
-| `/settings/profile`               | `account`          | ჩემი პროფილი                | Authenticated account                                       |
-| `/settings/security`              | `account`          | ანგარიშის უსაფრთხოება       | Authenticated account                                       |
-| `/manage`                         | `dashboard`        | მართვის მიმოხილვა           | `manage.access` plus the authenticated parent               |
-| `/manage/attendance`              | `attendance`       | გუნდის დასწრება             | `attendance.read.team` plus the authenticated parent        |
-| `/manage/attendance/exceptions`   | `attendance`       | დასწრების გამონაკლისები     | `attendance.review.team` plus the authenticated parent      |
-| `/manage/timesheets`              | `timesheets`       | საათების განხილვა           | `timesheets.review.team` plus the authenticated parent      |
-| `/manage/timesheets/$timesheetId` | `timesheets`       | საათების განხილვის დეტალები | `timesheets.review.team` plus the authenticated parent      |
-| `/manage/schedule`                | `scheduling`       | განრიგის მართვა             | `schedule.manage` plus the authenticated parent             |
-| `/manage/jobs`                    | `jobs`             | სამუშაოების მართვა          | `jobs.manage` plus the authenticated parent                 |
-| `/manage/jobs/new`                | `jobs`             | ახალი სამუშაო               | `jobs.manage` plus the authenticated parent                 |
-| `/manage/jobs/$jobId`             | `jobs`             | სამუშაოს მართვა             | `jobs.manage` plus the authenticated parent                 |
-| `/manage/employees`               | `employees`        | თანამშრომლები               | `employees.read` plus the authenticated parent              |
-| `/manage/employees/$employeeId`   | `employees`        | თანამშრომლის დეტალები       | `employees.read` plus the authenticated parent              |
-| `/manage/teams`                   | `teams`            | გუნდები                     | `teams.manage` plus the authenticated parent                |
-| `/manage/leave`                   | `leave`            | შვებულების განხილვა         | `leave.review` plus the authenticated parent                |
-| `/manage/reports`                 | `reports`          | ანგარიშები                  | `reports.read` plus the authenticated parent                |
-| `/admin/dashboard`                | `company-settings` | ადმინისტრირების მიმოხილვა   | `admin.access` plus the authenticated parent                |
-| `/admin`                          | `company-settings` | ადმინისტრირება              | `admin.access` plus the authenticated parent                |
-| `/admin/users`                    | `access`           | მომხმარებლები               | `users.manage` plus the authenticated parent                |
-| `/admin/users/$userId`            | `access`           | მომხმარებლის ანგარიში       | `users.manage` plus the authenticated parent                |
-| `/admin/invitations`              | `invitations`      | მოწვევები                   | `invitations.manage` plus the authenticated parent          |
-| `/admin/roles`                    | `access`           | როლები და უფლებები          | `roles.manage` plus the authenticated parent                |
-| `/admin/settings/company`         | `company-settings` | კომპანიის პარამეტრები       | `company.configure` plus the authenticated parent           |
-| `/admin/settings/attendance`      | `attendance`       | დასწრების წესები            | `attendance.configure` plus the authenticated parent        |
-| `/admin/settings/approvals`       | `approvals`        | დადასტურების წესები         | `approvals.configure` plus the authenticated parent         |
-| `/admin/settings/leave`           | `leave`            | შვებულების წესები           | `leave.configure` plus the authenticated parent             |
-| `/admin/settings/security`        | `access`           | უსაფრთხოების პოლიტიკა       | `security.configure` plus the authenticated parent          |
-| `/admin/settings/notifications`   | `notifications`    | შეტყობინებების პარამეტრები  | `notifications.configure` plus the authenticated parent     |
-| `/admin/locations`                | `locations`        | სამუშაო ადგილები            | `locations.manage` plus the authenticated parent            |
-| `/admin/integrations`             | `integrations`     | ინტეგრაციები                | `integrations.manage` plus the authenticated parent         |
-| `/admin/audit-log`                | `audit-log`        | მოქმედებების ჟურნალი        | `audit.read` plus the authenticated parent                  |
+| URL                               | Feature module     | Page                               | Access                                                      |
+| --------------------------------- | ------------------ | ---------------------------------- | ----------------------------------------------------------- |
+| `/auth/login`                     | `auth`             | შესვლა                             | Public; no private domain data                              |
+| `/auth/register`                  | `auth`             | ანგარიშის გააქტიურება              | Public; valid single-use administrator-issued code required |
+| `/auth/accept-invitation`         | `auth`             | მოწვევის მიღება                    | Public; no private domain data                              |
+| `/auth/forgot-password`           | `auth`             | პაროლის აღდგენა                    | Public; no private domain data                              |
+| `/auth/reset-password`            | `auth`             | ახალი პაროლი                       | Public; no private domain data                              |
+| `/auth/verify-email`              | `auth`             | ელფოსტის დადასტურება               | Public; no private domain data                              |
+| `/auth/mfa`                       | `auth`             | დამატებითი დადასტურება             | Public; no private domain data                              |
+| `/dashboard`                      | `dashboard`        | მთავარი გვერდი                     | Authenticated account                                       |
+| `/attendance`                     | `attendance`       | დასწრება                           | Authenticated account                                       |
+| `/attendance/history`             | `attendance`       | დასწრების ისტორია                  | Authenticated account                                       |
+| `/attendance/corrections`         | `attendance`       | დროის შესწორებები                  | Authenticated account                                       |
+| `/timesheets`                     | `timesheets`       | სამუშაო საათები                    | Authenticated account                                       |
+| `/timesheets/$timesheetId`        | `timesheets`       | საათების დეტალები                  | Authenticated account                                       |
+| `/schedule`                       | `scheduling`       | ჩემი განრიგი                       | Authenticated account                                       |
+| `/jobs`                           | `jobs`             | ჩემი სამუშაოები                    | Authenticated account                                       |
+| `/jobs/$jobId`                    | `jobs`             | სამუშაოს დეტალები                  | Authenticated account                                       |
+| `/leave`                          | `leave`            | შვებულება და გაცდენა               | Authenticated account                                       |
+| `/notifications`                  | `notifications`    | შეტყობინებები                      | Authenticated account                                       |
+| `/settings/profile`               | `account`          | ჩემი პროფილი                       | Authenticated account                                       |
+| `/settings/security`              | `account`          | ანგარიშის უსაფრთხოება              | Authenticated account                                       |
+| `/manage`                         | `dashboard`        | მართვის მიმოხილვა                  | `manage.access` plus the authenticated parent               |
+| `/manage/attendance`              | `attendance`       | გუნდის დასწრება                    | `attendance.read.team` plus the authenticated parent        |
+| `/manage/attendance/exceptions`   | `attendance`       | დასწრების გამონაკლისები            | `attendance.review.team` plus the authenticated parent      |
+| `/manage/timesheets`              | `timesheets`       | საათების განხილვა                  | `timesheets.review.team` plus the authenticated parent      |
+| `/manage/timesheets/$timesheetId` | `timesheets`       | საათების განხილვის დეტალები        | `timesheets.review.team` plus the authenticated parent      |
+| `/manage/schedule`                | `scheduling`       | განრიგის მართვა                    | `schedule.manage` plus the authenticated parent             |
+| `/manage/jobs`                    | `jobs`             | სამუშაოების მართვა                 | `jobs.manage` plus the authenticated parent                 |
+| `/manage/jobs/new`                | `jobs`             | ახალი სამუშაო                      | `jobs.manage` plus the authenticated parent                 |
+| `/manage/jobs/$jobId`             | `jobs`             | სამუშაოს მართვა                    | `jobs.manage` plus the authenticated parent                 |
+| `/manage/employees`               | `employees`        | თანამშრომლები                      | `employees.read` plus the authenticated parent              |
+| `/manage/employees/$employeeId`   | `employees`        | თანამშრომლის დეტალები              | `employees.read` plus the authenticated parent              |
+| `/manage/teams`                   | `teams`            | გუნდები                            | `teams.manage` plus the authenticated parent                |
+| `/manage/leave`                   | `leave`            | შვებულების განხილვა                | `leave.review` plus the authenticated parent                |
+| `/manage/reports`                 | `reports`          | ანგარიშები                         | `reports.read` plus the authenticated parent                |
+| `/admin/dashboard`                | `company-settings` | ადმინისტრირების მიმოხილვა          | `admin.access` plus the authenticated parent                |
+| `/admin`                          | `company-settings` | ადმინისტრირება                     | `admin.access` plus the authenticated parent                |
+| `/admin/users`                    | `access`           | მომხმარებლები                      | `users.manage` plus the authenticated parent                |
+| `/admin/users/$userId`            | `access`           | მომხმარებლის ანგარიში              | `users.manage` plus the authenticated parent                |
+| `/admin/attendance`               | `attendance`       | თანამშრომლების დასწრება            | `attendance.read.all` plus the admin parent                 |
+| `/admin/attendance/$userId`       | `attendance`       | თანამშრომლის დასწრების ისტორია     | `attendance.read.all` plus the admin parent                 |
+| `/admin/timesheets`               | `timesheets`       | ყველა თანამშრომლის სამუშაო საათები | `attendance.read.all` plus the admin parent                 |
+| `/admin/invitations`              | `invitations`      | მოწვევები                          | `invitations.manage` plus the authenticated parent          |
+| `/admin/roles`                    | `access`           | როლები და უფლებები                 | `roles.manage` plus the authenticated parent                |
+| `/admin/settings/company`         | `company-settings` | კომპანიის პარამეტრები              | `company.configure` plus the authenticated parent           |
+| `/admin/settings/attendance`      | `attendance`       | დასწრების წესები                   | `attendance.configure` plus the authenticated parent        |
+| `/admin/settings/approvals`       | `approvals`        | დადასტურების წესები                | `approvals.configure` plus the authenticated parent         |
+| `/admin/settings/leave`           | `leave`            | შვებულების წესები                  | `leave.configure` plus the authenticated parent             |
+| `/admin/settings/security`        | `access`           | უსაფრთხოების პოლიტიკა              | `security.configure` plus the authenticated parent          |
+| `/admin/settings/notifications`   | `notifications`    | შეტყობინებების პარამეტრები         | `notifications.configure` plus the authenticated parent     |
+| `/admin/locations`                | `locations`        | სამუშაო ადგილები                   | `locations.manage` plus the authenticated parent            |
+| `/admin/integrations`             | `integrations`     | ინტეგრაციები                       | `integrations.manage` plus the authenticated parent         |
+| `/admin/audit-log`                | `audit-log`        | მოქმედებების ჟურნალი               | `audit.read` plus the authenticated parent                  |
 
 ## Compatibility routes
 

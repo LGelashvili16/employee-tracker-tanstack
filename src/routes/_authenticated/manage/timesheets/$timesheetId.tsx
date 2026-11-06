@@ -5,10 +5,12 @@ import { pageHead } from '#/lib/page-head'
 import { requirePagePermission } from '#/lib/auth/auth.functions'
 import { z } from 'zod'
 import { recordIdSchema } from '#/lib/route-schemas'
+import { timesheetSearchSchema } from '#/features/timesheets/timesheets.schemas'
 
 export const Route = createFileRoute(
   '/_authenticated/manage/timesheets/$timesheetId',
 )({
+  validateSearch: timesheetSearchSchema.omit({ userId: true }),
   params: {
     parse: (params) => z.object({ timesheetId: recordIdSchema }).parse(params),
   },

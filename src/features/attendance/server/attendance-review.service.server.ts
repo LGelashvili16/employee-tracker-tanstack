@@ -3,6 +3,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { attendanceAudit, attendanceSession, employee, user } from '#/db/schema'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
 import { hasPermission } from '#/lib/authorization/permissions'
+import { assertPermission } from '#/lib/authorization/access'
 import type { Actor } from '#/lib/authorization/actor'
 import {
   attendanceCorrectionSchema,
@@ -21,10 +22,16 @@ import * as repository from './attendance-review.repository.server'
 export async function listAttendanceForReview(
   actor: Actor | null,
   input: unknown,
+  scope: 'team' | 'company' = 'team',
 ) {
-  const { page, exceptionsOnly } = attendanceListSchema.parse(input)
+  const { page, exceptionsOnly, userId } = attendanceListSchema.parse(input)
   return transactAttendance(async (tx) => {
-    const current = await authorizeAttendance(tx, actor, 'attendance.read.team')
+    const current = await authorizeAttendance(
+      tx,
+      actor,
+      scope === 'company' ? 'attendance.read.all' : 'attendance.read.team',
+    )
+    if (scope === 'company') assertPermission(current, 'admin.access')
     const now = new Date()
     const rows = await repository.reviewRows(
       tx,
@@ -32,6 +39,8 @@ export async function listAttendanceForReview(
       page,
       exceptionsOnly,
       now,
+      userId,
+      scope,
     )
     const items: Array<ReviewSession> = rows
       .slice(0, 50)
@@ -53,7 +62,9 @@ export async function listAttendanceForReview(
         revision: session.revision,
         approvedOutsideSeconds: session.approvedOutsideSeconds,
         maxOpenHours: session.maxOpenHours,
-        canReview: hasPermission(current.roles, 'attendance.review.team'),
+        canReview:
+          scope === 'team' &&
+          hasPermission(current.roles, 'attendance.review.team'),
       }))
     return { items, hasMore: rows.length > 50, serverNow: now.toISOString() }
   })

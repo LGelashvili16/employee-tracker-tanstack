@@ -20,6 +20,8 @@ export async function reviewRows(
   page: number,
   exceptionsOnly: boolean,
   now: Date,
+  userId?: string,
+  scope: 'team' | 'company' = 'team',
 ) {
   return tx
     .select({
@@ -32,8 +34,9 @@ export async function reviewRows(
     .innerJoin(employee, eq(employee.id, attendanceSession.employeeId))
     .where(
       and(
-        reviewerScope(reviewerId),
-        ne(employee.userId, reviewerId),
+        scope === 'team' ? reviewerScope(reviewerId) : undefined,
+        scope === 'team' ? ne(employee.userId, reviewerId) : undefined,
+        userId ? eq(employee.userId, userId) : undefined,
         exceptionsOnly
           ? sql`${attendanceSession.reviewState} = 'pending' and (${attendanceSession.endedAt} is not null or ${now}::timestamptz - ${attendanceSession.startedAt} >= ${attendanceSession.maxOpenHours} * interval '1 hour')`
           : undefined,

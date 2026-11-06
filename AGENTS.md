@@ -31,6 +31,15 @@ These instructions apply to every new feature, fix, refactor, route, component, 
 
 This is a single-company employee tracking, time and attendance, scheduling, and job execution platform. Employee, management, and admin screens share the same business modules. Preserve existing user changes and keep work within the requested scope. Apply this architecture incrementally to touched code; do not perform unrelated restructuring or create empty future modules.
 
+## Required UI and design standard
+
+- Before designing, implementing, changing, or reviewing any UI, read [Teamwork UI and design guidelines](docs/ui-design-guidelines.md). This is the canonical, living design standard; local skills and external inspiration support it rather than replace it.
+- Typography, hierarchy, spacing and density, color and contrast, iconography, consistency and polish, and clarity are mandatory acceptance criteria. Reuse the existing tokens, Base UI/shadcn components, Tabler icons, and Georgian copy.
+- Use the shadcn Data Table pattern with TanStack Table and shared shadcn pagination controls. Growing lists require debounced search, server-side filtering/sorting/pagination, and validated URL search parameters.
+- Use the approved rounded shadcn tab strip below the main page title. Page headers show titles and relevant actions without unnecessary descriptions. All action buttons and button-styled controls use the shared subtle 3D treatment.
+- Use existing Base UI/shadcn components throughout. Use the single Sonner Toaster for confirmed user-action success/error outcomes, semantic shadcn Badge variants for persistent status, shadcn Alerts for persistent contextual messages, and inline form validation. Follow the guide's feedback rules, task-flow principles, and rendered-UI review requirements.
+- Update the linked guide when the user changes a UI standard. Existing inconsistent screens do not override it; apply it incrementally within the requested scope.
+
 ## Implementation Workflow
 
 1. Read the applicable `AGENTS.md` files and run the Intent skill discovery above. If Intent is unavailable, report that fact and do not download a replacement.

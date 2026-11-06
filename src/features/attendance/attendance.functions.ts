@@ -28,6 +28,14 @@ import {
   reviewAttendance,
   saveAttendanceLimit,
 } from './server/attendance-review.service.server'
+import {
+  companyAttendanceListSchema,
+  companyAttendanceUserSchema,
+} from './company-attendance.schemas'
+import {
+  listCompanyAttendanceUsers,
+  readCompanyAttendanceUser,
+} from './server/company-attendance.service.server'
 
 async function safely<T>(action: () => Promise<T>) {
   setResponseHeader('Cache-Control', 'private, no-store')
@@ -61,6 +69,24 @@ export const readTeamAttendance = createServerFn({ method: 'GET' })
   .validator(attendanceListSchema)
   .handler(({ context, data }) =>
     safely(() => listAttendanceForReview(context.actor, data)),
+  )
+export const readCompanyAttendance = createServerFn({ method: 'GET' })
+  .middleware([authenticatedMiddleware])
+  .validator(attendanceListSchema)
+  .handler(({ context, data }) =>
+    safely(() => listAttendanceForReview(context.actor, data, 'company')),
+  )
+export const readCompanyAttendanceUsers = createServerFn({ method: 'GET' })
+  .middleware([authenticatedMiddleware])
+  .validator(companyAttendanceListSchema)
+  .handler(({ context, data }) =>
+    safely(() => listCompanyAttendanceUsers(context.actor, data)),
+  )
+export const readCompanyUserAttendance = createServerFn({ method: 'GET' })
+  .middleware([authenticatedMiddleware])
+  .validator(companyAttendanceUserSchema)
+  .handler(({ context, data }) =>
+    safely(() => readCompanyAttendanceUser(context.actor, data)),
   )
 export const decideAttendance = createServerFn({ method: 'POST' })
   .middleware([authenticatedMiddleware])

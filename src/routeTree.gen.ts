@@ -27,12 +27,14 @@ import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
 import { Route as AuthVerifyEmailRouteImport } from './routes/auth/verify-email'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
+import { Route as AuthenticatedAdminAttendanceRouteRouteImport } from './routes/_authenticated/admin/attendance/route'
 import { Route as AuthenticatedAdminAuditLogRouteImport } from './routes/_authenticated/admin/audit-log'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
 import { Route as AuthenticatedAdminIntegrationsRouteImport } from './routes/_authenticated/admin/integrations'
 import { Route as AuthenticatedAdminInvitationsRouteImport } from './routes/_authenticated/admin/invitations'
 import { Route as AuthenticatedAdminLocationsRouteImport } from './routes/_authenticated/admin/locations'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin/roles'
+import { Route as AuthenticatedAdminTimesheetsRouteImport } from './routes/_authenticated/admin/timesheets'
 import { Route as AuthenticatedAttendanceIndexRouteImport } from './routes/_authenticated/attendance/index'
 import { Route as AuthenticatedAttendanceCorrectionsRouteImport } from './routes/_authenticated/attendance/corrections'
 import { Route as AuthenticatedAttendanceHistoryRouteImport } from './routes/_authenticated/attendance/history'
@@ -49,6 +51,8 @@ import { Route as AuthenticatedSettingsSecurityRouteImport } from './routes/_aut
 import { Route as AuthenticatedTimesheetsIndexRouteImport } from './routes/_authenticated/timesheets/index'
 import { Route as AuthenticatedTimesheetsTimesheetIdRouteImport } from './routes/_authenticated/timesheets/$timesheetId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthenticatedAdminAttendanceIndexRouteImport } from './routes/_authenticated/admin/attendance/index'
+import { Route as AuthenticatedAdminAttendanceUserIdRouteImport } from './routes/_authenticated/admin/attendance/$userId'
 import { Route as AuthenticatedAdminSettingsApprovalsRouteImport } from './routes/_authenticated/admin/settings/approvals'
 import { Route as AuthenticatedAdminSettingsAttendanceRouteImport } from './routes/_authenticated/admin/settings/attendance'
 import { Route as AuthenticatedAdminSettingsCompanyRouteImport } from './routes/_authenticated/admin/settings/company'
@@ -159,6 +163,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
+const AuthenticatedAdminAttendanceRouteRoute =
+  AuthenticatedAdminAttendanceRouteRouteImport.update({
+    id: '/attendance',
+    path: '/attendance',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminAuditLogRoute =
   AuthenticatedAdminAuditLogRouteImport.update({
     id: '/audit-log',
@@ -194,6 +204,12 @@ const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
   path: '/roles',
   getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
+const AuthenticatedAdminTimesheetsRoute =
+  AuthenticatedAdminTimesheetsRouteImport.update({
+    id: '/timesheets',
+    path: '/timesheets',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAttendanceIndexRoute =
   AuthenticatedAttendanceIndexRouteImport.update({
     id: '/',
@@ -287,6 +303,18 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminAttendanceIndexRoute =
+  AuthenticatedAdminAttendanceIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAdminAttendanceRouteRoute,
+  } as any)
+const AuthenticatedAdminAttendanceUserIdRoute =
+  AuthenticatedAdminAttendanceUserIdRouteImport.update({
+    id: '/$userId',
+    path: '/$userId',
+    getParentRoute: () => AuthenticatedAdminAttendanceRouteRoute,
+  } as any)
 const AuthenticatedAdminSettingsApprovalsRoute =
   AuthenticatedAdminSettingsApprovalsRouteImport.update({
     id: '/settings/approvals',
@@ -407,12 +435,14 @@ export interface FileRoutesByFullPath {
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/admin/attendance': typeof AuthenticatedAdminAttendanceRouteRouteWithChildren
   '/admin/audit-log': typeof AuthenticatedAdminAuditLogRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/invitations': typeof AuthenticatedAdminInvitationsRoute
   '/admin/locations': typeof AuthenticatedAdminLocationsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/admin/timesheets': typeof AuthenticatedAdminTimesheetsRoute
   '/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
   '/attendance/history': typeof AuthenticatedAttendanceHistoryRoute
   '/jobs/$jobId': typeof AuthenticatedJobsJobIdRoute
@@ -430,6 +460,7 @@ export interface FileRoutesByFullPath {
   '/jobs/': typeof AuthenticatedJobsIndexRoute
   '/manage/': typeof AuthenticatedManageIndexRoute
   '/timesheets/': typeof AuthenticatedTimesheetsIndexRoute
+  '/admin/attendance/$userId': typeof AuthenticatedAdminAttendanceUserIdRoute
   '/admin/settings/approvals': typeof AuthenticatedAdminSettingsApprovalsRoute
   '/admin/settings/attendance': typeof AuthenticatedAdminSettingsAttendanceRoute
   '/admin/settings/company': typeof AuthenticatedAdminSettingsCompanyRoute
@@ -442,6 +473,7 @@ export interface FileRoutesByFullPath {
   '/manage/jobs/$jobId': typeof AuthenticatedManageJobsJobIdRoute
   '/manage/jobs/new': typeof AuthenticatedManageJobsNewRoute
   '/manage/timesheets/$timesheetId': typeof AuthenticatedManageTimesheetsTimesheetIdRoute
+  '/admin/attendance/': typeof AuthenticatedAdminAttendanceIndexRoute
   '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/manage/attendance/': typeof AuthenticatedManageAttendanceIndexRoute
   '/manage/employees/': typeof AuthenticatedManageEmployeesIndexRoute
@@ -468,6 +500,7 @@ export interface FileRoutesByTo {
   '/admin/invitations': typeof AuthenticatedAdminInvitationsRoute
   '/admin/locations': typeof AuthenticatedAdminLocationsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/admin/timesheets': typeof AuthenticatedAdminTimesheetsRoute
   '/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
   '/attendance/history': typeof AuthenticatedAttendanceHistoryRoute
   '/jobs/$jobId': typeof AuthenticatedJobsJobIdRoute
@@ -485,6 +518,7 @@ export interface FileRoutesByTo {
   '/jobs': typeof AuthenticatedJobsIndexRoute
   '/manage': typeof AuthenticatedManageIndexRoute
   '/timesheets': typeof AuthenticatedTimesheetsIndexRoute
+  '/admin/attendance/$userId': typeof AuthenticatedAdminAttendanceUserIdRoute
   '/admin/settings/approvals': typeof AuthenticatedAdminSettingsApprovalsRoute
   '/admin/settings/attendance': typeof AuthenticatedAdminSettingsAttendanceRoute
   '/admin/settings/company': typeof AuthenticatedAdminSettingsCompanyRoute
@@ -497,6 +531,7 @@ export interface FileRoutesByTo {
   '/manage/jobs/$jobId': typeof AuthenticatedManageJobsJobIdRoute
   '/manage/jobs/new': typeof AuthenticatedManageJobsNewRoute
   '/manage/timesheets/$timesheetId': typeof AuthenticatedManageTimesheetsTimesheetIdRoute
+  '/admin/attendance': typeof AuthenticatedAdminAttendanceIndexRoute
   '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
   '/manage/attendance': typeof AuthenticatedManageAttendanceIndexRoute
   '/manage/employees': typeof AuthenticatedManageEmployeesIndexRoute
@@ -522,12 +557,14 @@ export interface FileRoutesById {
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/_authenticated/admin/attendance': typeof AuthenticatedAdminAttendanceRouteRouteWithChildren
   '/_authenticated/admin/audit-log': typeof AuthenticatedAdminAuditLogRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/_authenticated/admin/invitations': typeof AuthenticatedAdminInvitationsRoute
   '/_authenticated/admin/locations': typeof AuthenticatedAdminLocationsRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/_authenticated/admin/timesheets': typeof AuthenticatedAdminTimesheetsRoute
   '/_authenticated/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
   '/_authenticated/attendance/history': typeof AuthenticatedAttendanceHistoryRoute
   '/_authenticated/jobs/$jobId': typeof AuthenticatedJobsJobIdRoute
@@ -545,6 +582,7 @@ export interface FileRoutesById {
   '/_authenticated/jobs/': typeof AuthenticatedJobsIndexRoute
   '/_authenticated/manage/': typeof AuthenticatedManageIndexRoute
   '/_authenticated/timesheets/': typeof AuthenticatedTimesheetsIndexRoute
+  '/_authenticated/admin/attendance/$userId': typeof AuthenticatedAdminAttendanceUserIdRoute
   '/_authenticated/admin/settings/approvals': typeof AuthenticatedAdminSettingsApprovalsRoute
   '/_authenticated/admin/settings/attendance': typeof AuthenticatedAdminSettingsAttendanceRoute
   '/_authenticated/admin/settings/company': typeof AuthenticatedAdminSettingsCompanyRoute
@@ -557,6 +595,7 @@ export interface FileRoutesById {
   '/_authenticated/manage/jobs/$jobId': typeof AuthenticatedManageJobsJobIdRoute
   '/_authenticated/manage/jobs/new': typeof AuthenticatedManageJobsNewRoute
   '/_authenticated/manage/timesheets/$timesheetId': typeof AuthenticatedManageTimesheetsTimesheetIdRoute
+  '/_authenticated/admin/attendance/': typeof AuthenticatedAdminAttendanceIndexRoute
   '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/_authenticated/manage/attendance/': typeof AuthenticatedManageAttendanceIndexRoute
   '/_authenticated/manage/employees/': typeof AuthenticatedManageEmployeesIndexRoute
@@ -582,12 +621,14 @@ export interface FileRouteTypes {
     | '/auth/register'
     | '/auth/reset-password'
     | '/auth/verify-email'
+    | '/admin/attendance'
     | '/admin/audit-log'
     | '/admin/dashboard'
     | '/admin/integrations'
     | '/admin/invitations'
     | '/admin/locations'
     | '/admin/roles'
+    | '/admin/timesheets'
     | '/attendance/corrections'
     | '/attendance/history'
     | '/jobs/$jobId'
@@ -605,6 +646,7 @@ export interface FileRouteTypes {
     | '/jobs/'
     | '/manage/'
     | '/timesheets/'
+    | '/admin/attendance/$userId'
     | '/admin/settings/approvals'
     | '/admin/settings/attendance'
     | '/admin/settings/company'
@@ -617,6 +659,7 @@ export interface FileRouteTypes {
     | '/manage/jobs/$jobId'
     | '/manage/jobs/new'
     | '/manage/timesheets/$timesheetId'
+    | '/admin/attendance/'
     | '/admin/users/'
     | '/manage/attendance/'
     | '/manage/employees/'
@@ -643,6 +686,7 @@ export interface FileRouteTypes {
     | '/admin/invitations'
     | '/admin/locations'
     | '/admin/roles'
+    | '/admin/timesheets'
     | '/attendance/corrections'
     | '/attendance/history'
     | '/jobs/$jobId'
@@ -660,6 +704,7 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/manage'
     | '/timesheets'
+    | '/admin/attendance/$userId'
     | '/admin/settings/approvals'
     | '/admin/settings/attendance'
     | '/admin/settings/company'
@@ -672,6 +717,7 @@ export interface FileRouteTypes {
     | '/manage/jobs/$jobId'
     | '/manage/jobs/new'
     | '/manage/timesheets/$timesheetId'
+    | '/admin/attendance'
     | '/admin/users'
     | '/manage/attendance'
     | '/manage/employees'
@@ -696,12 +742,14 @@ export interface FileRouteTypes {
     | '/auth/register'
     | '/auth/reset-password'
     | '/auth/verify-email'
+    | '/_authenticated/admin/attendance'
     | '/_authenticated/admin/audit-log'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/integrations'
     | '/_authenticated/admin/invitations'
     | '/_authenticated/admin/locations'
     | '/_authenticated/admin/roles'
+    | '/_authenticated/admin/timesheets'
     | '/_authenticated/attendance/corrections'
     | '/_authenticated/attendance/history'
     | '/_authenticated/jobs/$jobId'
@@ -719,6 +767,7 @@ export interface FileRouteTypes {
     | '/_authenticated/jobs/'
     | '/_authenticated/manage/'
     | '/_authenticated/timesheets/'
+    | '/_authenticated/admin/attendance/$userId'
     | '/_authenticated/admin/settings/approvals'
     | '/_authenticated/admin/settings/attendance'
     | '/_authenticated/admin/settings/company'
@@ -731,6 +780,7 @@ export interface FileRouteTypes {
     | '/_authenticated/manage/jobs/$jobId'
     | '/_authenticated/manage/jobs/new'
     | '/_authenticated/manage/timesheets/$timesheetId'
+    | '/_authenticated/admin/attendance/'
     | '/_authenticated/admin/users/'
     | '/_authenticated/manage/attendance/'
     | '/_authenticated/manage/employees/'
@@ -874,6 +924,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/attendance': {
+      id: '/_authenticated/admin/attendance'
+      path: '/attendance'
+      fullPath: '/admin/attendance'
+      preLoaderRoute: typeof AuthenticatedAdminAttendanceRouteRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/audit-log': {
       id: '/_authenticated/admin/audit-log'
       path: '/audit-log'
@@ -914,6 +971,13 @@ declare module '@tanstack/react-router' {
       path: '/roles'
       fullPath: '/admin/roles'
       preLoaderRoute: typeof AuthenticatedAdminRolesRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/timesheets': {
+      id: '/_authenticated/admin/timesheets'
+      path: '/timesheets'
+      fullPath: '/admin/timesheets'
+      preLoaderRoute: typeof AuthenticatedAdminTimesheetsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/attendance/': {
@@ -1027,6 +1091,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin/attendance/': {
+      id: '/_authenticated/admin/attendance/'
+      path: '/'
+      fullPath: '/admin/attendance/'
+      preLoaderRoute: typeof AuthenticatedAdminAttendanceIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminAttendanceRouteRoute
+    }
+    '/_authenticated/admin/attendance/$userId': {
+      id: '/_authenticated/admin/attendance/$userId'
+      path: '/$userId'
+      fullPath: '/admin/attendance/$userId'
+      preLoaderRoute: typeof AuthenticatedAdminAttendanceUserIdRouteImport
+      parentRoute: typeof AuthenticatedAdminAttendanceRouteRoute
     }
     '/_authenticated/admin/settings/approvals': {
       id: '/_authenticated/admin/settings/approvals'
@@ -1150,13 +1228,33 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAdminAttendanceRouteRouteChildren {
+  AuthenticatedAdminAttendanceUserIdRoute: typeof AuthenticatedAdminAttendanceUserIdRoute
+  AuthenticatedAdminAttendanceIndexRoute: typeof AuthenticatedAdminAttendanceIndexRoute
+}
+
+const AuthenticatedAdminAttendanceRouteRouteChildren: AuthenticatedAdminAttendanceRouteRouteChildren =
+  {
+    AuthenticatedAdminAttendanceUserIdRoute:
+      AuthenticatedAdminAttendanceUserIdRoute,
+    AuthenticatedAdminAttendanceIndexRoute:
+      AuthenticatedAdminAttendanceIndexRoute,
+  }
+
+const AuthenticatedAdminAttendanceRouteRouteWithChildren =
+  AuthenticatedAdminAttendanceRouteRoute._addFileChildren(
+    AuthenticatedAdminAttendanceRouteRouteChildren,
+  )
+
 interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminAttendanceRouteRoute: typeof AuthenticatedAdminAttendanceRouteRouteWithChildren
   AuthenticatedAdminAuditLogRoute: typeof AuthenticatedAdminAuditLogRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminIntegrationsRoute: typeof AuthenticatedAdminIntegrationsRoute
   AuthenticatedAdminInvitationsRoute: typeof AuthenticatedAdminInvitationsRoute
   AuthenticatedAdminLocationsRoute: typeof AuthenticatedAdminLocationsRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
+  AuthenticatedAdminTimesheetsRoute: typeof AuthenticatedAdminTimesheetsRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedAdminSettingsApprovalsRoute: typeof AuthenticatedAdminSettingsApprovalsRoute
   AuthenticatedAdminSettingsAttendanceRoute: typeof AuthenticatedAdminSettingsAttendanceRoute
@@ -1170,12 +1268,15 @@ interface AuthenticatedAdminRouteRouteChildren {
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
+    AuthenticatedAdminAttendanceRouteRoute:
+      AuthenticatedAdminAttendanceRouteRouteWithChildren,
     AuthenticatedAdminAuditLogRoute: AuthenticatedAdminAuditLogRoute,
     AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
     AuthenticatedAdminIntegrationsRoute: AuthenticatedAdminIntegrationsRoute,
     AuthenticatedAdminInvitationsRoute: AuthenticatedAdminInvitationsRoute,
     AuthenticatedAdminLocationsRoute: AuthenticatedAdminLocationsRoute,
     AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
+    AuthenticatedAdminTimesheetsRoute: AuthenticatedAdminTimesheetsRoute,
     AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
     AuthenticatedAdminSettingsApprovalsRoute:
       AuthenticatedAdminSettingsApprovalsRoute,

@@ -19,7 +19,10 @@ import { Button } from '#/components/ui/button'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Spinner } from '#/components/ui/spinner'
 import { Alert, AlertDescription } from '#/components/ui/alert'
-import { readTeamAttendance } from '../attendance.functions'
+import {
+  readCompanyAttendance,
+  readTeamAttendance,
+} from '../attendance.functions'
 import {
   formatAttendanceLocalInput,
   formatWorkedTime,
@@ -125,17 +128,33 @@ const columns = helper.columns([
   }),
 ])
 
+const companyColumns = columns.filter((column) => column.id !== 'actions')
+
 export function AttendanceReviewTable({
   actorId,
   exceptionsOnly = false,
+  userId,
+  company = false,
 }: {
   actorId: string
   exceptionsOnly?: boolean
+  userId?: string
+  company?: boolean
 }) {
   const [page, setPage] = useState(0)
   const query = useQuery({
-    queryKey: ['team-attendance', actorId, exceptionsOnly, page],
-    queryFn: () => readTeamAttendance({ data: { page, exceptionsOnly } }),
+    queryKey: [
+      'team-attendance',
+      actorId,
+      company,
+      exceptionsOnly,
+      userId,
+      page,
+    ],
+    queryFn: () =>
+      (company ? readCompanyAttendance : readTeamAttendance)({
+        data: { page, exceptionsOnly, userId },
+      }),
     retry: false,
     refetchInterval: 60000,
   })
@@ -150,7 +169,12 @@ export function AttendanceReviewTable({
         : [],
     [result],
   )
-  const table = useTable({ features, columns, data, getRowId: (row) => row.id })
+  const table = useTable({
+    features,
+    columns: company ? companyColumns : columns,
+    data,
+    getRowId: (row) => row.id,
+  })
   async function refresh() {
     const response = await query.refetch().catch(() => null)
     if (response?.data?.ok && !response.isError)
@@ -161,8 +185,10 @@ export function AttendanceReviewTable({
     <section className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          ჩანს მხოლოდ თქვენთვის მინიჭებული თანამშრომლების ჩანაწერები. დრო
-          მითითებულია ჩანაწერის დროის სარტყელში.
+          {company
+            ? 'ნაჩვენებია ყველა თანამშრომლის დასწრების ჩანაწერები. ეს გვერდი მხოლოდ დათვალიერებისთვისაა.'
+            : 'ჩანს მხოლოდ თქვენთვის მინიჭებული თანამშრომლების ჩანაწერები.'}{' '}
+          დრო მითითებულია ჩანაწერის დროის სარტყელში.
         </p>
         <Button
           variant="outline"
@@ -191,8 +217,9 @@ export function AttendanceReviewTable({
         </Alert>
       ) : !data.length ? (
         <p className="rounded-xl border p-6 text-muted-foreground">
-          ჩანაწერები არ მოიძებნა. თანამშრომლების მინიჭებას დასწრების
-          პარამეტრებში შესაბამისი უფლებამოსილების მქონე პირი მართავს.
+          {company
+            ? 'დასწრების ჩანაწერები არ მოიძებნა.'
+            : 'ჩანაწერები არ მოიძებნა. თანამშრომლების მინიჭებას დასწრების პარამეტრებში შესაბამისი უფლებამოსილების მქონე პირი მართავს.'}
         </p>
       ) : (
         <Table>

@@ -20,8 +20,9 @@ describe('role and permission boundaries', () => {
         expect(hasPermission(roles, permission)).toBe(false)
     }
   })
-  it('limits administrators to platform configuration without operational grants', () => {
+  it('grants administrators platform configuration and company reads without review grants', () => {
     const platformPermissions = [
+      'attendance.read.all',
       'admin.access',
       'users.manage',
       'invitations.manage',

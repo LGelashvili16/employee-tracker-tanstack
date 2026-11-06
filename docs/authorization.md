@@ -17,6 +17,8 @@ UI checks only determine presentation. Never use client roles or an actor suppli
 
 ## Entry points
 
+Administrators and owners additionally have the explicit `attendance.read.all` permission. Together with `admin.access`, it permits read-only company-wide attendance and timesheet views at `/admin/attendance` and `/admin/timesheets`. These reads include all employee records without reviewer assignments. This grant does not confer attendance review, correction, self-approval, or company-wide write access. Management review endpoints retain their permission and assignment checks.
+
 | Entry point                            | Protection                                                                                                      |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | Page `beforeLoad`                      | `ensureSession()` or `requirePagePermission({ data: { permission } })`; anonymous navigation redirects to login |

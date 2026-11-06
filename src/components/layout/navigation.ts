@@ -209,6 +209,18 @@ export const navigationItems = [
     permission: 'company.configure',
   },
   {
+    to: '/admin/attendance',
+    icon: IconClock,
+    label: 'ყველა თანამშრომლის დასწრება',
+    permission: 'attendance.read.all',
+  },
+  {
+    to: '/admin/timesheets',
+    icon: IconChecklist,
+    label: 'ყველა თანამშრომლის სამუშაო საათები',
+    permission: 'attendance.read.all',
+  },
+  {
     to: '/admin/settings/attendance',
     icon: IconClockCog,
     label: 'დასწრების წესები',
@@ -274,7 +286,11 @@ export function isNavigationItemActive(pathname: string, destination: string) {
       path.startsWith('/timesheets/')
     )
   }
-  if (destination === '/manage/attendance' || destination === '/manage/jobs') {
+  if (
+    destination === '/manage/attendance' ||
+    destination === '/manage/jobs' ||
+    destination === '/admin/attendance'
+  ) {
     return path === destination || path.startsWith(`${destination}/`)
   }
   return path === destination

@@ -5,6 +5,11 @@ import { Button } from '#/components/ui/button'
 
 const links = [
   {
+    to: '/manage/timesheets',
+    label: 'სამუშაო საათები',
+    permission: 'timesheets.review.team',
+  },
+  {
     to: '/manage/attendance',
     label: 'გუნდის დასწრება',
     permission: 'attendance.read.team',

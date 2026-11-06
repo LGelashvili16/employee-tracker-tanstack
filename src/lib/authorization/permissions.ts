@@ -5,6 +5,7 @@ export const permissionSchema = z.enum(
   [
     'manage.access',
     'attendance.read.team',
+    'attendance.read.all',
     'attendance.review.team',
     'timesheets.review.team',
     'schedule.manage',
@@ -45,6 +46,7 @@ export const roleSchema = z.enum(
 export type Role = z.infer<typeof roleSchema>
 
 const administrationPermissions = [
+  'attendance.read.all',
   'admin.access',
   'users.manage',
   'invitations.manage',

@@ -20,7 +20,11 @@ export async function authorizeAttendance(
     (person && person.status !== 'active')
   )
     throw new AuthorizationError()
-  if (!person && permission !== 'attendance.configure')
+  if (
+    !person &&
+    permission !== 'attendance.configure' &&
+    permission !== 'attendance.read.all'
+  )
     throw new AuthorizationError()
   const current = { ...actor, roles: parseRoles(identity.roles) }
   assertPermission(current, permission)

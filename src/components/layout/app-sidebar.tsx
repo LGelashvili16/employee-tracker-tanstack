@@ -64,6 +64,8 @@ export function AppSidebar({
       items: navigationItems.filter(
         (item) =>
           item.to === '/admin/users' ||
+          item.to === '/admin/attendance' ||
+          item.to === '/admin/timesheets' ||
           item.to === '/admin/settings/attendance',
       ),
     },

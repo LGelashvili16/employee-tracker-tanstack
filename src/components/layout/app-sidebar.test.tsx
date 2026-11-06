@@ -64,6 +64,12 @@ describe('workspace navigation', () => {
     expect(
       screen.getByRole('link', { name: 'დასწრების წესები' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'ყველა თანამშრომლის დასწრება' }),
+    ).toHaveAttribute('href', '/admin/attendance')
+    expect(
+      screen.getByRole('link', { name: 'ყველა თანამშრომლის სამუშაო საათები' }),
+    ).toHaveAttribute('href', '/admin/timesheets')
     expect(screen.getByRole('link', { name: 'დასწრება' })).toBeInTheDocument()
   })
   it('keeps personal and admin navigation together on admin routes with a real account menu', async () => {

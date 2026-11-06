@@ -35,6 +35,10 @@ The duration badge retains the eight-hour reference: yellow below eight recorded
 
 ## Reviewer setup and permissions
 
+The administrative attendance page is an account directory at `/admin/attendance`, including accounts without sessions. Search by name or employee code and sort by either column. `page`, `q` and `sort` search parameters drive server-side filtering, sorting and 20-account pagination. Opening an account navigates to `/admin/attendance/<userId>`, with its own `page` and `sort` parameters. The detail page paginates 10 complete work dates, then loads all sessions for those dates in the requested chronological order. Session groups never split across pages. Both pages use the shared shadcn pagination primitives. Legacy `/admin/attendance?userId=...` links redirect to the detail route. Both server entry points independently recheck company-wide read permissions.
+
+Administrators and owners can view all employees in the read-only `/admin/attendance` and `/admin/timesheets` pages without reviewer assignments. This separate `attendance.read.all` grant covers reads only. The assignment rules below continue to govern management review and correction actions.
+
 1. Give the reviewer an existing role with `attendance.read.team` and `attendance.review.team`, such as supervisor or HR manager.
 2. An account with `attendance.configure` assigns that reviewer to the relevant employee in `/admin/settings/attendance`.
 3. The reviewer uses `/manage/attendance` for session history and `/manage/attendance/exceptions` for pending closed sessions and overdue open sessions.

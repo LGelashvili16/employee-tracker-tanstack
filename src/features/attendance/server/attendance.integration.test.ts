@@ -16,6 +16,8 @@ import type { Actor } from '#/lib/authorization/actor'
 import type * as Service from './attendance.service.server'
 import type * as Scheduling from '#/features/scheduling/server/scheduling.service.server'
 import type * as Review from './attendance-review.service.server'
+import type * as Timesheets from '#/features/timesheets/server/timesheets.service.server'
+import type * as CompanyAttendance from './company-attendance.service.server'
 import type { db as Database } from '#/db'
 
 vi.mock('@tanstack/react-start/server-only', () => ({}))
@@ -28,6 +30,8 @@ let database: typeof Database | undefined
 let service: typeof Service
 let scheduling: typeof Scheduling
 let review: typeof Review
+let timesheets: typeof Timesheets
+let companyAttendance: typeof CompanyAttendance
 let created = false
 let employeeId: string
 const actor: Actor = {
@@ -79,6 +83,9 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     process.env.DATABASE_URL = target.toString()
     service = await import('./attendance.service.server')
     review = await import('./attendance-review.service.server')
+    timesheets =
+      await import('#/features/timesheets/server/timesheets.service.server')
+    companyAttendance = await import('./company-attendance.service.server')
     scheduling =
       await import('#/features/scheduling/server/scheduling.service.server')
     database = (await import('#/db')).db
@@ -392,6 +399,391 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     id: 'review-manager',
     roles: ['supervisor'],
   }
+  it('reads complete monthly timesheets and preserves work-date ownership across midnight', async () => {
+    time('2026-11-04T06:00:00Z')
+    const first = await service.checkIn(actor, request())
+    time('2026-11-04T10:00:00Z')
+    await service.checkOut(actor, { sessionId: first.id, confirmEarly: true })
+    time('2026-11-04T11:00:00Z')
+    const second = await service.checkIn(actor, request(first.id))
+    time('2026-11-04T15:00:00Z')
+    await service.checkOut(actor, { sessionId: second.id, confirmEarly: true })
+    time('2026-11-05T18:00:00Z')
+    const overnight = await service.checkIn(actor, request(second.id))
+    time('2026-11-06T01:00:00Z')
+    const open = await timesheets.readTimesheets(
+      actor,
+      { month: '2026-11' },
+      'self',
+    )
+    expect(open.totals.seconds).toBe(15 * 3600)
+    expect(open.totals.days).toBe(2)
+    expect(open.totals.open).toBe(1)
+    expect(
+      open.rows.find((row) => row.date === '2026-11-05')?.lastOut,
+    ).toBeNull()
+    await service.checkOut(actor, {
+      sessionId: overnight.id,
+      confirmEarly: true,
+    })
+    const closed = await timesheets.readTimesheets(
+      actor,
+      { month: '2026-11' },
+      'self',
+    )
+    expect(closed.totals.seconds).toBe(15 * 3600)
+    expect(closed.totals.pending).toBe(3)
+    expect(closed.rows).toHaveLength(2)
+    expect(closed.rows[0].seconds).toBe(8 * 3600)
+    expect(closed.rows[1].date).toBe('2026-11-05')
+    expect(closed.rows[1].lastOut).toBe('2026-11-06T01:00:00.000Z')
+    expect(
+      (await timesheets.readTimesheets(actor, { month: '2026-12' }, 'self'))
+        .totals.seconds,
+    ).toBe(0)
+  })
+
+  it('protects timesheet reads, filters and totals by the current actor and explicit reviewer scope', async () => {
+    await expect(
+      timesheets.readTimesheets(null, { month: '2026-11' }, 'self'),
+    ).rejects.toThrow()
+    await expect(
+      timesheets.readTimesheets(actor, { month: '2026-13' }, 'self'),
+    ).rejects.toThrow()
+    await expect(
+      timesheets.readTimesheets(
+        actor,
+        { userId: other.id, month: '2026-11' },
+        'self',
+      ),
+    ).rejects.toThrow()
+    const entry = await service.checkIn(actor, request())
+    time('2026-11-04T15:00:00Z')
+    await service.checkOut(actor, { sessionId: entry.id, confirmEarly: true })
+    expect(
+      (await timesheets.readTimesheets(manager, { month: '2026-11' }, 'team'))
+        .rows,
+    ).toHaveLength(0)
+    await assign()
+    const scoped = await timesheets.readTimesheets(
+      manager,
+      { month: '2026-11', userId: actor.id },
+      'team',
+    )
+    expect(scoped.rows).toHaveLength(1)
+    expect(scoped.rows[0].userId).toBe(actor.id)
+    expect(
+      (
+        await review.listAttendanceForReview(manager, {
+          page: 0,
+          userId: other.id,
+        })
+      ).items,
+    ).toHaveLength(0)
+    expect(
+      (
+        await review.listAttendanceForReview(manager, {
+          page: 0,
+          userId: actor.id,
+        })
+      ).items,
+    ).toHaveLength(1)
+    expect(
+      (
+        await timesheets.readTimesheets(
+          manager,
+          { month: '2026-11', userId: other.id },
+          'team',
+        )
+      ).totals.seconds,
+    ).toBe(0)
+    await expect(
+      timesheets.readTimesheets(administrator, { month: '2026-11' }, 'team'),
+    ).rejects.toThrow()
+    await sql().query(
+      `UPDATE "user" SET roles = 'employee' WHERE id = 'review-manager'`,
+    )
+    await expect(
+      timesheets.readTimesheets(manager, { month: '2026-11' }, 'team'),
+    ).rejects.toThrow()
+    await sql().query(
+      `UPDATE "user" SET roles = 'supervisor' WHERE id = 'review-manager'`,
+    )
+    await sql().query(
+      `UPDATE "user" SET access_state = 'suspended' WHERE id = 'attendance-a'`,
+    )
+    await expect(
+      timesheets.readTimesheets(actor, { month: '2026-11' }, 'self'),
+    ).rejects.toThrow()
+  })
+  it('keeps monthly totals complete across paginated timesheet days and scoped employee filters', async () => {
+    await sql().query(
+      `INSERT INTO attendance_reviewer (reviewer_id, employee_id) SELECT 'review-manager', id FROM employee WHERE user_id IN ('attendance-a', 'attendance-b')`,
+    )
+    await sql()
+      .query(`INSERT INTO attendance_session (employee_id, request_id, work_date, timezone, schedule_effective_from, expected_start_at, expected_end_at, started_at, ended_at)
+      SELECT e.id, uuidv7(), date '2026-11-01' + d, 'Asia/Tbilisi', date '2026-01-01',
+        timestamptz '2026-11-01 06:00:00+00' + d * interval '1 day', timestamptz '2026-11-01 07:00:00+00' + d * interval '1 day',
+        timestamptz '2026-11-01 06:00:00+00' + d * interval '1 day', timestamptz '2026-11-01 07:00:00+00' + d * interval '1 day'
+      FROM employee e CROSS JOIN generate_series(0, 25) AS d WHERE e.user_id IN ('attendance-a', 'attendance-b')`)
+    const first = await timesheets.readTimesheets(
+      manager,
+      { month: '2026-11', page: 0 },
+      'team',
+    )
+    const second = await timesheets.readTimesheets(
+      manager,
+      { month: '2026-11', page: 1 },
+      'team',
+    )
+    expect(first.rows).toHaveLength(50)
+    expect(first.hasMore).toBe(true)
+    expect(second.rows).toHaveLength(2)
+    expect(second.hasMore).toBe(false)
+    expect(first.totals.seconds).toBe(52 * 3600)
+    expect(second.totals.seconds).toBe(52 * 3600)
+    expect(
+      (
+        await timesheets.readTimesheets(
+          manager,
+          { month: '2026-11', userId: other.id },
+          'team',
+        )
+      ).totals.seconds,
+    ).toBe(26 * 3600)
+    await sql().query(
+      `DELETE FROM attendance_reviewer WHERE reviewer_id = 'review-manager'`,
+    )
+    expect(
+      (await timesheets.readTimesheets(manager, { month: '2026-11' }, 'team'))
+        .totals.seconds,
+    ).toBe(0)
+  })
+
+  it('defaults the timesheet month using company timezone rather than browser or host time', async () => {
+    time('2026-11-01T02:00:00Z')
+    await sql().query(
+      `UPDATE company_schedule SET timezone = 'Pacific/Honolulu'`,
+    )
+    expect((await timesheets.readTimesheets(actor, {}, 'self')).month).toBe(
+      '2026-10',
+    )
+  })
+
+  it('allows administrators company-wide read access without reviewer assignments while retaining mutation scope', async () => {
+    const entry = await service.checkIn(actor, request())
+    const own = await service.checkIn(administrator, request())
+    const company = await review.listAttendanceForReview(
+      administrator,
+      { page: 0 },
+      'company',
+    )
+    expect(company.items.map((row) => row.id)).toEqual(
+      expect.arrayContaining([entry.id, own.id]),
+    )
+    expect(company.items.every((row) => row.canReview === false)).toBe(true)
+    expect(
+      (
+        await review.listAttendanceForReview(
+          administrator,
+          { page: 0, userId: actor.id },
+          'company',
+        )
+      ).items,
+    ).toHaveLength(1)
+    const allTimesheets = await timesheets.readTimesheets(
+      administrator,
+      { month: '2026-11' },
+      'company',
+    )
+    expect(allTimesheets.rows).toHaveLength(2)
+    expect(allTimesheets.totals.open).toBe(2)
+    await expect(
+      review.listAttendanceForReview(manager, { page: 0 }, 'company'),
+    ).rejects.toThrow()
+    await expect(
+      timesheets.readTimesheets(manager, { month: '2026-11' }, 'company'),
+    ).rejects.toThrow()
+    await expect(
+      review.reviewAttendance(administrator, {
+        sessionId: entry.id,
+        revision: 0,
+        decision: 'approve',
+        approveOutside: false,
+        reason: 'ადმინისტრაციული დათვალიერება',
+      }),
+    ).rejects.toThrow()
+    await sql().query(
+      `UPDATE "user" SET roles = 'owner' WHERE id = 'review-admin'`,
+    )
+    expect(
+      (
+        await review.listAttendanceForReview(
+          administrator,
+          { page: 0 },
+          'company',
+        )
+      ).items,
+    ).toHaveLength(2)
+    await expect(
+      review.reviewAttendance(administrator, {
+        sessionId: entry.id,
+        revision: 0,
+        decision: 'approve',
+        approveOutside: false,
+        reason: 'მფლობელის დათვალიერება',
+      }),
+    ).rejects.toThrow()
+    await sql().query(
+      `UPDATE "user" SET roles = 'admin' WHERE id = 'review-admin'`,
+    )
+    await sql().query(
+      `UPDATE "user" SET access_state = 'suspended' WHERE id = 'review-admin'`,
+    )
+    await expect(
+      review.listAttendanceForReview(administrator, { page: 0 }, 'company'),
+    ).rejects.toThrow()
+    await expect(
+      timesheets.readTimesheets(administrator, { month: '2026-11' }, 'company'),
+    ).rejects.toThrow()
+  })
+
+  it('lists all attendance accounts including empty accounts with server search, sorting and pagination', async () => {
+    await expect(
+      companyAttendance.listCompanyAttendanceUsers(null, {}),
+    ).rejects.toThrow()
+    await expect(
+      companyAttendance.listCompanyAttendanceUsers(actor, {}),
+    ).rejects.toThrow()
+    await expect(
+      companyAttendance.listCompanyAttendanceUsers(administrator, {
+        sort: 'sql-injection',
+      }),
+    ).rejects.toThrow()
+    await sql().query(
+      `INSERT INTO "user" (id, name, email, username) SELECT 'attendance-list-' || lpad(n::text, 2, '0'), 'სატესტო ' || lpad(n::text, 2, '0'), 'list-' || n || '@attendance.invalid', 'list-' || lpad(n::text, 2, '0') FROM generate_series(0, 21) AS n`,
+    )
+    try {
+      const first = await companyAttendance.listCompanyAttendanceUsers(
+        administrator,
+        { q: 'list-', page: 1, sort: 'code-asc' },
+      )
+      const second = await companyAttendance.listCompanyAttendanceUsers(
+        administrator,
+        { q: 'list-', page: 2, sort: 'code-asc' },
+      )
+      expect(first.items).toHaveLength(20)
+      expect(second.items).toHaveLength(2)
+      expect(first.total).toBe(22)
+      expect(first.items[0].code).toBe('list-00')
+      expect(first.items[0].sessionCount).toBe(0)
+      expect(Object.keys(first.items[0]).sort()).toEqual([
+        'code',
+        'name',
+        'sessionCount',
+        'state',
+        'userId',
+      ])
+      const reversed = await companyAttendance.listCompanyAttendanceUsers(
+        administrator,
+        { q: 'list-', sort: 'code-desc' },
+      )
+      expect(reversed.items[0].code).toBe('list-21')
+      expect(
+        (
+          await companyAttendance.listCompanyAttendanceUsers(administrator, {
+            q: '%',
+          })
+        ).total,
+      ).toBe(0)
+      expect(
+        (
+          await companyAttendance.listCompanyAttendanceUsers(administrator, {
+            q: '_',
+          })
+        ).total,
+      ).toBe(0)
+      const empty = await companyAttendance.readCompanyAttendanceUser(
+        administrator,
+        { userId: 'attendance-list-00' },
+      )
+      expect(empty?.days).toEqual([])
+      expect(empty?.subject.name).toBe('სატესტო 00')
+    } finally {
+      await sql().query(`DELETE FROM "user" WHERE id LIKE 'attendance-list-%'`)
+    }
+  })
+
+  it('paginates employee attendance by whole days with deterministic session order', async () => {
+    await sql()
+      .query(`INSERT INTO attendance_session (employee_id, request_id, work_date, timezone, schedule_effective_from, expected_start_at, expected_end_at, started_at, ended_at)
+      SELECT e.id, uuidv7(), date '2026-11-01' + d, 'Asia/Tbilisi', date '2026-01-01',
+        timestamptz '2026-11-01 06:00:00+00' + d * interval '1 day', timestamptz '2026-11-01 07:00:00+00' + d * interval '1 day',
+        timestamptz '2026-11-01 06:00:00+00' + d * interval '1 day', timestamptz '2026-11-01 07:00:00+00' + d * interval '1 day'
+      FROM employee e CROSS JOIN generate_series(0, 10) AS d WHERE e.user_id = 'attendance-a'`)
+    await sql()
+      .query(`INSERT INTO attendance_session (employee_id, request_id, work_date, timezone, schedule_effective_from, expected_start_at, expected_end_at, started_at, ended_at)
+      SELECT e.id, uuidv7(), date '2026-11-01', 'Asia/Tbilisi', date '2026-01-01',
+        timestamptz '2026-11-01 08:00:00+00', timestamptz '2026-11-01 09:00:00+00', timestamptz '2026-11-01 08:00:00+00', timestamptz '2026-11-01 09:00:00+00' FROM employee e WHERE e.user_id = 'attendance-a'`)
+    const first = await companyAttendance.readCompanyAttendanceUser(
+      administrator,
+      { userId: actor.id },
+    )
+    const next = await companyAttendance.readCompanyAttendanceUser(
+      administrator,
+      { userId: actor.id, page: 2 },
+    )
+    expect(first?.totalDays).toBe(11)
+    expect(first?.days).toHaveLength(10)
+    expect(first?.days[0]).toBe('2026-11-11')
+    expect(next?.days).toEqual(['2026-11-01'])
+    expect(next?.sessions).toHaveLength(2)
+    expect(next?.sessions[0].startedAt).toBe('2026-11-01T08:00:00.000Z')
+    expect(next?.sessions[0].isLastOfDay).toBe(true)
+    expect(next?.sessions[0].isFirstOfDay).toBe(false)
+    const oldest = await companyAttendance.readCompanyAttendanceUser(
+      administrator,
+      { userId: actor.id, sort: 'date-asc' },
+    )
+    expect(oldest?.days[0]).toBe('2026-11-01')
+    expect(oldest?.sessions[0].startedAt).toBe('2026-11-01T06:00:00.000Z')
+    expect(oldest?.sessions[0].isFirstOfDay).toBe(true)
+    expect(
+      (
+        await companyAttendance.readCompanyAttendanceUser(administrator, {
+          userId: other.id,
+        })
+      )?.sessions,
+    ).toEqual([])
+    expect(
+      await companyAttendance.readCompanyAttendanceUser(administrator, {
+        userId: 'missing-user',
+      }),
+    ).toBeNull()
+    await expect(
+      companyAttendance.readCompanyAttendanceUser(manager, {
+        userId: actor.id,
+      }),
+    ).rejects.toThrow()
+    await expect(
+      companyAttendance.readCompanyAttendanceUser(administrator, {
+        userId: actor.id,
+        page: -1,
+      }),
+    ).rejects.toThrow()
+    await sql().query(
+      `UPDATE "user" SET roles = 'employee' WHERE id = 'review-admin'`,
+    )
+    await expect(
+      companyAttendance.readCompanyAttendanceUser(administrator, {
+        userId: actor.id,
+      }),
+    ).rejects.toThrow()
+    await sql().query(
+      `UPDATE "user" SET roles = 'admin' WHERE id = 'review-admin'`,
+    )
+  })
+
   const administrator: Actor = {
     ...actor,
     id: 'review-admin',

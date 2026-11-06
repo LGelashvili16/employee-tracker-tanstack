@@ -21,12 +21,26 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({
     to,
     children,
+    search,
+    params,
     ...props
   }: {
     to: string
     children: React.ReactNode
+    search?: Record<string, string | number>
+    params?: Record<string, string>
   }) => (
-    <a href={to} {...props}>
+    <a
+      href={
+        search
+          ? `${to}?${new URLSearchParams(Object.entries(search).map(([key, value]) => [key, String(value)]))}`
+          : to.replace(
+              /\$([A-Za-z]+)/g,
+              (_, name: string) => params?.[name] ?? `$${name}`,
+            )
+      }
+      {...props}
+    >
       {children}
     </a>
   ),
@@ -72,6 +86,36 @@ function renderDetail(
 }
 
 describe('single account page', () => {
+  it('links authorized account managers to attendance and timesheets', async () => {
+    renderDetail({}, { ...actor, roles: ['owner'] })
+    expect(
+      await screen.findByRole('link', { name: 'დასწრების ჩანაწერები' }),
+    ).toHaveAttribute('href', '/admin/attendance/employee')
+    expect(
+      screen.getByRole('link', { name: 'სამუშაო საათები' }),
+    ).toHaveAttribute('href', '/admin/timesheets?userId=employee')
+  })
+
+  it('provides company read navigation to administrators', async () => {
+    renderDetail()
+    await screen.findByRole('heading', { name: 'ანა მაისურაძე' })
+    expect(
+      screen.queryByRole('link', { name: 'დასწრების ჩანაწერები' }),
+    ).toHaveAttribute('href', '/admin/attendance/employee')
+    expect(
+      screen.queryByRole('link', { name: 'სამუშაო საათები' }),
+    ).toHaveAttribute('href', '/admin/timesheets?userId=employee')
+  })
+
+  it('checks attendance and timesheet access separately', async () => {
+    renderDetail({}, { ...actor, roles: ['operations_manager'] })
+    expect(
+      await screen.findByRole('link', { name: 'დასწრების ჩანაწერები' }),
+    ).toHaveAttribute('href', '/manage/attendance?userId=employee')
+    expect(
+      screen.queryByRole('link', { name: 'სამუშაო საათები' }),
+    ).not.toBeInTheDocument()
+  })
   it('shows personal data, the inherited working week and management actions', async () => {
     renderDetail()
     expect(

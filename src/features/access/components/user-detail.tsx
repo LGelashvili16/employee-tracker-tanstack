@@ -17,6 +17,7 @@ import { EmployeeDetailsDialog } from './employee-details-dialog'
 import { UserAccessCard } from './user-access-card'
 import { UserProfileCard } from './user-profile-card'
 import { UserScheduleCard } from './user-schedule-card'
+import { UserWorkRecordsCard } from './user-work-records-card'
 import type { Actor } from '#/lib/authorization/actor'
 import type { IssuedAccountCode } from '../access.types'
 import type { AccountAction } from './account-action-content'
@@ -117,6 +118,7 @@ export function UserDetail({
         />
       </div>
       <UserScheduleCard week={record.workingWeek} companyWeek={companyWeek} />
+      <UserWorkRecordsCard roles={actor.roles} userId={record.userId} />
       {action ? (
         <AccountActionDialog
           target={record}

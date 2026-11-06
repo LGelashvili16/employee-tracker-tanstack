@@ -22,6 +22,7 @@ const calls = vi.hoisted(() => ({
 }))
 vi.mock('../attendance.functions', () => ({
   readTeamAttendance: calls.read,
+  readCompanyAttendance: calls.read,
   decideAttendance: calls.review,
   amendAttendance: calls.correct,
   readAttendanceReviewHistory: calls.history,
@@ -78,6 +79,23 @@ beforeEach(() => {
   })
 })
 describe('manager attendance workflow', () => {
+  it('renders the company overview without approval or correction controls', async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AttendanceReviewTable actorId="admin" company />
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText('ანა')).toBeVisible()
+    expect(
+      screen.queryByRole('columnheader', { name: 'მოქმედებები' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'განხილვა' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'შესწორება' }),
+    ).not.toBeInTheDocument()
+  })
   it('shows real deviations and respects read-only access', async () => {
     calls.read.mockResolvedValue({
       ok: true,

@@ -1,4 +1,9 @@
 import { z } from 'zod'
+import { recordIdSchema } from '#/lib/route-schemas'
+
+export const attendanceSearchSchema = z.object({
+  userId: recordIdSchema.optional(),
+})
 
 const identifier = z.uuid({ error: 'ჩანაწერის იდენტიფიკატორი არასწორია.' })
 export const checkInSchema = z.object(
@@ -57,6 +62,7 @@ export const attendanceCorrectionSchema = z
     message: 'დასრულება უნდა იყოს დაწყების შემდეგ.',
   })
 export const attendanceListSchema = z.object({
+  userId: recordIdSchema.optional(),
   page: z
     .number({ error: 'გვერდი არასწორია.' })
     .int('გვერდი არასწორია.')
