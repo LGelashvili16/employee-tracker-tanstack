@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 25. Last updated: 2026-11-09.
+Status: required project instructions. Version: 26. Last updated: 2026-11-09.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -218,6 +218,7 @@ Before implementation, identify the user, their immediate task, the decision the
 - Distinguish first use, no records, no matches, insufficient access, and failure in empty states. Provide a useful permitted next step when one exists; do not invent actions the user cannot perform.
 - Use specific Georgian action labels. Avoid vague labels when context is ambiguous, generic motivational copy, and implementation terminology in product flows.
 - Use motion to explain state changes, not decorate every interaction. Follow existing short transitions, preserve layout stability, and respect reduced motion.
+- While an attendance session is running, its action button shows a violet-purple and soft white gradient with visible drifting white particles clipped inside its rounded surface. Keep the dark label and focus ring unobstructed, pause motion during submission, and use a static gradient for reduced motion. The effect follows the active session rather than scheduled hours. Retain the shared raised press feedback and a subtle hover lift.
 
 ## Visual restraint and evidence
 

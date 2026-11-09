@@ -25,6 +25,7 @@ import {
 } from '../attendance.presentation'
 import { cn } from '#/lib/utils'
 import { AttendanceClockPattern } from './attendance-clock-pattern'
+import { WorkCurrent } from './work-current'
 
 const digitFormat = { minimumIntegerDigits: 2, maximumFractionDigits: 0 }
 
@@ -95,7 +96,7 @@ export function AttendanceClock({
             showWorkTarget={!overview.approvedLeave}
           />
           <Button
-            className="relative h-11 w-full sm:w-auto sm:min-w-52"
+            className="work-current-button relative h-11 w-full sm:w-auto sm:min-w-52"
             disabled={
               action.pending ||
               (!open && overview.workday.kind === 'unconfigured')
@@ -150,7 +151,8 @@ export function AttendanceClock({
               }
             }}
           >
-            <span className="flex size-4 items-center justify-center">
+            {open ? <WorkCurrent /> : null}
+            <span className="relative flex size-4 items-center justify-center">
               {action.pending ? (
                 <Spinner aria-hidden="true" />
               ) : open ? (
@@ -159,7 +161,9 @@ export function AttendanceClock({
                 <IconCirclePlay aria-hidden="true" />
               )}
             </span>
-            {open ? 'სამუშაოს დასრულება' : 'სამუშაოს დაწყება'}
+            <span className="relative">
+              {open ? 'სამუშაოს დასრულება' : 'სამუშაოს დაწყება'}
+            </span>
           </Button>
           {overview.workday.kind === 'day_off' ? (
             <Badge variant="secondary" className="relative">

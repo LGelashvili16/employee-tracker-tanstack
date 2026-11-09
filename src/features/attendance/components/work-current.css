@@ -1,0 +1,122 @@
+.work-current-button {
+  isolation: isolate;
+  transition-duration: 180ms;
+}
+
+.work-current-button:has(.work-current) {
+  --work-current-violet: #b49aef;
+  --work-current-highlight: #faf8ff;
+  background: linear-gradient(
+    110deg,
+    var(--work-current-highlight),
+    var(--work-current-violet) 48%,
+    #e6dcfb 78%,
+    var(--work-current-highlight)
+  );
+  color: #2e2148;
+  border-color: color-mix(in oklch, var(--work-current-violet), white 30%);
+}
+
+.work-current {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  color: white;
+}
+
+.work-current__wash {
+  position: absolute;
+  inset: -60% -50%;
+  background:
+    radial-gradient(
+      ellipse at 25% 60%,
+      color-mix(in oklch, var(--work-current-violet) 70%, transparent),
+      transparent 45%
+    ),
+    radial-gradient(
+      ellipse at 70% 30%,
+      color-mix(in oklch, var(--work-current-highlight) 85%, transparent),
+      transparent 40%
+    );
+  animation: work-current-wash 10s ease-in-out infinite alternate;
+}
+
+.work-current__particle {
+  position: absolute;
+  left: -3%;
+  width: 100%;
+  height: var(--particle-size);
+  opacity: 0;
+  animation: work-current-drift var(--drift-duration) linear var(--drift-delay)
+    infinite;
+}
+
+.work-current__particle::before {
+  content: '';
+  display: block;
+  width: var(--particle-size);
+  height: var(--particle-size);
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow:
+    0 0 3px currentColor,
+    -5px 0 5px color-mix(in oklch, currentColor 70%, transparent);
+}
+
+.work-current-button[aria-busy='true'] .work-current > * {
+  animation-play-state: paused;
+}
+
+@keyframes work-current-wash {
+  from {
+    transform: translate3d(-12%, 5%, 0) rotate(-8deg);
+    opacity: 0.55;
+  }
+  to {
+    transform: translate3d(12%, -5%, 0) rotate(8deg);
+    opacity: 0.85;
+  }
+}
+
+@keyframes work-current-drift {
+  0% {
+    transform: translate3d(0, 3px, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate3d(50%, -3px, 0);
+    opacity: 1;
+  }
+  88% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(106%, 2px, 0);
+    opacity: 0;
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .work-current-button:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+  .work-current-button:not(:disabled):active {
+    transform: translateY(1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .work-current__wash {
+    animation: none;
+    opacity: 0.5;
+  }
+  .work-current__particle {
+    display: none;
+    animation: none;
+  }
+}
