@@ -92,6 +92,7 @@ export function AttendanceClock({
             running={open !== null}
             onStart={recordClockStart}
             compact={compact}
+            showWorkTarget={!overview.approvedLeave}
           />
           <Button
             className="relative h-11 w-full sm:w-auto sm:min-w-52"
@@ -101,14 +102,25 @@ export function AttendanceClock({
             }
             aria-busy={action.pending}
             onClick={() => {
-              if (!open && overview.workday.kind === 'day_off') {
+              if (
+                !open &&
+                (overview.workday.kind === 'day_off' || overview.approvedLeave)
+              ) {
                 openModal(
                   <StartNonworkingDayConfirmation
                     start={() => action.start(true)}
                     submitting={submitting}
+                    leaveKind={overview.approvedLeave?.kind}
                   />,
                   {
-                    title: 'არასამუშაო დღეს მუშაობა',
+                    title:
+                      overview.approvedLeave?.kind === 'sick_leave'
+                        ? 'ბიულეტენის დროს მუშაობა'
+                        : overview.approvedLeave?.kind === 'vacation'
+                          ? 'შვებულების დროს მუშაობა'
+                          : overview.approvedLeave?.kind === 'day_off'
+                            ? 'დასვენების დღეს მუშაობა'
+                            : 'არასამუშაო დღეს მუშაობა',
                     canClose: () => !submitting.current,
                   },
                 )
@@ -195,11 +207,13 @@ export function ClockTimer({
   running,
   onStart,
   compact = false,
+  showWorkTarget = true,
 }: {
   seconds: number
   running: boolean
   onStart?: (startedAt: number) => void
   compact?: boolean
+  showWorkTarget?: boolean
 }) {
   const total = seconds + useElapsedSeconds(running, undefined, onStart)
   const durationStatus = workDurationStatus(total)
@@ -250,10 +264,9 @@ export function ClockTimer({
           </div>
         ))}
       </div>
-      <Badge variant={durationStatus.variant}>{durationStatus.label}</Badge>
-      <p className="text-center text-xs text-muted-foreground">
-        მიზანი: 8 სთ მუშაობა + 1 სთ შესვენება
-      </p>
+      {showWorkTarget ? (
+        <Badge variant={durationStatus.variant}>{durationStatus.label}</Badge>
+      ) : null}
     </div>
   )
 }

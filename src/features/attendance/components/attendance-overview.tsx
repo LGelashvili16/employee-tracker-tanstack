@@ -20,6 +20,7 @@ import { cn } from '#/lib/utils'
 import { TimeGreeting } from '#/components/common/time-greeting'
 import { AttendanceScheduleWidget } from './attendance-schedule-widget'
 import { AttendanceWeeklyWidget } from './attendance-weekly-widget'
+import { ApprovedLeaveNotice } from './approved-leave-notice'
 
 // Share row heights across the compact widgets, with the clock spanning both rows.
 const dashboardGrid = 'sm:grid-cols-2 xl:auto-rows-fr xl:grid-cols-4'
@@ -152,6 +153,9 @@ function OverviewContent({
         className="flex flex-col gap-4"
       >
         {heading ? <div className="mb-2">{heading}</div> : null}
+        {result.value.approvedLeave ? (
+          <ApprovedLeaveNotice leave={result.value.approvedLeave} />
+        ) : null}
         <div
           className={cn(
             'grid gap-4',
@@ -181,6 +185,7 @@ function OverviewContent({
               <div className="min-w-0">
                 <AttendanceScheduleWidget
                   workday={result.value.workday}
+                  approvedLeave={result.value.approvedLeave}
                   compact
                 />
               </div>

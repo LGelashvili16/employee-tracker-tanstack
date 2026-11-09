@@ -133,6 +133,41 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
     ).toBe(1)
   })
 
+  it('initializes a new employee from company policy or an explicit override', async () => {
+    await testDatabase()
+      .update(tables.dayOffSetting)
+      .set({ defaultDays: 7, defaultVacationDays: 30 })
+    try {
+      for (const [code, override, expected] of [
+        ['allowance-default', null, 7],
+        ['allowance-custom', 2, 2],
+      ] as const) {
+        await service.provisionEmployee(owner, {
+          code,
+          name: 'ტესტის თანამშრომელი',
+          contactEmail: '',
+          role: 'employee',
+          dayOffAllowance: override,
+        })
+        const record = await identity(code)
+        const [balance] = await testDatabase()
+          .select()
+          .from(tables.dayOffBalance)
+          .where(eq(tables.dayOffBalance.userId, record.id))
+        expect(balance).toMatchObject({
+          annualDays: expected,
+          remainingDays: expected,
+          vacationAnnualDays: 30,
+          vacationRemainingDays: 30,
+          revision: 0,
+        })
+      }
+    } finally {
+      await testDatabase()
+        .update(tables.dayOffSetting)
+        .set({ defaultDays: 4, defaultVacationDays: 24 })
+    }
+  })
   it.each(['sales_manager', 'production_specialist', 'hr_manager'] as const)(
     'provisions and stores the %s role through the employee workflow',
     async (role) => {

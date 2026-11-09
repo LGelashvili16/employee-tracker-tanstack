@@ -1,16 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { ReviewLeavePage } from '#/features/leave/pages/review-leave-page'
-import { leaveContent } from '#/features/leave/leave.content'
-import { pageHead } from '#/lib/page-head'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { leaveSearchSchema } from '#/features/leave/leave.schemas'
 import { requirePagePermission } from '#/lib/auth/auth.functions'
 
 export const Route = createFileRoute('/_authenticated/manage/vacations')({
-  beforeLoad: () =>
-    requirePagePermission({ data: { permission: 'leave.review' } }),
-  head: () =>
-    pageHead(
-      leaveContent.reviewLeave.title,
-      leaveContent.reviewLeave.description,
-    ),
-  component: ReviewLeavePage,
+  validateSearch: leaveSearchSchema,
+  beforeLoad: async ({ search }) => {
+    await requirePagePermission({ data: { permission: 'leave.review' } })
+    throw redirect({ to: '/manage/leave', search, replace: true })
+  },
 })

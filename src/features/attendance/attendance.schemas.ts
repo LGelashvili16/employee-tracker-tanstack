@@ -11,6 +11,7 @@ export const checkInSchema = z.object(
   {
     requestId: identifier,
     expectedLastSessionId: identifier.nullable(),
+    /** Company-local date explicitly confirmed for a scheduled rest day or an approved day off/leave. */
     confirmedNonWorkingDate: scheduleDateSchema.optional(),
   },
   { error: 'შესვლის მოთხოვნა არასწორია.' },

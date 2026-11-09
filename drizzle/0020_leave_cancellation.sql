@@ -1,0 +1,4 @@
+ALTER TABLE "leave_request" DROP CONSTRAINT "leave_request_status_valid";--> statement-breakpoint
+ALTER TABLE "leave_request" DROP CONSTRAINT "leave_request_review_valid";--> statement-breakpoint
+ALTER TABLE "leave_request" ADD CONSTRAINT "leave_request_status_valid" CHECK ("leave_request"."status" in ('pending', 'approved', 'rejected', 'cancelled'));--> statement-breakpoint
+ALTER TABLE "leave_request" ADD CONSTRAINT "leave_request_review_valid" CHECK (("leave_request"."reviewer_id" is null and "leave_request"."reviewed_at" is null and "leave_request"."review_reason" = '' and "leave_request"."status" in ('pending', 'cancelled')) or ("leave_request"."reviewer_id" is not null and "leave_request"."reviewer_id" <> "leave_request"."requester_id" and "leave_request"."reviewed_at" is not null and "leave_request"."status" <> 'cancelled' and length(trim("leave_request"."review_reason")) between 5 and 500));

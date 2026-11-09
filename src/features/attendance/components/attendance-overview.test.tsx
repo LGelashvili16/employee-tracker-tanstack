@@ -51,6 +51,7 @@ const sessionId = '019a4fb0-1234-7000-8000-123456789012'
 function overview(): Overview {
   return {
     serverNow: '2026-11-04T07:00:00.000Z',
+    approvedLeave: null,
     workday: {
       date: '2026-11-04',
       timezone: 'Asia/Tbilisi',
@@ -119,6 +120,85 @@ afterEach(() => {
 })
 
 describe('persisted attendance dashboard', () => {
+  it.each(['day_off', 'vacation', 'sick_leave'] as const)(
+    'shows approved %s instead of ordinary schedule and work-goal prompts',
+    async (kind) => {
+      const state = overview()
+      state.approvedLeave = {
+        kind,
+        startDate: '2026-11-04',
+        endDate:
+          kind === 'sick_leave'
+            ? null
+            : kind === 'vacation'
+              ? '2026-11-06'
+              : '2026-11-04',
+      }
+      calls.read.mockResolvedValue({ ok: true, value: state })
+      render(
+        <ModalProvider>
+          <AttendanceOverview actorId="employee" dashboardLayout />
+        </ModalProvider>,
+      )
+      expect(
+        await screen.findByText(
+          kind === 'sick_leave'
+            ? 'დღეს ბიულეტენზე ხართ'
+            : kind === 'vacation'
+              ? 'დღეს შვებულება გაქვთ'
+              : 'დღეს დასვენების დღე გაქვთ',
+          { selector: '[data-slot="alert-title"]' },
+        ),
+      ).toBeVisible()
+      expect(
+        screen.getAllByText(
+          kind === 'sick_leave'
+            ? '4 ნოემბერი 2026 / მიმდინარე'
+            : kind === 'vacation'
+              ? '4 ნოემბერი 2026 / 6 ნოემბერი 2026'
+              : '4 ნოემბერი 2026',
+        ).length,
+      ).toBeGreaterThanOrEqual(1)
+      expect(
+        screen.queryByText('მიზანი: 8 სთ მუშაობა + 1 სთ შესვენება'),
+      ).not.toBeInTheDocument()
+      expect(screen.queryByText('8 საათზე ნაკლები')).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('progressbar', { name: 'დღის მიზნის შესრულება' }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('მუშაობის ხანგრძლივობა'),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByText(/სამუშაო მიზანი არ არის განსაზღვრული/),
+      ).toBeVisible()
+      expect(
+        screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
+      ).toBeVisible()
+    },
+  )
+  it('keeps an open attendance session visible during approved vacation', async () => {
+    const state = working()
+    state.approvedLeave = {
+      kind: 'vacation',
+      startDate: '2026-11-04',
+      endDate: '2026-11-06',
+    }
+    calls.read.mockResolvedValue({ ok: true, value: state })
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" dashboardLayout />
+      </ModalProvider>,
+    )
+    expect(
+      await screen.findByRole('button', { name: 'სამუშაოს დასრულება' }),
+    ).toBeEnabled()
+    expect(screen.getByText('მუშაობთ')).toBeVisible()
+    expect(screen.getByText('დღეს შვებულება გაქვთ')).toBeVisible()
+    expect(
+      screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
+    ).toHaveTextContent('01:00:00')
+  })
   it('shows a full week of actual daily totals and labels future days separately', () => {
     const state = working()
     state.week = {
@@ -407,49 +487,123 @@ describe('persisted attendance dashboard', () => {
       'სამუშაოს დაწყება დაფიქსირდა.',
     )
   })
-  it('keeps nonworking confirmation open on failure and blocks repeated submission while pending', async () => {
-    const state = overview()
-    state.workday.kind = 'day_off'
-    calls.read.mockResolvedValue({ ok: true, value: state })
-    let complete: ((result: unknown) => void) | undefined
-    calls.start.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          complete = resolve
-        }),
-    )
-    const user = userEvent.setup()
-    render(
-      <ModalProvider>
-        <AttendanceOverview actorId="employee" />
-      </ModalProvider>,
-    )
-    await user.click(
-      await screen.findByRole('button', { name: 'სამუშაოს დაწყება' }),
-    )
-    const dialog = await screen.findByRole('dialog')
-    const confirm = within(dialog).getByRole('button', {
-      name: 'მუშაობის დაწყება',
-    })
-    await user.click(confirm)
-    expect(confirm).toBeDisabled()
-    expect(confirm).toHaveAttribute('aria-busy', 'true')
-    expect(
-      within(dialog).getByRole('button', { name: 'გაუქმება' }),
-    ).toBeDisabled()
-    await user.keyboard('{Escape}')
-    expect(dialog).toBeVisible()
-    expect(calls.start).toHaveBeenCalledOnce()
-    await act(async () => {
-      complete?.({ ok: false, message: 'მოთხოვნა ვერ დასრულდა.' })
-    })
-    await waitFor(() => expect(confirm).toBeEnabled())
-    expect(dialog).toBeVisible()
-    expect(calls.success).not.toHaveBeenCalled()
-    expect(calls.error).toHaveBeenCalledExactlyOnceWith(
-      'მოთხოვნა ვერ დასრულდა.',
-    )
-  })
+  it.each(['day_off', 'vacation', 'sick_leave'] as const)(
+    'asks before restarting work during approved %s and submits only after confirmation',
+    async (kind) => {
+      const state = working()
+      state.openSession = null
+      if (!state.today) throw new Error('Missing attendance fixture')
+      state.today.incomplete = false
+      state.approvedLeave = {
+        kind,
+        startDate: '2026-11-04',
+        endDate:
+          kind === 'sick_leave'
+            ? null
+            : kind === 'vacation'
+              ? '2026-11-06'
+              : '2026-11-04',
+      }
+      calls.read.mockResolvedValue({ ok: true, value: state })
+      calls.start.mockResolvedValue({ ok: true, value: { id: sessionId } })
+      const user = userEvent.setup()
+      render(
+        <ModalProvider>
+          <AttendanceOverview actorId="employee" dashboardLayout />
+        </ModalProvider>,
+      )
+      const start = await screen.findByRole('button', {
+        name: 'სამუშაოს დაწყება',
+      })
+      await user.click(start)
+      const title =
+        kind === 'sick_leave'
+          ? 'ბიულეტენის დროს მუშაობა'
+          : kind === 'vacation'
+            ? 'შვებულების დროს მუშაობა'
+            : 'დასვენების დღეს მუშაობა'
+      const dialog = await screen.findByRole('dialog', { name: title })
+      expect(
+        within(dialog).getByText(
+          kind === 'sick_leave'
+            ? /დღეს ბიულეტენზე ხართ/
+            : kind === 'vacation'
+              ? /დღეს შვებულებაში ხართ/
+              : /დღეს დასვენების დღე გაქვთ/,
+        ),
+      ).toBeVisible()
+      expect(calls.start).not.toHaveBeenCalled()
+      await user.click(within(dialog).getByRole('button', { name: 'გაუქმება' }))
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+      )
+      expect(calls.start).not.toHaveBeenCalled()
+      await user.click(start)
+      await user.click(
+        within(await screen.findByRole('dialog', { name: title })).getByRole(
+          'button',
+          { name: 'მუშაობის დაწყება' },
+        ),
+      )
+      await waitFor(() => expect(calls.start).toHaveBeenCalledOnce())
+      expect(calls.start.mock.calls[0][0].data).toMatchObject({
+        confirmedNonWorkingDate: '2026-11-04',
+        expectedLastSessionId: sessionId,
+      })
+    },
+  )
+  it.each([undefined, 'day_off', 'vacation'] as const)(
+    'keeps %s confirmation open on failure and blocks repeated submission while pending',
+    async (kind) => {
+      const state = overview()
+      if (kind)
+        state.approvedLeave = {
+          kind,
+          startDate: '2026-11-04',
+          endDate: '2026-11-04',
+        }
+      else state.workday.kind = 'day_off'
+      calls.read.mockResolvedValue({ ok: true, value: state })
+      let complete: ((result: unknown) => void) | undefined
+      calls.start.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            complete = resolve
+          }),
+      )
+      const user = userEvent.setup()
+      render(
+        <ModalProvider>
+          <AttendanceOverview actorId="employee" />
+        </ModalProvider>,
+      )
+      await user.click(
+        await screen.findByRole('button', { name: 'სამუშაოს დაწყება' }),
+      )
+      const dialog = await screen.findByRole('dialog')
+      const confirm = within(dialog).getByRole('button', {
+        name: 'მუშაობის დაწყება',
+      })
+      await user.click(confirm)
+      expect(confirm).toBeDisabled()
+      expect(confirm).toHaveAttribute('aria-busy', 'true')
+      expect(
+        within(dialog).getByRole('button', { name: 'გაუქმება' }),
+      ).toBeDisabled()
+      await user.keyboard('{Escape}')
+      expect(dialog).toBeVisible()
+      expect(calls.start).toHaveBeenCalledOnce()
+      await act(async () => {
+        complete?.({ ok: false, message: 'მოთხოვნა ვერ დასრულდა.' })
+      })
+      await waitFor(() => expect(confirm).toBeEnabled())
+      expect(dialog).toBeVisible()
+      expect(calls.success).not.toHaveBeenCalled()
+      expect(calls.error).toHaveBeenCalledExactlyOnceWith(
+        'მოთხოვნა ვერ დასრულდა.',
+      )
+    },
+  )
   it('refetches the persisted server state after check-in and shows a success toast', async () => {
     let state = overview()
     calls.read.mockImplementation(async () => ({ ok: true, value: state }))
@@ -543,7 +697,7 @@ describe('persisted attendance dashboard', () => {
       ),
     )
   })
-  it('leaves the timer running after a rejected check-out and reports one safe error', async () => {
+  it('vacations the timer running after a rejected check-out and reports one safe error', async () => {
     const state = working()
     calls.read.mockResolvedValue({ ok: true, value: state })
     calls.finish.mockResolvedValue({
@@ -707,8 +861,8 @@ describe('persisted attendance dashboard', () => {
         beforeColor,
       )
       expect(
-        screen.getByText('მიზანი: 8 სთ მუშაობა + 1 სთ შესვენება'),
-      ).toBeVisible()
+        screen.queryByText('მიზანი: 8 სთ მუშაობა + 1 სთ შესვენება'),
+      ).not.toBeInTheDocument()
       act(() => vi.advanceTimersByTime(1000))
       expect(screen.getByText(after)).toHaveAttribute(
         'data-variant',

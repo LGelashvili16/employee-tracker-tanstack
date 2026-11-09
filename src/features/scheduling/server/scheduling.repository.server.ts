@@ -315,3 +315,30 @@ export async function companyWorkdayAt(
     endsAt: record.endsAt.toISOString(),
   }
 }
+
+/** Bounded inclusive dates for paid-vacation charging. The caller owns authorization and the employee lock. */
+export async function vacationWorkingDates(
+  tx: ScheduleTransaction,
+  userId: string,
+  startDate: string,
+  endDate: string,
+) {
+  await tx.execute(sql`select pg_advisory_xact_lock_shared(812734, 1)`)
+  const result = await tx.execute<{
+    date: string
+    working: boolean
+    configured: boolean
+  }>(sql`
+    select dates.day::date::text as date, version.effective_from is not null as configured,
+      case when assignment.days is not null then exists (
+        select 1 from jsonb_array_elements(assignment.days) item
+        where (item->>'weekday')::int = extract(isodow from dates.day)::int and item->'hours' <> 'null'::jsonb
+      ) else weekday.start_time is not null and weekday.end_time is not null end as working
+    from generate_series(${startDate}::date, ${endDate}::date, '1 day'::interval) dates(day)
+    left join lateral (select effective_from from company_schedule where effective_from <= dates.day::date order by effective_from desc limit 1) version on true
+    left join company_schedule_day weekday on weekday.effective_from = version.effective_from and weekday.weekday = extract(isodow from dates.day)::int
+    left join employee person on person.user_id = ${userId}
+    left join employee_work_schedule assignment on assignment.employee_id = person.id
+  `)
+  return result.rows
+}

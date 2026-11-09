@@ -12,6 +12,27 @@ import {
 import type { Actor } from './actor'
 
 describe('role and permission boundaries', () => {
+  it('grants vacation review to HR, admins, and owners, with explicit denials taking precedence', () => {
+    for (const role of ['hr_manager', 'admin', 'owner'] as const)
+      expect(hasPermission([role], 'leave.review')).toBe(true)
+    for (const role of [
+      'employee',
+      'production_specialist',
+      'supervisor',
+      'operations_manager',
+      'sales_manager',
+    ] as const)
+      expect(hasPermission([role], 'leave.review')).toBe(false)
+    expect(
+      hasPermission(
+        {
+          roles: ['admin'],
+          permissionOverrides: { allow: [], deny: ['leave.review'] },
+        },
+        'leave.review',
+      ),
+    ).toBe(false)
+  })
   it('rejects the retired team-management permission', () => {
     expect(permissionSchema.safeParse('teams.manage').success).toBe(false)
   })
@@ -81,7 +102,7 @@ describe('role and permission boundaries', () => {
         permission === 'jobs.claim',
       )
   })
-  it('grants administrators platform configuration and company reads without review grants', () => {
+  it('grants administrators platform configuration, company reads, and vacation review', () => {
     const platformPermissions = [
       'manage.access',
       'employees.read',
@@ -96,6 +117,7 @@ describe('role and permission boundaries', () => {
       'attendance.configure',
       'approvals.configure',
       'leave.configure',
+      'leave.review',
       'security.configure',
       'notifications.configure',
       'locations.manage',

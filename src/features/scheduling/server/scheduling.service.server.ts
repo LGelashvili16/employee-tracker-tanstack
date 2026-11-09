@@ -217,3 +217,13 @@ export async function saveScheduleVersion(actor: Actor | null, input: unknown) {
     return { effectiveFrom: schedule.effectiveFrom }
   })
 }
+
+/** Internal vacation workflow interface. The caller checks current permissions and locks the target employee. */
+export function getVacationWorkingDates(
+  tx: repository.ScheduleTransaction,
+  userId: string,
+  startDate: string,
+  endDate: string,
+) {
+  return repository.vacationWorkingDates(tx, userId, startDate, endDate)
+}

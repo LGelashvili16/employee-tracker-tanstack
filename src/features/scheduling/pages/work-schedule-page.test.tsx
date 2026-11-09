@@ -24,6 +24,13 @@ vi.mock('#/features/scheduling/scheduling.functions', () => ({
   getScheduleSettings: read,
   createScheduleVersion: vi.fn(),
 }))
+vi.mock('#/features/leave/day-off-allowance.functions', () => ({
+  getDayOffSettings: vi.fn().mockResolvedValue({
+    ok: true,
+    value: { defaultDays: 4, resetYearly: true, revision: 0 },
+  }),
+  updateDayOffSettings: vi.fn(),
+}))
 vi.mock('@tanstack/react-start', () => ({ useServerFn: (fn: unknown) => fn }))
 beforeEach(() => {
   read.mockReset()
@@ -68,6 +75,61 @@ describe('work schedule page states', () => {
     expect(notifications.error).toHaveBeenCalledExactlyOnceWith(
       'განრიგის ჩატვირთვა ვერ მოხერხდა.',
     )
+  })
+  it('shows one settings group and preserves unsaved edits across tab changes', async () => {
+    read.mockResolvedValue({
+      ok: true,
+      value: {
+        current: null,
+        latest: null,
+        upcoming: [],
+        hasMoreUpcoming: false,
+        today: '2026-11-09',
+        minimumEffectiveFrom: '2026-11-09',
+        timezone: null,
+      },
+    })
+    const user = userEvent.setup()
+    render(<WorkSchedulePage actorId="admin" canConfigureLeave />)
+    const reminder = await screen.findByRole('spinbutton', {
+      name: 'შესვლის შეხსენება დაწყებამდე (წუთი)',
+    })
+    await user.clear(reminder)
+    await user.type(reminder, '7')
+    expect(screen.getAllByRole('tabpanel')).toHaveLength(1)
+    await user.click(
+      screen.getByRole('tab', { name: 'დასვენება და შვებულება' }),
+    )
+    expect(
+      screen.queryByRole('button', { name: 'განრიგის შენახვა' }),
+    ).not.toBeInTheDocument()
+    const allowance = await screen.findByRole('spinbutton', {
+      name: 'საწყისი ლიმიტი (დღე)',
+    })
+    await user.clear(allowance)
+    await user.type(allowance, '6')
+    await user.click(screen.getByRole('tab', { name: 'დასწრების წესები' }))
+    expect(
+      await screen.findByRole('spinbutton', {
+        name: 'გადამოწმების ზღვარი (საათი)',
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole('button', { name: 'წესის შენახვა' }),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'განრიგი' }))
+    expect(
+      screen.getByRole('spinbutton', {
+        name: 'შესვლის შეხსენება დაწყებამდე (წუთი)',
+      }),
+    ).toHaveValue(7)
+    await user.click(
+      screen.getByRole('tab', { name: 'დასვენება და შვებულება' }),
+    )
+    expect(
+      screen.getByRole('spinbutton', { name: 'საწყისი ლიმიტი (დღე)' }),
+    ).toHaveValue(6)
+    expect(screen.getAllByRole('tabpanel')).toHaveLength(1)
   })
   it('shows an honest unconfigured state and editable initial schedule', async () => {
     read.mockResolvedValue({

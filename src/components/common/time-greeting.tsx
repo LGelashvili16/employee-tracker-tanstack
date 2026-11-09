@@ -23,11 +23,11 @@ export function TimeGreeting({
 }) {
   // The server sample keeps SSR and browser navigation in the same company timezone.
   const greeting = clock ? dayPeriodGreeting(clock) : 'გამარჯობა'
-  const displayName = name.trim()
+  const displayName = name.trim().split(' ')[0]
   return (
     <h1 className="w-full text-center text-2xl font-semibold tracking-tight text-balance break-words sm:text-3xl">
       {greeting}
-      {displayName ? `, ${displayName}` : ''}
+      {displayName ? `, ${displayName} !` : ''}
     </h1>
   )
 }

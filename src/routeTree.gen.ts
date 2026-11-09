@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as AuthenticatedAttendanceRouteRouteImport } from './routes/_authenticated/attendance/route'
+import { Route as AuthenticatedLeaveRouteImport } from './routes/_authenticated/leave'
 import { Route as AuthenticatedManageRouteRouteImport } from './routes/_authenticated/manage/route'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
@@ -35,6 +36,7 @@ import { Route as AuthenticatedAttendanceCorrectionsRouteImport } from './routes
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedJobsIndexRouteImport } from './routes/_authenticated/jobs/index'
 import { Route as AuthenticatedManageAttendanceRouteRouteImport } from './routes/_authenticated/manage/attendance/route'
+import { Route as AuthenticatedManageLeaveRouteImport } from './routes/_authenticated/manage/leave'
 import { Route as AuthenticatedManageReportsRouteImport } from './routes/_authenticated/manage/reports'
 import { Route as AuthenticatedManageScheduleRouteImport } from './routes/_authenticated/manage/schedule'
 import { Route as AuthenticatedManageVacationsRouteImport } from './routes/_authenticated/manage/vacations'
@@ -48,6 +50,7 @@ import { Route as AuthenticatedAdminSettingsCompanyRouteImport } from './routes/
 import { Route as AuthenticatedAdminSettingsLeaveRouteImport } from './routes/_authenticated/admin/settings/leave'
 import { Route as AuthenticatedAdminSettingsNotificationsRouteImport } from './routes/_authenticated/admin/settings/notifications'
 import { Route as AuthenticatedAdminSettingsSecurityRouteImport } from './routes/_authenticated/admin/settings/security'
+import { Route as AuthenticatedAdminSettingsVacationRouteImport } from './routes/_authenticated/admin/settings/vacation'
 import { Route as AuthenticatedManageAttendanceIndexRouteImport } from './routes/_authenticated/manage/attendance/index'
 import { Route as AuthenticatedManageAttendanceUserIdRouteImport } from './routes/_authenticated/manage/attendance/$userId'
 import { Route as AuthenticatedManageEmployeesIndexRouteImport } from './routes/_authenticated/manage/employees/index'
@@ -78,6 +81,11 @@ const AuthenticatedAttendanceRouteRoute =
     path: '/attendance',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedLeaveRoute = AuthenticatedLeaveRouteImport.update({
+  id: '/leave',
+  path: '/leave',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedManageRouteRoute =
   AuthenticatedManageRouteRouteImport.update({
     id: '/manage',
@@ -194,6 +202,12 @@ const AuthenticatedManageAttendanceRouteRoute =
     path: '/attendance',
     getParentRoute: () => AuthenticatedManageRouteRoute,
   } as any)
+const AuthenticatedManageLeaveRoute =
+  AuthenticatedManageLeaveRouteImport.update({
+    id: '/leave',
+    path: '/leave',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
 const AuthenticatedManageReportsRoute =
   AuthenticatedManageReportsRouteImport.update({
     id: '/reports',
@@ -271,6 +285,12 @@ const AuthenticatedAdminSettingsSecurityRoute =
     path: '/settings/security',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminSettingsVacationRoute =
+  AuthenticatedAdminSettingsVacationRouteImport.update({
+    id: '/settings/vacation',
+    path: '/settings/vacation',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedManageAttendanceIndexRoute =
   AuthenticatedManageAttendanceIndexRouteImport.update({
     id: '/',
@@ -302,6 +322,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/attendance': typeof AuthenticatedAttendanceRouteRouteWithChildren
   '/manage': typeof AuthenticatedManageRouteRouteWithChildren
+  '/leave': typeof AuthenticatedLeaveRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/vacation': typeof AuthenticatedVacationRoute
@@ -319,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/admin/locations': typeof AuthenticatedAdminLocationsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
+  '/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/manage/reports': typeof AuthenticatedManageReportsRoute
   '/manage/schedule': typeof AuthenticatedManageScheduleRoute
   '/manage/vacations': typeof AuthenticatedManageVacationsRoute
@@ -335,6 +357,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings/leave': typeof AuthenticatedAdminSettingsLeaveRoute
   '/admin/settings/notifications': typeof AuthenticatedAdminSettingsNotificationsRoute
   '/admin/settings/security': typeof AuthenticatedAdminSettingsSecurityRoute
+  '/admin/settings/vacation': typeof AuthenticatedAdminSettingsVacationRoute
   '/manage/attendance/$userId': typeof AuthenticatedManageAttendanceUserIdRoute
   '/manage/employees/$employeeId': typeof AuthenticatedManageEmployeesEmployeeIdRoute
   '/manage/attendance/': typeof AuthenticatedManageAttendanceIndexRoute
@@ -345,6 +368,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteRouteWithChildren
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/manage': typeof AuthenticatedManageRouteRouteWithChildren
+  '/leave': typeof AuthenticatedLeaveRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/vacation': typeof AuthenticatedVacationRoute
@@ -361,6 +385,7 @@ export interface FileRoutesByTo {
   '/admin/locations': typeof AuthenticatedAdminLocationsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
+  '/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/manage/reports': typeof AuthenticatedManageReportsRoute
   '/manage/schedule': typeof AuthenticatedManageScheduleRoute
   '/manage/vacations': typeof AuthenticatedManageVacationsRoute
@@ -377,6 +402,7 @@ export interface FileRoutesByTo {
   '/admin/settings/leave': typeof AuthenticatedAdminSettingsLeaveRoute
   '/admin/settings/notifications': typeof AuthenticatedAdminSettingsNotificationsRoute
   '/admin/settings/security': typeof AuthenticatedAdminSettingsSecurityRoute
+  '/admin/settings/vacation': typeof AuthenticatedAdminSettingsVacationRoute
   '/manage/attendance/$userId': typeof AuthenticatedManageAttendanceUserIdRoute
   '/manage/employees/$employeeId': typeof AuthenticatedManageEmployeesEmployeeIdRoute
   '/manage/attendance': typeof AuthenticatedManageAttendanceIndexRoute
@@ -390,6 +416,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/attendance': typeof AuthenticatedAttendanceRouteRouteWithChildren
   '/_authenticated/manage': typeof AuthenticatedManageRouteRouteWithChildren
+  '/_authenticated/leave': typeof AuthenticatedLeaveRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
   '/_authenticated/vacation': typeof AuthenticatedVacationRoute
@@ -407,6 +434,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/locations': typeof AuthenticatedAdminLocationsRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
+  '/_authenticated/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/_authenticated/manage/reports': typeof AuthenticatedManageReportsRoute
   '/_authenticated/manage/schedule': typeof AuthenticatedManageScheduleRoute
   '/_authenticated/manage/vacations': typeof AuthenticatedManageVacationsRoute
@@ -423,6 +451,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/settings/leave': typeof AuthenticatedAdminSettingsLeaveRoute
   '/_authenticated/admin/settings/notifications': typeof AuthenticatedAdminSettingsNotificationsRoute
   '/_authenticated/admin/settings/security': typeof AuthenticatedAdminSettingsSecurityRoute
+  '/_authenticated/admin/settings/vacation': typeof AuthenticatedAdminSettingsVacationRoute
   '/_authenticated/manage/attendance/$userId': typeof AuthenticatedManageAttendanceUserIdRoute
   '/_authenticated/manage/employees/$employeeId': typeof AuthenticatedManageEmployeesEmployeeIdRoute
   '/_authenticated/manage/attendance/': typeof AuthenticatedManageAttendanceIndexRoute
@@ -436,6 +465,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/attendance'
     | '/manage'
+    | '/leave'
     | '/notifications'
     | '/schedule'
     | '/vacation'
@@ -453,6 +483,7 @@ export interface FileRouteTypes {
     | '/admin/locations'
     | '/admin/roles'
     | '/attendance/corrections'
+    | '/manage/leave'
     | '/manage/reports'
     | '/manage/schedule'
     | '/manage/vacations'
@@ -469,6 +500,7 @@ export interface FileRouteTypes {
     | '/admin/settings/leave'
     | '/admin/settings/notifications'
     | '/admin/settings/security'
+    | '/admin/settings/vacation'
     | '/manage/attendance/$userId'
     | '/manage/employees/$employeeId'
     | '/manage/attendance/'
@@ -479,6 +511,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin'
     | '/manage'
+    | '/leave'
     | '/notifications'
     | '/schedule'
     | '/vacation'
@@ -495,6 +528,7 @@ export interface FileRouteTypes {
     | '/admin/locations'
     | '/admin/roles'
     | '/attendance/corrections'
+    | '/manage/leave'
     | '/manage/reports'
     | '/manage/schedule'
     | '/manage/vacations'
@@ -511,6 +545,7 @@ export interface FileRouteTypes {
     | '/admin/settings/leave'
     | '/admin/settings/notifications'
     | '/admin/settings/security'
+    | '/admin/settings/vacation'
     | '/manage/attendance/$userId'
     | '/manage/employees/$employeeId'
     | '/manage/attendance'
@@ -523,6 +558,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/attendance'
     | '/_authenticated/manage'
+    | '/_authenticated/leave'
     | '/_authenticated/notifications'
     | '/_authenticated/schedule'
     | '/_authenticated/vacation'
@@ -540,6 +576,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/locations'
     | '/_authenticated/admin/roles'
     | '/_authenticated/attendance/corrections'
+    | '/_authenticated/manage/leave'
     | '/_authenticated/manage/reports'
     | '/_authenticated/manage/schedule'
     | '/_authenticated/manage/vacations'
@@ -556,6 +593,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/settings/leave'
     | '/_authenticated/admin/settings/notifications'
     | '/_authenticated/admin/settings/security'
+    | '/_authenticated/admin/settings/vacation'
     | '/_authenticated/manage/attendance/$userId'
     | '/_authenticated/manage/employees/$employeeId'
     | '/_authenticated/manage/attendance/'
@@ -604,6 +642,13 @@ declare module '@tanstack/react-router' {
       path: '/attendance'
       fullPath: '/attendance'
       preLoaderRoute: typeof AuthenticatedAttendanceRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/leave': {
+      id: '/_authenticated/leave'
+      path: '/leave'
+      fullPath: '/leave'
+      preLoaderRoute: typeof AuthenticatedLeaveRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/manage': {
@@ -753,6 +798,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedManageAttendanceRouteRouteImport
       parentRoute: typeof AuthenticatedManageRouteRoute
     }
+    '/_authenticated/manage/leave': {
+      id: '/_authenticated/manage/leave'
+      path: '/leave'
+      fullPath: '/manage/leave'
+      preLoaderRoute: typeof AuthenticatedManageLeaveRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
     '/_authenticated/manage/reports': {
       id: '/_authenticated/manage/reports'
       path: '/reports'
@@ -844,6 +896,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSettingsSecurityRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/settings/vacation': {
+      id: '/_authenticated/admin/settings/vacation'
+      path: '/settings/vacation'
+      fullPath: '/admin/settings/vacation'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsVacationRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/manage/attendance/': {
       id: '/_authenticated/manage/attendance/'
       path: '/'
@@ -887,6 +946,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminSettingsLeaveRoute: typeof AuthenticatedAdminSettingsLeaveRoute
   AuthenticatedAdminSettingsNotificationsRoute: typeof AuthenticatedAdminSettingsNotificationsRoute
   AuthenticatedAdminSettingsSecurityRoute: typeof AuthenticatedAdminSettingsSecurityRoute
+  AuthenticatedAdminSettingsVacationRoute: typeof AuthenticatedAdminSettingsVacationRoute
 }
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
@@ -906,6 +966,8 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
       AuthenticatedAdminSettingsNotificationsRoute,
     AuthenticatedAdminSettingsSecurityRoute:
       AuthenticatedAdminSettingsSecurityRoute,
+    AuthenticatedAdminSettingsVacationRoute:
+      AuthenticatedAdminSettingsVacationRoute,
   }
 
 const AuthenticatedAdminRouteRouteWithChildren =
@@ -950,6 +1012,7 @@ const AuthenticatedManageAttendanceRouteRouteWithChildren =
 
 interface AuthenticatedManageRouteRouteChildren {
   AuthenticatedManageAttendanceRouteRoute: typeof AuthenticatedManageAttendanceRouteRouteWithChildren
+  AuthenticatedManageLeaveRoute: typeof AuthenticatedManageLeaveRoute
   AuthenticatedManageReportsRoute: typeof AuthenticatedManageReportsRoute
   AuthenticatedManageScheduleRoute: typeof AuthenticatedManageScheduleRoute
   AuthenticatedManageVacationsRoute: typeof AuthenticatedManageVacationsRoute
@@ -961,6 +1024,7 @@ const AuthenticatedManageRouteRouteChildren: AuthenticatedManageRouteRouteChildr
   {
     AuthenticatedManageAttendanceRouteRoute:
       AuthenticatedManageAttendanceRouteRouteWithChildren,
+    AuthenticatedManageLeaveRoute: AuthenticatedManageLeaveRoute,
     AuthenticatedManageReportsRoute: AuthenticatedManageReportsRoute,
     AuthenticatedManageScheduleRoute: AuthenticatedManageScheduleRoute,
     AuthenticatedManageVacationsRoute: AuthenticatedManageVacationsRoute,
@@ -979,6 +1043,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedAttendanceRouteRoute: typeof AuthenticatedAttendanceRouteRouteWithChildren
   AuthenticatedManageRouteRoute: typeof AuthenticatedManageRouteRouteWithChildren
+  AuthenticatedLeaveRoute: typeof AuthenticatedLeaveRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
   AuthenticatedVacationRoute: typeof AuthenticatedVacationRoute
@@ -995,6 +1060,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAttendanceRouteRoute:
     AuthenticatedAttendanceRouteRouteWithChildren,
   AuthenticatedManageRouteRoute: AuthenticatedManageRouteRouteWithChildren,
+  AuthenticatedLeaveRoute: AuthenticatedLeaveRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
   AuthenticatedVacationRoute: AuthenticatedVacationRoute,

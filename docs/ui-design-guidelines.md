@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 19. Last updated: 2026-11-09.
+Status: required project instructions. Version: 25. Last updated: 2026-11-09.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -104,7 +104,7 @@ Choose feedback by purpose and lifetime. These components complement one another
 - Emit one outcome toast per action. Avoid duplicates from hooks, components, retries, rerenders, and cache invalidation.
 - Show success only after the server confirms completion. Never simulate an unavailable workflow or imply that a local draft was saved remotely.
 - Say what happened and, for failures, what the user can do next. Reuse the existing green success and red error styling; do not create per-feature palettes.
-- Never expose SQL errors, stack traces, tokens, or unnecessary personal data. Preserve user input after failure and leave controls recoverable.
+- Never expose SQL errors, stack traces, tokens, or unnecessary personal data. Preserve user input after failure and vacation controls recoverable.
 - Critical information, required decisions, and long-lived errors must remain available in the interface. A toast must not be their only presentation.
 
 ### Badges and status colors
@@ -259,6 +259,8 @@ Feedback references: `src/components/ui/sonner.tsx` owns the shared Sonner styli
 
 ## Updating this guide
 
+Day-off requests use one date picker labeled `თარიღი`; vacations use separate start and end date pickers. Apply this distinction to employee submissions and reviewer date changes. Switching a vacation to a day off retains the start date as the single selected day.
+
 When the user changes a shared UI standard, update this file instead of creating a competing design manual. Increment its version, update the date, and record the substantive decision below. Update references when files move. Carry accepted rules into shared primitives when implementing them, with verification proportional to their reach.
 
 | Version | Date       | Decision                                                                                                                                                                                                               |
@@ -282,3 +284,23 @@ When the user changes a shared UI standard, update this file instead of creating
 | 17      | 2026-11-09 | Move attendance rules from the sidebar to a permission-gated top-right action on დასწრებები, preserving the protected rules route. Configuration-only users can reach that action without requesting employee records. |
 | 18      | 2026-11-09 | Use /manage/attendance for attendance and employee detail; replace the scheduling placeholder with the working work-schedule/settings page at /manage/schedule and remove the attendance shortcut.                     |
 | 19      | 2026-11-09 | Organize employee attendance around one work date, defaulting to company-local today; use shared date controls and one table instead of repeated day cards and sorting controls.                                       |
+| 20      | 2026-11-09 | Use one calendar date for day-off requests and date ranges for vacations, including reviewer date changes.                                                                                                             |
+
+## Employee creation and day-off allowance
+
+- Open employee creation in a right shadcn Sheet from the page action; the employee list uses the full available width. Keep the form scrollable and preserve the one-time activation-code dialog.
+- Schedule settings define the starting day-off allowance (initially 4) and a toggle for calendar-year resets. Employee creation inherits the company default with an optional override. Employee profiles show remaining days and permit authorized HR adjustments. Approved day offs consume one day; vacations are separate.
+
+## Schedule settings organization
+
+- Group `/manage/schedule` into the rounded tabs განრიგი, დასვენება და შვებულება, and დასწრების წესები below the page title. Show one settings group at a time and preserve unsaved form values while switching tabs. Keep each form save action beside its own content.
+- Keep settings cards concise: use clear labels and at most a short, decision-relevant helper. Avoid introductory paragraphs that repeat the fields. Preserve essential consequences such as annual reset timing, continued attendance tracking, and unavailable reminders. Bound narrow policy forms rather than stretching them across the page.
+
+- The personal vacation page shows დასვენების დღეები in a compact blue shadcn Badge and available paid შვებულება in a purple Badge, measured in working days. Omit annual-limit, reset-date, and approval-deduction explanations from this summary.
+
+- The allowance settings tab includes the annual paid-vacation default, initially 24 working days and never below 24. January 1 adds each employee annual vacation allowance while preserving unused days. Keep the vacation addition separate from the day-off reset toggle.
+
+## Sick leave
+
+- Use leave as the umbrella feature. Personal navigation is არყოფნა and management navigation is არყოფნების მართვა. The request type ბიულეტენი means დროებითი შრომისუუნარობა.
+- Sick leave opens with a start date and displays მიმდინარე until an end is recorded. Use a local shadcn dialog to record ბიულეტენის ბოლო დღე. Keep diagnosis optional and unnecessary, retain the shared HR review flow, and show sick-leave-specific dashboard and work-confirmation copy. Preserve day-off and paid-vacation badges without introducing a sick-leave allowance.

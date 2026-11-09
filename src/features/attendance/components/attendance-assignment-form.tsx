@@ -72,9 +72,7 @@ export function AttendanceAssignmentForm({
     >
       <FieldGroup>
         <p className="text-sm text-muted-foreground">
-          ხელმძღვანელს სჭირდება დასწრების განხილვის უფლება და კონკრეტული
-          თანამშრომლის მინიჭება. საკუთარი ჩანაწერის დადასტურება ან შესწორება
-          დაუშვებელია.
+          აირჩიეთ თანამშრომელი და მისი დასწრების განმხილველი.
         </p>
         {(['employeeId', 'reviewerId'] as const).map((name) => (
           <form.Field key={name} name={name}>

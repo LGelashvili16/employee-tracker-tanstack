@@ -8,13 +8,21 @@ import {
   formatAttendanceDuration,
 } from '../attendance.rules'
 import type { AttendanceOverview } from '../attendance.types'
+import type { ApprovedLeave } from '#/features/leave/leave.types'
+import {
+  formatLeaveDate,
+  formatLeaveEndDate,
+  kindLabels,
+} from '#/features/leave/leave.presentation'
 
 export function AttendanceScheduleWidget({
   workday,
   compact,
+  approvedLeave,
 }: {
   workday: AttendanceOverview['workday']
   compact: boolean
+  approvedLeave?: ApprovedLeave | null
 }) {
   return (
     <Card
@@ -39,7 +47,21 @@ export function AttendanceScheduleWidget({
       <CardContent
         className={cn('flex flex-1 flex-col', compact ? 'gap-3' : 'gap-5')}
       >
-        {workday.kind === 'scheduled' ? (
+        {approvedLeave ? (
+          <div className="flex flex-col gap-3">
+            <Badge
+              variant={approvedLeave.kind === 'vacation' ? 'blue' : 'secondary'}
+            >
+              {kindLabels[approvedLeave.kind]}
+            </Badge>
+            <p className="text-sm text-muted-foreground">
+              {formatLeaveDate(approvedLeave.startDate)}
+              {approvedLeave.endDate !== approvedLeave.startDate
+                ? ` / ${formatLeaveEndDate(approvedLeave.endDate)}`
+                : ''}
+            </p>
+          </div>
+        ) : workday.kind === 'scheduled' ? (
           <div
             className={cn(
               'rounded-xl',
@@ -76,6 +98,7 @@ export function AttendanceScheduleWidget({
           </Badge>
         )}
         {compact &&
+        !approvedLeave &&
         workday.kind === 'scheduled' &&
         workday.startsAt &&
         workday.endsAt ? (

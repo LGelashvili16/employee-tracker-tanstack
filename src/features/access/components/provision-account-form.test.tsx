@@ -14,6 +14,12 @@ vi.mock('../access.functions', () => ({ createEmployeeAccount: create }))
 vi.mock('#/features/scheduling/scheduling.functions', () => ({
   getScheduleSettings: scheduleRead,
 }))
+vi.mock('#/features/leave/day-off-allowance.functions', () => ({
+  getDayOffSettings: vi.fn().mockResolvedValue({
+    ok: true,
+    value: { defaultDays: 4, resetYearly: true, revision: 0 },
+  }),
+}))
 vi.mock('sonner', () => ({ toast: { success, error } }))
 beforeEach(() => {
   create.mockReset()
@@ -147,6 +153,7 @@ describe('administrative account provisioning', () => {
         jobTitle: '',
         phone: '',
         workingWeek: null,
+        dayOffAllowance: null,
       },
     })
     expect(onCode).toHaveBeenCalledWith(secret)

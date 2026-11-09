@@ -134,6 +134,55 @@
       "when": 1794223138195,
       "tag": "0018_nonworking_day_attendance",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794224889996,
+      "tag": "0019_leave_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794226923653,
+      "tag": "0020_leave_cancellation",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794227399799,
+      "tag": "0021_optional_leave_description",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794229937491,
+      "tag": "0022_day_off_allowances",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794231657570,
+      "tag": "0023_vacation_terminology",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794233454531,
+      "tag": "0024_paid_vacation_allowances",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794234886367,
+      "tag": "0025_sick_leave_and_leave_naming",
+      "breakpoints": true
     }
   ]
 }

@@ -102,6 +102,7 @@ const administrationPermissions = [
   'attendance.configure',
   'approvals.configure',
   'leave.configure',
+  'leave.review',
   'security.configure',
   'notifications.configure',
   'locations.manage',
@@ -120,7 +121,6 @@ const managementPermissions: Record<
     'timesheets.review.team',
     'jobs.manage',
     'employees.read',
-    'leave.review',
   ],
   operations_manager: [
     'manage.access',
@@ -140,6 +140,7 @@ const managementPermissions: Record<
     'employees.read',
     'employees.manage',
     'leave.review',
+    'leave.configure',
     'reports.read',
   ],
 }

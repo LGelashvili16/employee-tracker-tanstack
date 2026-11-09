@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { employeeWorkingWeekSchema } from '#/features/scheduling/scheduling.schemas'
+import { dayOffDaysSchema } from '#/features/leave/day-off-allowance.schemas'
 import {
   maxPasswordLength,
   minPasswordLength,
@@ -75,6 +76,7 @@ export const provisionAccountSchema = z.object({
   jobTitle: jobTitleSchema,
   phone: phoneSchema,
   workingWeek: employeeWorkingWeekSchema.nullable().default(null),
+  dayOffAllowance: dayOffDaysSchema.nullable().default(null),
   role: employeeRoleSchema,
 })
 /** Administrative correction of an existing employee's personal details; username and role stay fixed. */

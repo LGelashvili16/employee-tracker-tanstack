@@ -1,4 +1,5 @@
 import type { CompanyWorkday } from '#/features/scheduling/scheduling.types'
+import type { ApprovedLeave } from '#/features/leave/leave.types'
 
 export type WorkingSession = {
   id: string
@@ -43,6 +44,7 @@ export type ReviewSession = WorkingSession & {
 export type AttendanceOverview = {
   serverNow: string
   workday: CompanyWorkday
+  approvedLeave: ApprovedLeave | null
   openSession: WorkingSession | null
   lastSessionId: string | null
   today: AttendanceDay | null

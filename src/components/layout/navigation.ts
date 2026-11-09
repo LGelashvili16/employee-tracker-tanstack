@@ -72,9 +72,9 @@ export const navigationItems = [
     permission: null,
   },
   {
-    to: '/vacation',
+    to: '/leave',
     icon: IconCalendarOff,
-    label: 'შვებულება',
+    label: 'არყოფნა',
     permission: null,
   },
   {
@@ -111,9 +111,9 @@ export const navigationItems = [
     permission: 'employees.manage',
   },
   {
-    to: '/manage/vacations',
+    to: '/manage/leave',
     icon: IconCalendarCheck,
-    label: 'შვებულებები',
+    label: 'არყოფნების მართვა',
     permission: 'leave.review',
   },
   {

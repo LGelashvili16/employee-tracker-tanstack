@@ -9,7 +9,7 @@ This document tracks delivery in small, verifiable steps. Company work schedules
 - Weekly hours are local wall-clock values. Effective dates are PostgreSQL `date` values. Creation, audit, and actual attendance instants use Drizzle `timestamp(..., { withTimezone: true })` and UTC application semantics. PostgreSQL timestamps do not retain the timezone name, so store that separately.
 - Capture actual server timestamps. New schedules do not use grace periods: flag arrivals after scheduled start and departures before scheduled end, preserving exact timestamps. Historical grace columns are retained only to preserve existing versions. Preserve seconds and choose consistent minute display rounding when implementing calculations.
 - Late arrival and early departure are independent flags. Additional time at the end of the day does not erase lateness.
-- Approved leave, holidays, nonworking days, and approved schedule exceptions suppress missing-attendance alerts. Missing check-out remains unresolved until corrected; never invent a successful check-out.
+- Approved vacation, holidays, nonworking days, and approved schedule exceptions suppress missing-attendance alerts. Missing check-out remains unresolved until corrected; never invent a successful check-out.
 - Employee identity comes from the authenticated actor. Self-service and scoped management use the same attendance services.
 - All product copy and validation messages are Georgian. Keep payroll and finance out of scope.
 
@@ -39,10 +39,10 @@ Versions are append-only. The first version may start today; subsequent versions
 
 The shared sidebar has personal, employee-management, and administration groups, filtered by permissions. The administration group sits at the bottom and currently surfaces only Users and Attendance Rules. It opens automatically on admin URLs; personal navigation and the account menu remain available there. The `/admin` entry opens Users. Other existing admin routes retain their guards and URLs but stay hidden until their workflows are needed. Attendance settings uses compact weekday rows and separate effective-date and reminder panels with a sticky save footer. Saved versions remain in the database and are not listed on this settings page.
 
-- [ ] Add holidays and single-date exceptions; integrate approved leave through its service contract when available.
+- [ ] Add holidays and single-date exceptions; integrate approved vacation through its service contract when available.
 - [ ] Add employee schedule overrides only with real assignment workflows. Define precedence: date exception, employee override, company default. Teams are outside the current scope.
 - [ ] Define employment eligibility and unscheduled work policy. Do not label an unscheduled employee late or absent.
-- [ ] Test effective-date changes, leave, holidays, and historical interpretation.
+- [ ] Test effective-date changes, vacation, holidays, and historical interpretation.
 
 ## 4. Employee check-in and check-out
 
@@ -53,14 +53,14 @@ The shared sidebar has personal, employee-management, and administration groups,
 - [ ] Add personal attendance history with bounded, Zod-validated pagination/date filters and self-only authorization.
 - [x] Test concurrent check-ins/check-outs, repeated check-outs, inactive employment, and direct unauthorized service calls against PostgreSQL.
 
-The first delivery includes five recent attendance days, not a full paginated history. One day can contain several nonoverlapping sessions; the first arrival determines lateness and the last completed departure determines early departure. Gaps are excluded from worked duration. Missing prior-day check-outs remain open and block a new interval; closing one records the current actual time after confirmation. Corrections are explicitly unavailable until step 6. Configured day-off check-ins now require date-bound employee confirmation and retain all time as outside-schedule work; unconfigured schedules remain blocked; holiday/leave exceptions still require step 3. Browser counters use a monotonic elapsed clock anchored to a server sample and recover from persisted timestamps after reopening. Ordinary punches do not accept historical client timestamps. DST gaps in schedule hours are rejected; repeated wall times use PostgreSQL's standard-time interpretation.
+The first delivery includes five recent attendance days, not a full paginated history. One day can contain several nonoverlapping sessions; the first arrival determines lateness and the last completed departure determines early departure. Gaps are excluded from worked duration. Missing prior-day check-outs remain open and block a new interval; closing one records the current actual time after confirmation. Corrections are explicitly unavailable until step 6. Configured day-off check-ins now require date-bound employee confirmation and retain all time as outside-schedule work; unconfigured schedules remain blocked; holiday/vacation exceptions still require step 3. Browser counters use a monotonic elapsed clock anchored to a server sample and recover from persisted timestamps after reopening. Ordinary punches do not accept historical client timestamps. DST gaps in schedule hours are rejected; repeated wall times use PostgreSQL's standard-time interpretation.
 
 Bklit UI's `chart-stat-flow` source was installed from its official registry with the MIT license retained under `src/components/charts/`. Motion and `@number-flow/react` power the dashboard's transitions and animated numeric widgets. The component was adapted to existing aliases, Georgian formatting, semantic tokens, and deterministic SSR hydration; no second component library or chart dataset was introduced. Motion respects reduced-motion preferences, and the timer avoids live screen-reader announcements each second.
 
 ## 5. Attendance evaluation and manager visibility
 
 - [ ] Calculate late and early seconds against retained schedule expectations. Keep original punches independent of flags and summaries.
-- [ ] Show expected, checked in, checked out, late, on leave, and incomplete states. Keep confirmed absence separate from missing check-in.
+- [ ] Show expected, checked in, checked out, late, on vacation, and incomplete states. Keep confirmed absence separate from missing check-in.
 - [ ] Implement manager scope in SQL for records, counts, searches, and summaries. Platform administration alone does not grant assigned-employee attendance access.
 - [ ] Test exact schedule boundaries, date boundaries, corrected records, and independent late/early flags.
 
@@ -79,7 +79,7 @@ Redis is already defined in `compose.yaml` under the optional `cache` profile, w
 - [ ] Send a reminder five minutes before scheduled start by default, only if not checked in.
 - [ ] Notify after scheduled start when check-in is missing; escalate once at a configurable manager threshold.
 - [ ] Remind still-clocked-in employees the configured number of minutes before scheduled end (default zero, at the end) and again after a configured forgotten-check-out delay. Check-in reminder lead time remains independently configurable, default five minutes.
-- [ ] Recheck current attendance, employment, schedule changes, holidays, and leave at delivery time. Use idempotency keys per employee, scheduled occurrence, and notification type, with bounded retries.
+- [ ] Recheck current attendance, employment, schedule changes, holidays, and vacation at delivery time. Use idempotency keys per employee, scheduled occurrence, and notification type, with bounded retries.
 - [ ] Add in-app notifications and preferences. Deliver while the app is closed only through a configured external channel such as permission-based web push. Do not promise exact delivery times.
 - [ ] Test duplicate worker runs, delayed jobs, changed schedules, completed actions, and provider failures. Surface unavailable delivery honestly.
 
@@ -118,4 +118,4 @@ Each step includes targeted tests, formatting/lint, TypeScript checks, and a pro
 - Migration `0006_attendance_sessions.sql` was generated, inspected, tested, and applied to the local development database. All actual/expected instants use timezone-aware columns; one-open-session and request uniqueness constraints protect concurrent actions.
 - Default regression run: 143 passed, with 46 opt-in database tests skipped. Follow-up UI/time-rule run: 11 passed. Final separate PostgreSQL attendance/scheduling run: 36 passed, including a schedule-write/attendance-read race across a company-date boundary. New UI coverage includes server-confirmed actions, pending submissions, early-out confirmation, failed writes, persisted timer recovery, monotonic ticking, and unresolved prior-day sessions.
 - Production build, TypeScript, lint, and migration checks passed. A temporary production server confirmed an anonymous dashboard redirect to login and HTTP 401 for attendance reads and validly serialized check-in/out requests; that server was stopped afterward.
-- Live browser preview timed out, so signed-in visual verification remains outstanding. No employee attendance punches were fabricated in the application database. Reminder delivery, leave/holiday exceptions, breaks, manager attendance, corrections, and full paginated history remain future work.
+- Live browser preview timed out, so signed-in visual verification remains outstanding. No employee attendance punches were fabricated in the application database. Reminder delivery, vacation/holiday exceptions, breaks, manager attendance, corrections, and full paginated history remain future work.

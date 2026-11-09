@@ -4,6 +4,7 @@ import {
   IconUsers,
   IconChevronLeft,
   IconChevronRight,
+  IconUserPlus,
 } from '@tabler/icons-react'
 import { Button } from '#/components/ui/button'
 import {
@@ -16,6 +17,13 @@ import {
 import { Badge } from '#/components/ui/badge'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Alert, AlertDescription } from '#/components/ui/alert'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '#/components/ui/sheet'
 import { hasPermission } from '#/lib/authorization/permissions'
 import { listAccounts } from '../access.functions'
 import { ProvisionAccountForm } from './provision-account-form'
@@ -40,13 +48,50 @@ export function EmployeeAccounts({
     staleTime: 0,
   })
   const [issuedCode, setIssuedCode] = useState<IssuedAccountCode | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [creatingBusy, setCreatingBusy] = useState(false)
   const data = query.data?.ok ? query.data.value : null
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">თანამშრომლები</h1>
+        <Sheet
+          open={creating}
+          onOpenChange={(open) => {
+            if (!creatingBusy) setCreating(open)
+          }}
+        >
+          <SheetTrigger render={<Button />}>
+            <IconUserPlus data-icon="inline-start" aria-hidden="true" />
+            თანამშრომლის დამატება
+          </SheetTrigger>
+          <SheetContent
+            side="right"
+            className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
+            showCloseButton={!creatingBusy}
+          >
+            <SheetHeader className="border-b">
+              <SheetTitle>ახალი თანამშრომელი</SheetTitle>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <ProvisionAccountForm
+                framed={false}
+                onCode={(value) => {
+                  setCreating(false)
+                  setIssuedCode(value)
+                }}
+                onPendingChange={setCreatingBusy}
+                canAssignRoles={hasPermission(actor, 'roles.manage')}
+                canConfigureSchedule={hasPermission(
+                  actor,
+                  'attendance.configure',
+                )}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
       </header>
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
+      <div className="min-w-0">
         <Card
           aria-label="თანამშრომლების ანგარიშების სია"
           className="min-w-0 gap-0 rounded-2xl"
@@ -118,11 +163,6 @@ export function EmployeeAccounts({
             </Button>
           </CardFooter>
         </Card>
-        <ProvisionAccountForm
-          onCode={setIssuedCode}
-          canAssignRoles={hasPermission(actor, 'roles.manage')}
-          canConfigureSchedule={hasPermission(actor, 'attendance.configure')}
-        />
       </div>
       {issuedCode ? (
         <AccountCodeDialog

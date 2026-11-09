@@ -1,3 +1,4 @@
+import { hasPermission } from '#/lib/authorization/permissions'
 import { createFileRoute } from '@tanstack/react-router'
 import { WorkSchedulePage } from '#/features/scheduling/pages/work-schedule-page'
 import { schedulingContent } from '#/features/scheduling/scheduling.content'
@@ -17,5 +18,11 @@ export const Route = createFileRoute('/_authenticated/manage/schedule')({
 
 function WorkScheduleRoute() {
   const { actor } = Route.useRouteContext()
-  return <WorkSchedulePage key={actor.id} actorId={actor.id} />
+  return (
+    <WorkSchedulePage
+      key={actor.id}
+      actorId={actor.id}
+      canConfigureLeave={hasPermission(actor, 'leave.configure')}
+    />
+  )
 }

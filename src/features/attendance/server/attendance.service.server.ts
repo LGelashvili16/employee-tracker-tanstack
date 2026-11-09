@@ -1,6 +1,7 @@
 import '@tanstack/react-start/server-only'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
 import { getEmployeeWorkday } from '#/features/scheduling/server/scheduling.service.server'
+import { readApprovedLeaveForAttendance } from '#/features/leave/server/leave.service.server'
 import { checkInSchema, checkOutSchema } from '../attendance.schemas'
 import { startOfWorkWeek } from '../attendance.rules'
 import * as repository from './attendance.repository.server'
@@ -31,10 +32,16 @@ async function activeEmployee(
 export async function getAttendanceOverview(
   actor: Actor | null,
 ): Promise<AttendanceOverview> {
+  if (!actor) throw new AuthorizationError()
   return repository.transactAttendance(async (tx) => {
     const employeeId = await activeEmployee(tx, actor, false)
     const now = new Date()
     const workday = await getEmployeeWorkday(now, employeeId, tx)
+    const approvedLeave = await readApprovedLeaveForAttendance(
+      tx,
+      actor.id,
+      workday.date,
+    )
     const open = await repository.openSession(tx, employeeId)
     const last = await repository.latestSession(tx, employeeId)
     const recent = await repository.attendanceDays(tx, employeeId, now)
@@ -47,6 +54,7 @@ export async function getAttendanceOverview(
     return {
       serverNow: now.toISOString(),
       workday,
+      approvedLeave,
       lastSessionId: last?.id ?? null,
       openSession: open
         ? {
@@ -72,6 +80,7 @@ export async function getAttendanceOverview(
   })
 }
 export async function checkIn(actor: Actor | null, input: unknown) {
+  if (!actor) throw new AuthorizationError()
   return repository.transactAttendance(async (tx) => {
     const employeeId = await activeEmployee(tx, actor, true)
     const result = checkInSchema.safeParse(input)
@@ -100,9 +109,24 @@ export async function checkIn(actor: Actor | null, input: unknown) {
       )
     const workday = await getEmployeeWorkday(now, employeeId, tx)
     const nonWorkingDay = workday.kind === 'day_off'
-    if (nonWorkingDay && result.data.confirmedNonWorkingDate !== workday.date)
+    const approvedLeave = await readApprovedLeaveForAttendance(
+      tx,
+      actor.id,
+      workday.date,
+      true,
+    )
+    if (
+      (nonWorkingDay || approvedLeave) &&
+      result.data.confirmedNonWorkingDate !== workday.date
+    )
       throw new AttendanceWorkflowError(
-        'დაადასტურეთ არასამუშაო დღეს მუშაობის დაწყება.',
+        approvedLeave?.kind === 'sick_leave'
+          ? 'დაადასტურეთ ბიულეტენის დროს მუშაობის დაწყება.'
+          : approvedLeave?.kind === 'vacation'
+            ? 'დაადასტურეთ შვებულების დროს მუშაობის დაწყება.'
+            : approvedLeave?.kind === 'day_off'
+              ? 'დაადასტურეთ დასვენების დღეს მუშაობის დაწყება.'
+              : 'დაადასტურეთ არასამუშაო დღეს მუშაობის დაწყება.',
       )
     if (
       workday.kind === 'unconfigured' ||

@@ -89,7 +89,6 @@ describe('direct server authorization guards', () => {
       'timesheets.review.team',
       'schedule.manage',
       'jobs.manage',
-      'leave.review',
       'reports.read',
     ] as const) {
       await expect(requirePermissions(permission)).rejects.toThrow(

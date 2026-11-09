@@ -127,7 +127,7 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     time('2026-11-04T06:05:00Z')
     await sql().query(
-      'DELETE FROM employee_work_schedule; DELETE FROM attendance_audit; DELETE FROM attendance_reviewer; DELETE FROM attendance_setting; DELETE FROM attendance_session; DELETE FROM company_schedule_audit; DELETE FROM company_schedule_day; DELETE FROM company_schedule;',
+      'DELETE FROM day_off_allowance_audit; DELETE FROM day_off_balance; DELETE FROM leave_audit; DELETE FROM leave_request; DELETE FROM employee_work_schedule; DELETE FROM attendance_audit; DELETE FROM attendance_reviewer; DELETE FROM attendance_setting; DELETE FROM attendance_session; DELETE FROM company_schedule_audit; DELETE FROM company_schedule_day; DELETE FROM company_schedule;',
     )
     await sql().query(
       `UPDATE "user" SET access_state = 'active'; UPDATE employee SET status = 'active';`,
@@ -166,6 +166,129 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     await expect(service.checkIn(actor, request())).rejects.toThrow()
     await expect(service.getAttendanceOverview(actor)).rejects.toThrow()
   })
+  it('shows ongoing sick leave, requires work confirmation, and stops showing it after closure', async () => {
+    const leave = await import('#/features/leave/server/leave.service.server')
+    time('2026-11-04T08:00:00Z')
+    const opened = await leave.createLeave(actor, {
+      kind: 'sick_leave',
+      startDate: '2026-11-04',
+      endDate: null,
+      note: '',
+    })
+    await leave.reviewLeave(
+      { ...actor, id: 'review-admin', roles: ['admin'] },
+      {
+        id: opened.id,
+        revision: 0,
+        action: 'approved',
+        startDate: '2026-11-04',
+        endDate: null,
+        reason: '',
+      },
+    )
+    expect((await service.getAttendanceOverview(actor)).approvedLeave).toEqual({
+      kind: 'sick_leave',
+      startDate: '2026-11-04',
+      endDate: null,
+    })
+    await expect(service.checkIn(actor, request())).rejects.toThrow(
+      'ბიულეტენის დროს',
+    )
+    time('2026-11-05T08:00:00Z')
+    await leave.closeSickLeave(actor, {
+      id: opened.id,
+      revision: 1,
+      endDate: '2026-11-04',
+    })
+    expect(
+      (await service.getAttendanceOverview(actor)).approvedLeave,
+    ).toBeNull()
+  })
+  it.each(['day_off', 'vacation'])(
+    "shows only the employee's approved %s on inclusive company-local dates",
+    async (kind) => {
+      const leave = await import('#/features/leave/server/leave.service.server')
+      const leaveRequest = await leave.createLeave(actor, {
+        kind,
+        startDate: '2026-11-04',
+        endDate: kind === 'vacation' ? '2026-11-06' : '2026-11-04',
+        note: 'პირადი კომენტარი',
+      })
+      expect(
+        (await service.getAttendanceOverview(actor)).approvedLeave,
+      ).toBeNull()
+      await leave.reviewLeave(
+        { ...actor, id: 'review-admin', roles: ['admin'] },
+        {
+          id: leaveRequest.id,
+          revision: 0,
+          action: 'approved',
+          startDate: '2026-11-04',
+          endDate: kind === 'vacation' ? '2026-11-06' : '2026-11-04',
+          reason: '',
+        },
+      )
+      time('2026-11-03T21:30:00Z')
+      const first = await service.getAttendanceOverview(actor)
+      expect(first.workday.date).toBe('2026-11-04')
+      expect(first.approvedLeave).toEqual({
+        kind,
+        startDate: '2026-11-04',
+        endDate: kind === 'vacation' ? '2026-11-06' : '2026-11-04',
+      })
+      expect(
+        (await service.getAttendanceOverview(other)).approvedLeave,
+      ).toBeNull()
+      time(
+        kind === 'vacation' ? '2026-11-06T19:59:00Z' : '2026-11-04T19:59:00Z',
+      )
+      expect(
+        (await service.getAttendanceOverview(actor)).approvedLeave?.kind,
+      ).toBe(kind)
+      time(
+        kind === 'vacation' ? '2026-11-06T20:00:00Z' : '2026-11-04T20:00:00Z',
+      )
+      expect(
+        (await service.getAttendanceOverview(actor)).approvedLeave,
+      ).toBeNull()
+      time('2026-11-03T19:59:00Z')
+      expect(
+        (await service.getAttendanceOverview(actor)).approvedLeave,
+      ).toBeNull()
+    },
+  )
+  it.each(['rejected', 'cancelled'])(
+    'does not display %s requests as approved vacation',
+    async (status) => {
+      const leave = await import('#/features/leave/server/leave.service.server')
+      const leaveRequest = await leave.createLeave(actor, {
+        kind: 'day_off',
+        startDate: '2026-11-04',
+        endDate: '2026-11-04',
+        note: '',
+      })
+      if (status === 'cancelled')
+        await leave.cancelLeave(actor, {
+          id: leaveRequest.id,
+          revision: 0,
+        })
+      else
+        await leave.reviewLeave(
+          { ...actor, id: 'review-admin', roles: ['admin'] },
+          {
+            id: leaveRequest.id,
+            revision: 0,
+            action: 'rejected',
+            startDate: '2026-11-04',
+            endDate: '2026-11-04',
+            reason: '',
+          },
+        )
+      expect(
+        (await service.getAttendanceOverview(actor)).approvedLeave,
+      ).toBeNull()
+    },
+  )
   it('returns an explicit unconfigured state and refuses unscheduled clock-in', async () => {
     await sql().query(
       'DELETE FROM company_schedule_day; DELETE FROM company_schedule;',
@@ -264,6 +387,47 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
       earlyStartSeconds: 0,
     })
   })
+  it.each(['day_off', 'vacation'])(
+    'requires current-date confirmation for work during approved %s',
+    async (kind) => {
+      const leave = await import('#/features/leave/server/leave.service.server')
+      const leaveRequest = await leave.createLeave(actor, {
+        kind,
+        startDate: '2026-11-04',
+        endDate: '2026-11-04',
+        note: '',
+      })
+      await leave.reviewLeave(
+        { ...actor, id: 'review-admin', roles: ['admin'] },
+        {
+          id: leaveRequest.id,
+          revision: 0,
+          action: 'approved',
+          startDate: '2026-11-04',
+          endDate: '2026-11-04',
+          reason: '',
+        },
+      )
+      await expect(service.checkIn(actor, request())).rejects.toThrow(
+        'დაადასტურეთ',
+      )
+      await expect(
+        service.checkIn(actor, {
+          ...request(),
+          confirmedNonWorkingDate: '2026-11-03',
+        }),
+      ).rejects.toThrow('დაადასტურეთ')
+      const confirmed = { ...request(), confirmedNonWorkingDate: '2026-11-04' }
+      const entry = await service.checkIn(actor, confirmed)
+      expect((await service.checkIn(actor, confirmed)).id).toBe(entry.id)
+      expect(
+        (await service.getAttendanceOverview(actor)).openSession,
+      ).toMatchObject({
+        expectedStartAt: '2026-11-04T06:00:00.000Z',
+        expectedEndAt: '2026-11-04T15:00:00.000Z',
+      })
+    },
+  )
   it('uses server timestamps and UUIDv7, and recovers persisted time on a fresh read', async () => {
     const result = await service.checkIn(actor, {
       ...request(),

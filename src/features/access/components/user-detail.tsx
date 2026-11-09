@@ -1,3 +1,4 @@
+import { EmployeeDayOffBalanceCard } from '#/features/leave/components/day-off-allowance-card'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
@@ -117,6 +118,16 @@ export function UserDetail({
           onAction={setAction}
         />
       </div>
+      {hasPermission(actor, 'employees.manage') ? (
+        <EmployeeDayOffBalanceCard
+          actorId={actor.id}
+          userId={record.userId}
+          canEdit={
+            actor.id !== record.userId &&
+            hasPermission(actor, 'employees.manage')
+          }
+        />
+      ) : null}
       <UserScheduleCard week={record.workingWeek} companyWeek={companyWeek} />
       <UserWorkRecordsCard
         roles={actor.roles}

@@ -10,6 +10,7 @@ import {
   hasEveryPermission,
 } from '#/lib/authorization/permissions'
 import { provisionIdentity } from '#/lib/auth/provisioning.server'
+import { initializeEmployeeDayOffBalance } from '#/features/leave/server/day-off-allowance.service.server'
 import {
   assignInitialEmployeeWeek,
   readCompanyWeek,
@@ -117,6 +118,12 @@ async function createEmployee(
     jobTitle: input.jobTitle || null,
     phone: input.phone || null,
   })
+  await initializeEmployeeDayOffBalance(
+    tx,
+    userId,
+    input.dayOffAllowance,
+    actorId,
+  )
   if (input.workingWeek !== null) {
     if (!person || !actorId) throw new AuthorizationError()
     try {

@@ -53,15 +53,13 @@ export function AttendanceLimitForm({
     >
       <FieldGroup>
         <p className="text-sm text-muted-foreground">
-          ზღვარი მოქმედებს ახალ სესიებზე. საათების გადაჭარბება მხოლოდ
-          გაფრთხილებას აჩვენებს, დროის აღრიცხვას არ წყვეტს და გასვლას არ
-          აფიქსირებს.
+          ზღვრის გადაჭარბება მხოლოდ გაფრთხილებაა. აღრიცხვა გრძელდება.
         </p>
         <form.Field name="maxOpenHours">
           {(field) => (
             <Field data-invalid={!field.state.meta.isValid}>
               <FieldLabel htmlFor="attendance-limit">
-                გადამოწმების ზღვარი საათებში
+                გადამოწმების ზღვარი (საათი)
               </FieldLabel>
               <Input
                 id="attendance-limit"

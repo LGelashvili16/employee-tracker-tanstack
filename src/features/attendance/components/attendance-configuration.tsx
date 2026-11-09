@@ -35,7 +35,7 @@ export function AttendanceConfiguration({ actorId }: { actorId: string }) {
     )
   const settings = result.value
   return (
-    <div className="grid gap-6 xl:grid-cols-2">
+    <div className="grid items-start gap-6 xl:grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle>ხანგრძლივი სამუშაოს გადამოწმება</CardTitle>
@@ -49,7 +49,7 @@ export function AttendanceConfiguration({ actorId }: { actorId: string }) {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>დასწრების ხელმძღვანელის მინიჭება</CardTitle>
+          <CardTitle>დასწრების განმხილველი</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <AttendanceAssignmentForm
