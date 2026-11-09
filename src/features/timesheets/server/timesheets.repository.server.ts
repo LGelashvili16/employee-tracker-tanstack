@@ -35,6 +35,7 @@ export async function currentTimesheetActor(
     await tx
       .select({
         roles: user.roles,
+        permissionOverrides: user.permissionOverrides,
         state: user.accessState,
         employmentStatus: employee.status,
       })

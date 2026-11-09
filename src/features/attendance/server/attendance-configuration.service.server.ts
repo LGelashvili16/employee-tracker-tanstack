@@ -6,7 +6,10 @@ import {
   employee,
   user,
 } from '#/db/schema'
-import { hasPermission, parseRoles } from '#/lib/authorization/permissions'
+import {
+  hasPermission,
+  currentAuthorization,
+} from '#/lib/authorization/permissions'
 import type { Actor } from '#/lib/authorization/actor'
 import {
   attendanceAssignmentSchema,
@@ -29,6 +32,7 @@ export async function readAttendanceConfiguration(actor: Actor | null) {
         name: employee.fullName,
         userId: user.id,
         roles: user.roles,
+        permissionOverrides: user.permissionOverrides,
         employmentStatus: employee.status,
         accessState: user.accessState,
       })
@@ -57,7 +61,10 @@ export async function readAttendanceConfiguration(actor: Actor | null) {
         .slice(0, 500)
         .filter(
           (person) =>
-            hasPermission(parseRoles(person.roles), 'attendance.review.team') ||
+            hasPermission(
+              currentAuthorization(person),
+              'attendance.review.team',
+            ) ||
             assignments.some(
               (assignment) => assignment.reviewerId === person.userId,
             ),
@@ -140,7 +147,7 @@ export async function assignAttendanceReviewer(
         reviewer.identity.state !== 'active' ||
         reviewer.person?.status !== 'active' ||
         !hasPermission(
-          parseRoles(reviewer.identity.roles),
+          currentAuthorization(reviewer.identity),
           'attendance.review.team',
         ))
     )

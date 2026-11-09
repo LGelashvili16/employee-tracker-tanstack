@@ -56,7 +56,11 @@ export function AttendanceReviewForm({
       }
       toast.success('დასწრების განხილვა შენახულია.')
       close()
-      await client.invalidateQueries({ queryKey: ['team-attendance'] })
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['team-attendance'] }),
+        client.invalidateQueries({ queryKey: ['company-attendance-user'] }),
+        client.invalidateQueries({ queryKey: ['company-timesheets'] }),
+      ])
     },
   })
   return (

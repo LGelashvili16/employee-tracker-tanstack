@@ -25,6 +25,34 @@ beforeEach(() => {
 })
 
 describe('administrative account provisioning', () => {
+  it('keeps restricted provisioning on the employee role without requesting schedule settings', async () => {
+    const user = userEvent.setup()
+    create.mockResolvedValue({ ok: false, message: 'საცდელი პასუხი.' })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ProvisionAccountForm onCode={vi.fn()} canAssignRoles={false} />
+      </QueryClientProvider>,
+    )
+    expect(screen.getByRole('combobox')).toBeDisabled()
+    expect(
+      screen.queryByRole('switch', { name: 'კომპანიის განრიგის გამოყენება' }),
+    ).not.toBeInTheDocument()
+    expect(scheduleRead).not.toHaveBeenCalled()
+    await user.type(
+      screen.getByRole('textbox', { name: 'სახელი და გვარი' }),
+      'ანა მაისურაძე',
+    )
+    await user.type(
+      screen.getByRole('textbox', { name: 'მომხმარებლის სახელი' }),
+      'hr-worker',
+    )
+    await user.click(screen.getByRole('button', { name: 'ანგარიშის შექმნა' }))
+    await waitFor(() =>
+      expect(create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ role: 'employee', workingWeek: null }),
+      }),
+    )
+  })
   it('submits optional profile details and an office week with Saturday off', async () => {
     const days = Array.from({ length: 7 }, (_, index) => ({
       weekday: index + 1,
@@ -35,7 +63,11 @@ describe('administrative account provisioning', () => {
     const user = userEvent.setup()
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <ProvisionAccountForm onCode={vi.fn()} canAssignRoles={false} />
+        <ProvisionAccountForm
+          onCode={vi.fn()}
+          canAssignRoles={false}
+          canConfigureSchedule
+        />
       </QueryClientProvider>,
     )
     await user.type(

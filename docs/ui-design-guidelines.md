@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 8. Last updated: 2026-11-07.
+Status: required project instructions. Version: 19. Last updated: 2026-11-09.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -77,6 +77,8 @@ Map cartography has its own reference palette, maintained in `src/components/ui/
 
 ## Shared components are the default
 
+Employee management and the attendance directory belong in the management navigation group, labeled `მართვა`. The management attendance directory and employee detail use `/manage/attendance` and `/manage/attendance/$userId`. Company schedule and attendance configuration live on the dedicated `/manage/schedule` page, labeled `სამუშაო განრიგი`, with its own sidebar entry guarded by `attendance.configure`. Omit the rules shortcut from attendance and do not retain the old company-attendance/settings URL aliases. The application currently has no teams, team-creation workflows, or team-management route. Attendance review uses direct employee-to-reviewer assignments. HR receives the explicit permissions for these workflows. Keep company-wide reads distinct from assigned-employee review and correction scope. Platform administration is a separate concern. Its administration group contains working account controls and explicitly requested planned pages with specific future capabilities and a planned badge. Do not show an empty administration group, simulate unavailable actions, or retain old route aliases after moving a workflow.
+
 - Use the existing Base UI/shadcn components for buttons, inputs, fields, selects, date pickers, checkboxes, switches, tabs, tables, pagination, badges, alerts, cards, dialogs, sheets, tooltips, Skeleton, and Spinner. Inspect their actual composition APIs before use.
 - Do not recreate shared controls with raw interactive HTML or add a competing UI library. Normal semantic HTML remains appropriate for page structure, text, lists, and genuine links.
 - Pick the component for its behavior: navigation uses links, actions use buttons, persistent status uses a badge, persistent contextual feedback uses an alert, and a temporary action outcome uses a toast.
@@ -140,6 +142,7 @@ Use variants from `src/components/ui/badge.tsx`. Map each feature's states to la
 - Keep headers, row padding, borders, hover states, badges, sort indicators, and action placement consistent. Place row actions in a predictable final column; do not make every cell look like a button.
 - Sortable headers must be recognizable, keyboard accessible, and explicit about direction through `aria-sort` where applicable.
 - Sortable column titles use link styling with sort indicators, without a raised button surface or shadow. Keep the subtle 3D treatment for action buttons rather than table headings.
+- Use Tabler's combined up/down `IconArrowsSort` beside sortable titles. Preserve `aria-sort` for the active direction. Account-access row actions belong in the final column's three-dot menu, with existing authorization and confirmation behavior.
 - Align numeric comparisons consistently. Format durations, dates, statuses, and missing values with shared helpers and Georgian labels.
 - Distinguish initial loading, no records, no matches, forbidden access, and failed loading. No search matches must not imply that the company has no employees.
 - Overall totals must cover the full authorized filter scope, not just the currently displayed page.
@@ -176,6 +179,8 @@ For grouped records, paginate the meaningful group when the UI promises complete
 ## Tabs: one approved appearance
 
 Use shadcn `Tabs`, `TabsList`, `TabsTrigger`, and `TabsContent` for tabbed sections. Higher-level tabs must appear below the page's main title.
+
+Do not add route-changing tabs that duplicate destinations already shown as separate sidebar links. The `დასწრებები` sidebar item opens the employee directory. Selecting an employee opens one detail page with local attendance and monthly-hours tabs; both tabs keep that sidebar item active. There is no standalone company-timesheets sidebar item or route. Section tabs remain appropriate for related views that are not separately exposed in the sidebar, such as personal attendance and its correction/hour views.
 
 The approved appearance is the existing attendance tab strip shown in the user's reference:
 
@@ -256,13 +261,24 @@ Feedback references: `src/components/ui/sonner.tsx` owns the shared Sonner styli
 
 When the user changes a shared UI standard, update this file instead of creating a competing design manual. Increment its version, update the date, and record the substantive decision below. Update references when files move. Carry accepted rules into shared primitives when implementing them, with verification proportional to their reach.
 
-| Version | Date       | Decision                                                                                                                                                                                                       |
-| ------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1       | 2026-11-06 | Established mandatory design quality, shadcn Data Tables and pagination, debounced server lists with URL state, title-first approved tabs, title-only page headers, and shared subtle 3D buttons.              |
-| 2       | 2026-11-06 | Added explicit Sonner success/error feedback, semantic badge colors, persistent alerts, shared-component requirements, task-flow safeguards, visual restraint, realistic edge cases, and rendered-UI evidence. |
-| 3       | 2026-11-06 | Use link-style sortable table headings with direction indicators instead of raised button surfaces.                                                                                                            |
-| 4       | 2026-11-06 | Omit redundant instructional text from intuitive interfaces; retain helper copy only for meaningful ambiguity, constraints, or error prevention.                                                               |
-| 5       | 2026-11-06 | Use title-only headers for simple form dialogs, visible required-field asterisks with accessible semantics, and plain optional-field labels.                                                                   |
-| 6       | 2026-11-06 | Added the shared orange warning Alert variant; address-lookup fallback uses its compact layout and polite status semantics.                                                                                    |
-| 7       | 2026-11-06 | Show address-verification info alerts only for automatic fills; manual edits and existing saved jobs do not show this reminder.                                                                                |
-| 8       | 2026-11-07 | Give job types distinct blue/purple/neutral colors while retaining a separate status indicator and accessible labels on map pins.                                                                              |
+| Version | Date       | Decision                                                                                                                                                                                                               |
+| ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1       | 2026-11-06 | Established mandatory design quality, shadcn Data Tables and pagination, debounced server lists with URL state, title-first approved tabs, title-only page headers, and shared subtle 3D buttons.                      |
+| 2       | 2026-11-06 | Added explicit Sonner success/error feedback, semantic badge colors, persistent alerts, shared-component requirements, task-flow safeguards, visual restraint, realistic edge cases, and rendered-UI evidence.         |
+| 3       | 2026-11-06 | Use link-style sortable table headings with direction indicators instead of raised button surfaces.                                                                                                                    |
+| 4       | 2026-11-06 | Omit redundant instructional text from intuitive interfaces; retain helper copy only for meaningful ambiguity, constraints, or error prevention.                                                                       |
+| 5       | 2026-11-06 | Use title-only headers for simple form dialogs, visible required-field asterisks with accessible semantics, and plain optional-field labels.                                                                           |
+| 6       | 2026-11-06 | Added the shared orange warning Alert variant; address-lookup fallback uses its compact layout and polite status semantics.                                                                                            |
+| 7       | 2026-11-06 | Show address-verification info alerts only for automatic fills; manual edits and existing saved jobs do not show this reminder.                                                                                        |
+| 8       | 2026-11-07 | Give job types distinct blue/purple/neutral colors while retaining a separate status indicator and accessible labels on map pins.                                                                                      |
+| 9       | 2026-11-09 | Place employees, company attendance, company timesheets, and attendance rules in team management with explicit HR access; omit empty administration navigation and obsolete route aliases.                             |
+| 10      | 2026-11-09 | Expose platform account access and role permissions under administration; label planned platform pages and list concrete future capabilities without simulated controls.                                               |
+| 11      | 2026-11-09 | Use the combined Tabler up/down sort icon and a three-dot menu for account-access row actions, preserving accessible sort state and protected account rules.                                                           |
+| 12      | 2026-11-09 | Remove teams and team-management workflows; name management navigation for employees and retain direct employee-to-reviewer assignments.                                                                               |
+| 13      | 2026-11-09 | Omit route-changing tabs that duplicate separate sidebar destinations; retain section tabs where sidebar navigation does not already expose those views.                                                               |
+| 14      | 2026-11-09 | Consolidate attendance and monthly hours under the selected employee in დასწრებები; remove the standalone company-timesheets route and use local detail tabs.                                                          |
+| 15      | 2026-11-09 | Use one attendance directory and employee detail for company and assigned-manager workflows; omit duplicate management attendance, exceptions, and timesheet pages while retaining scoped review controls.             |
+| 16      | 2026-11-09 | Shorten the employee-management sidebar group label to მართვა.                                                                                                                                                         |
+| 17      | 2026-11-09 | Move attendance rules from the sidebar to a permission-gated top-right action on დასწრებები, preserving the protected rules route. Configuration-only users can reach that action without requesting employee records. |
+| 18      | 2026-11-09 | Use /manage/attendance for attendance and employee detail; replace the scheduling placeholder with the working work-schedule/settings page at /manage/schedule and remove the attendance shortcut.                     |
+| 19      | 2026-11-09 | Organize employee attendance around one work date, defaulting to company-local today; use shared date controls and one table instead of repeated day cards and sorting controls.                                       |

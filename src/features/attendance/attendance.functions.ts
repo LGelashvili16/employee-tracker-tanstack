@@ -16,14 +16,12 @@ import {
   attendanceCorrectionSchema,
   attendanceHistorySchema,
   attendanceLimitSchema,
-  attendanceListSchema,
   attendanceReviewSchema,
 } from './attendance.schemas'
 import {
   assignAttendanceReviewer,
   attendanceReviewHistory,
   correctAttendance,
-  listAttendanceForReview,
   readAttendanceConfiguration,
   reviewAttendance,
   saveAttendanceLimit,
@@ -64,18 +62,6 @@ export const finishMyWork = createServerFn({ method: 'POST' })
   .validator(checkOutSchema)
   .handler(({ context, data }) => safely(() => checkOut(context.actor, data)))
 
-export const readTeamAttendance = createServerFn({ method: 'GET' })
-  .middleware([authenticatedMiddleware])
-  .validator(attendanceListSchema)
-  .handler(({ context, data }) =>
-    safely(() => listAttendanceForReview(context.actor, data)),
-  )
-export const readCompanyAttendance = createServerFn({ method: 'GET' })
-  .middleware([authenticatedMiddleware])
-  .validator(attendanceListSchema)
-  .handler(({ context, data }) =>
-    safely(() => listAttendanceForReview(context.actor, data, 'company')),
-  )
 export const readCompanyAttendanceUsers = createServerFn({ method: 'GET' })
   .middleware([authenticatedMiddleware])
   .validator(companyAttendanceListSchema)

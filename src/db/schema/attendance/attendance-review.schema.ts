@@ -13,7 +13,7 @@ import { createdAt, uuidv7PrimaryKey } from '../_shared/columns'
 import { user } from '../auth/auth.schema'
 import { employee } from '../employees/employee.schema'
 
-/** Explicit attendance scope until broader team membership is implemented. No role grants company-wide access. */
+/** Direct employee-to-reviewer assignments define attendance review scope. Role grants alone do not authorize reviews. */
 export const attendanceReviewer = pgTable(
   'attendance_reviewer',
   {

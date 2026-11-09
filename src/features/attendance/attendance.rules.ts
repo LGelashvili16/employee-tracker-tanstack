@@ -48,6 +48,15 @@ export function sessionMetrics(
   const expectedEnd = Date.parse(expectedEndAt)
   const seconds = (milliseconds: number) =>
     Math.max(0, Math.floor(milliseconds / 1000))
+  if (expectedStart === expectedEnd)
+    return {
+      seconds: seconds(end - start),
+      earlyStartSeconds: 0,
+      lateSeconds: 0,
+      earlySeconds: 0,
+      afterScheduleSeconds: 0,
+      outsideSeconds: seconds(end - start),
+    }
   const before = seconds(Math.min(end, expectedStart) - start)
   const after = seconds(end - Math.max(start, expectedEnd))
   return {

@@ -5,11 +5,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AnchorHTMLAttributes } from 'react'
 import { CompanyAttendancePage } from './company-attendance-page'
 import { CompanyAttendanceUserPage } from './company-attendance-user-page'
+import type { z } from 'zod'
+import type { companyAttendanceUserSearchSchema } from '../company-attendance.schemas'
+import type { Role, PermissionOverrides } from '#/lib/authorization/permissions'
 
-const calls = vi.hoisted(() => ({
-  users: vi.fn(),
-  detail: vi.fn(),
-  navigate: vi.fn(),
+const calls = vi.hoisted(() => {
+  const detailSearch: z.input<typeof companyAttendanceUserSearchSchema> = {
+    date: undefined,
+  }
+  const permissionOverrides: PermissionOverrides = { allow: [], deny: [] }
+  return {
+    users: vi.fn(),
+    detail: vi.fn(),
+    navigate: vi.fn(),
+    hours: vi.fn(),
+    detailSearch,
+    roles: ['admin'] as Array<Role>,
+    permissionOverrides,
+  }
+})
+vi.mock('#/features/timesheets/timesheets.functions', () => ({
+  getCompanyTimesheets: calls.hours,
 }))
 vi.mock('../attendance.functions', () => ({
   readCompanyAttendanceUsers: calls.users,
@@ -17,10 +33,16 @@ vi.mock('../attendance.functions', () => ({
 }))
 vi.mock('@tanstack/react-router', () => ({
   getRouteApi: (id: string) => ({
-    useRouteContext: () => ({ actor: { id: 'admin', roles: ['admin'] } }),
+    useRouteContext: () => ({
+      actor: {
+        id: 'admin',
+        roles: calls.roles,
+        permissionOverrides: calls.permissionOverrides,
+      },
+    }),
     useSearch: () =>
       id.endsWith('$userId')
-        ? { page: 1, sort: 'date-desc' }
+        ? calls.detailSearch
         : { page: 2, q: 'ანა', sort: 'name-asc' },
     useParams: () => ({ userId: 'worker' }),
     useNavigate: () => calls.navigate,
@@ -29,7 +51,7 @@ vi.mock('@tanstack/react-router', () => ({
     select,
   }: {
     select: (value: { pathname: string }) => unknown
-  }) => select({ pathname: '/admin/attendance' }),
+  }) => select({ pathname: '/manage/attendance' }),
   Link: ({
     to,
     params,
@@ -70,6 +92,27 @@ function linkSearch(name: string) {
 }
 beforeEach(() => {
   vi.clearAllMocks()
+  calls.roles = ['admin']
+  calls.permissionOverrides = { allow: [], deny: [] }
+  calls.detailSearch = {}
+  calls.hours.mockResolvedValue({
+    ok: true,
+    value: {
+      month: '2026-11',
+      total: 0,
+      pageSize: 50,
+      rows: [],
+      totals: {
+        records: 0,
+        days: 0,
+        seconds: 0,
+        approvedOutsideSeconds: 0,
+        open: 0,
+        pending: 0,
+        rejected: 0,
+      },
+    },
+  })
   calls.users.mockResolvedValue({
     ok: true,
     value: {
@@ -106,10 +149,9 @@ beforeEach(() => {
         name: 'ანა',
         username: 'worker-1',
       },
-      days: ['2026-11-05', '2026-11-04'],
-      totalDays: 11,
-      page: 1,
-      pageSize: 10,
+      date: '2026-11-05',
+      today: '2026-11-05',
+      companyTimezone: 'Asia/Tbilisi',
       serverNow: '2026-11-05T10:00:00Z',
       sessions: [
         row,
@@ -119,18 +161,72 @@ beforeEach(() => {
           startedAt: '2026-11-05T08:00:00Z',
           endedAt: '2026-11-05T09:00:00Z',
         },
-        { ...row, id: 'three', date: '2026-11-04' },
       ],
     },
   })
 })
 describe('company attendance navigation', () => {
+  it.each(['admin', 'supervisor'] as const)(
+    'omits the rules shortcut from attendance for %s',
+    async (role) => {
+      calls.roles = [role]
+      mount('users')
+      await screen.findByRole('table')
+      expect(
+        screen.queryByRole('link', { name: 'დასწრების წესები' }),
+      ).not.toBeInTheDocument()
+    },
+  )
+  it('opens the employee timesheet while retaining the selected attendance date', async () => {
+    calls.detailSearch = {
+      date: '2026-11-04',
+      view: 'timesheet',
+      month: '2026-11',
+      hoursPage: 0,
+      hoursSort: 'seconds-desc',
+      hoursStatus: 'approved',
+    }
+    mount('detail')
+    expect(
+      await screen.findByRole('tab', { name: 'სამუშაო საათები' }),
+    ).toHaveAttribute('aria-selected', 'true')
+    expect(
+      await screen.findByRole('heading', {
+        name: 'შესაბამისი ჩანაწერები ვერ მოიძებნა',
+      }),
+    ).toBeVisible()
+    expect(calls.hours).toHaveBeenCalledWith({
+      data: {
+        userId: 'worker',
+        month: '2026-11',
+        page: 0,
+        sort: 'seconds-desc',
+        status: 'approved',
+      },
+    })
+    expect(calls.detail).toHaveBeenCalledWith({
+      data: { userId: 'worker', date: '2026-11-04' },
+    })
+    expect(
+      screen.queryByRole('textbox', { name: 'თანამშრომლის ძიება' }),
+    ).not.toBeInTheDocument()
+    const attendance = screen
+      .getByRole('tab', { name: 'დასწრებები' })
+      .getAttribute('href')
+    expect(attendance).toContain('/manage/attendance/worker?')
+    expect(attendance).toContain('view=attendance')
+    expect(attendance).toContain('date=2026-11-04')
+  })
   it('lists empty accounts, opens the dynamic user URL and preserves URL search and sort when paginating', async () => {
     mount('users')
     expect(
       await screen.findByRole('link', { name: 'სესიების ნახვა: ანა' }),
-    ).toHaveAttribute('href', '/admin/attendance/worker')
+    ).toHaveAttribute('href', '/manage/attendance/worker')
     expect(screen.getByRole('cell', { name: '0' })).toBeVisible()
+    expect(
+      screen.queryByRole('link', { name: 'დასწრების წესები' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     expect(calls.users).toHaveBeenCalledWith({
       data: { page: 2, q: 'ანა', sort: 'name-asc' },
     })
@@ -166,21 +262,47 @@ describe('company attendance navigation', () => {
     ).toBeVisible()
     expect(calls.navigate).not.toHaveBeenCalled()
   })
-  it('groups sessions by day and offers day pagination and URL sort links', async () => {
+  it('shows one work date in a shared table and navigates days through validated URL state', async () => {
+    const user = userEvent.setup()
     mount('detail')
     expect(await screen.findByRole('heading', { name: 'ანა' })).toBeVisible()
-    expect(screen.getByText('სამუშაო დღე: 2026-11-05')).toBeVisible()
-    expect(screen.getByText('სამუშაო დღე: 2026-11-04')).toBeVisible()
-    expect(screen.getAllByRole('table')).toHaveLength(2)
-    expect(calls.detail).toHaveBeenCalledWith({
-      data: { userId: 'worker', page: 1, sort: 'date-desc' },
-    })
-    expect(linkSearch('შემდეგი გვერდი').get('page')).toBe('2')
-    expect(linkSearch('შემდეგი გვერდი').get('sort')).toBe('date-desc')
-    expect(linkSearch('ჯერ ძველი').get('page')).toBe('1')
-    expect(linkSearch('ჯერ ძველი').get('sort')).toBe('date-asc')
+    expect(screen.getAllByRole('table')).toHaveLength(1)
     expect(
-      screen.queryByRole('button', { name: 'შესწორება' }),
+      screen.getByRole('button', { name: 'სამუშაო დღის არჩევა' }),
+    ).toHaveTextContent('5 ნოემბერი 2026')
+    expect(screen.getByRole('button', { name: 'შემდეგი დღე' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'დღეს' })).toBeDisabled()
+    expect(calls.detail).toHaveBeenCalledWith({ data: { userId: 'worker' } })
+    expect(
+      screen.queryByRole('link', { name: 'ჯერ ძველი' }),
     ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('navigation', { name: 'გვერდები' }),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'წინა დღე' }))
+    expect(calls.navigate).toHaveBeenCalledWith({
+      search: { date: '2026-11-04' },
+    })
+  })
+  it('does not imply absence when the selected day has no sessions', async () => {
+    calls.detail.mockResolvedValue({
+      ok: true,
+      value: {
+        subject: { userId: 'worker', name: 'ანა' },
+        date: '2026-11-04',
+        today: '2026-11-05',
+        companyTimezone: 'Asia/Tbilisi',
+        serverNow: '2026-11-05T10:00:00Z',
+        sessions: [],
+      },
+    })
+    mount('detail')
+    expect(
+      await screen.findByText('არჩეულ დღეს დასწრების ჩანაწერები არ არის.'),
+    ).toBeVisible()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'სამუშაო დღის არჩევა' }),
+    ).toHaveTextContent('4 ნოემბერი 2026')
   })
 })

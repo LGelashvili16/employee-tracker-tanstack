@@ -1,41 +1,18 @@
 import { z } from 'zod'
+import { accountDirectorySearchSchema } from '#/lib/account-directory.schemas'
 import { recordIdSchema } from '#/lib/route-schemas'
+import { employeeTimesheetSearchSchema } from '#/features/timesheets/timesheets.schemas'
+import { scheduleDateSchema } from '#/features/scheduling/scheduling.schemas'
 
 const page = z
   .number({ error: 'გვერდი არასწორია.' })
   .int('გვერდი არასწორია.')
   .min(1, 'გვერდი არასწორია.')
   .max(100000, 'გვერდი არასწორია.')
-export const companyAttendanceSearchSchema = z.object({
-  state: z
-    .enum(['all', 'active', 'invited', 'suspended'], {
-      error: 'სტატუსი არასწორია.',
-    })
-    .optional(),
-  page: page.optional(),
-  q: z
-    .string({ error: 'ძიება არასწორია.' })
-    .trim()
-    .max(100, 'ძიება მაქსიმუმ 100 სიმბოლოს უნდა შეიცავდეს.')
-    .optional(),
-  sort: z
-    .enum(
-      [
-        'name-asc',
-        'name-desc',
-        'username-asc',
-        'username-desc',
-        'code-asc',
-        'code-desc',
-      ],
-      {
-        error: 'დალაგება არასწორია.',
-      },
-    )
-    .optional(),
-  // Preserve old filtered links by redirecting them to the employee detail route.
-  userId: recordIdSchema.optional(),
-})
+export const companyAttendanceSearchSchema =
+  accountDirectorySearchSchema.extend({
+    userId: recordIdSchema.optional(),
+  })
 export const companyAttendanceListSchema = companyAttendanceSearchSchema
   .omit({ userId: true })
   .extend({
@@ -43,18 +20,21 @@ export const companyAttendanceListSchema = companyAttendanceSearchSchema
     q: companyAttendanceSearchSchema.shape.q.default(''),
     sort: companyAttendanceSearchSchema.shape.sort.default('name-asc'),
   })
-export const companyAttendanceUserSearchSchema = z.object({
-  page: page.optional(),
-  sort: z
-    .enum(['date-desc', 'date-asc'], { error: 'დალაგება არასწორია.' })
-    .optional(),
+export const attendanceDaySchema = scheduleDateSchema.refine(
+  (value) => value >= '2000-01-01' && value <= '2100-12-31',
+  'თარიღი დასაშვებ დიაპაზონს სცდება.',
+)
+export const attendanceDayFormSchema = z.object({ date: attendanceDaySchema })
+const attendanceHistorySearchSchema = z.object({
+  date: attendanceDaySchema.optional(),
 })
-export const companyAttendanceUserSchema =
-  companyAttendanceUserSearchSchema.extend({
+export const companyAttendanceUserSearchSchema =
+  attendanceHistorySearchSchema.extend(employeeTimesheetSearchSchema.shape)
+export const companyAttendanceUserSchema = attendanceHistorySearchSchema.extend(
+  {
     userId: recordIdSchema,
-    page: page.default(1),
-    sort: companyAttendanceUserSearchSchema.shape.sort.default('date-desc'),
-  })
+  },
+)
 export const companyAttendanceQuerySchema = z.object({
   q: companyAttendanceSearchSchema.shape.q.unwrap(),
   state: companyAttendanceSearchSchema.shape.state.unwrap(),

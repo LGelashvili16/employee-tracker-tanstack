@@ -47,7 +47,12 @@ export async function currentIdentity(
   lock: boolean,
 ) {
   const identityQuery = tx
-    .select({ id: user.id, roles: user.roles, state: user.accessState })
+    .select({
+      id: user.id,
+      roles: user.roles,
+      permissionOverrides: user.permissionOverrides,
+      state: user.accessState,
+    })
     .from(user)
     .where(eq(user.id, id))
   const identity = (

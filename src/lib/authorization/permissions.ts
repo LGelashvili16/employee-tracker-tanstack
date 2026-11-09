@@ -13,7 +13,6 @@ export const permissionSchema = z.enum(
     'jobs.claim',
     'employees.read',
     'employees.manage',
-    'teams.manage',
     'leave.review',
     'reports.read',
     'admin.access',
@@ -48,7 +47,51 @@ export const roleSchema = z.enum(
 )
 export type Role = z.infer<typeof roleSchema>
 
+export const permissionOverridesSchema = z
+  .object(
+    {
+      allow: z
+        .array(permissionSchema, { error: 'მიუთითეთ დასაშვები უფლებების სია.' })
+        .max(permissionSchema.options.length, 'უფლებების რაოდენობა არასწორია.'),
+      deny: z
+        .array(permissionSchema, { error: 'მიუთითეთ აკრძალული უფლებების სია.' })
+        .max(permissionSchema.options.length, 'უფლებების რაოდენობა არასწორია.'),
+    },
+    { error: 'ინდივიდუალური უფლებები არასწორია.' },
+  )
+  .refine(
+    (value) =>
+      !value.allow.some((permission) => value.deny.includes(permission)),
+    { message: 'უფლება ერთდროულად დაშვებული და აკრძალული ვერ იქნება.' },
+  )
+export type PermissionOverrides = z.infer<typeof permissionOverridesSchema>
+export type PermissionSubject =
+  | ReadonlyArray<Role>
+  | { roles: ReadonlyArray<Role>; permissionOverrides?: PermissionOverrides }
+
+/** Invalid persisted exceptions deny every privileged operation rather than silently restoring role grants. */
+export function parsePermissionOverrides(value: unknown): PermissionOverrides {
+  if (value === undefined || value === null) return { allow: [], deny: [] }
+  const parsed = permissionOverridesSchema.safeParse(value)
+  return parsed.success
+    ? parsed.data
+    : { allow: [], deny: [...permissionSchema.options] }
+}
+
+export function currentAuthorization(value: {
+  roles: string
+  permissionOverrides?: unknown
+}) {
+  return {
+    roles: parseRoles(value.roles),
+    permissionOverrides: parsePermissionOverrides(value.permissionOverrides),
+  }
+}
+
 const administrationPermissions = [
+  'manage.access',
+  'employees.read',
+  'employees.manage',
   'jobs.claim',
   'attendance.read.all',
   'admin.access',
@@ -85,17 +128,17 @@ const managementPermissions: Record<
     'schedule.manage',
     'jobs.manage',
     'employees.read',
-    'teams.manage',
     'reports.read',
   ],
   hr_manager: [
     'manage.access',
+    'attendance.read.all',
+    'attendance.configure',
     'attendance.read.team',
     'attendance.review.team',
     'timesheets.review.team',
     'employees.read',
     'employees.manage',
-    'teams.manage',
     'leave.review',
     'reports.read',
   ],
@@ -139,17 +182,23 @@ export const roles = {
   hr_manager: accessControl.newRole({
     teamwork: managementPermissions.hr_manager,
   }),
-  // Platform administration does not imply authority over daily team operations.
+  // Employee account management is explicit; attendance review and job management remain separate.
   admin: accessControl.newRole({ teamwork: administrationPermissions }),
   owner: accessControl.newRole({ teamwork: permissionSchema.options }),
 } satisfies Record<Role, unknown>
 
 export function hasPermission(
-  actorRoles: ReadonlyArray<Role>,
+  subject: PermissionSubject,
   permission: Permission,
 ) {
   // Also deny malformed runtime values from legacy/imported records.
   if (!permissionSchema.safeParse(permission).success) return false
+  const actorRoles = 'roles' in subject ? subject.roles : subject
+  if ('roles' in subject && subject.permissionOverrides) {
+    const overrides = parsePermissionOverrides(subject.permissionOverrides)
+    if (overrides.deny.includes(permission)) return false
+    if (overrides.allow.includes(permission)) return true
+  }
   return actorRoles.some(
     (role) =>
       roleSchema.safeParse(role).success &&
@@ -158,7 +207,7 @@ export function hasPermission(
 }
 
 export function hasEveryPermission(
-  actorRoles: ReadonlyArray<Role>,
+  actorRoles: PermissionSubject,
   permissions: ReadonlyArray<Permission>,
 ) {
   return (
@@ -168,7 +217,7 @@ export function hasEveryPermission(
 }
 
 export function hasAnyPermission(
-  actorRoles: ReadonlyArray<Role>,
+  actorRoles: PermissionSubject,
   permissions: ReadonlyArray<Permission>,
 ) {
   return permissions.some((permission) => hasPermission(actorRoles, permission))

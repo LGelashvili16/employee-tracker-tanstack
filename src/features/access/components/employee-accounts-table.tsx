@@ -49,8 +49,8 @@ export function EmployeeAccountsTable({
                   <div className="flex min-w-0 flex-col">
                     <span className="flex flex-wrap items-center gap-2 font-medium">
                       <Link
-                        to="/admin/users/$userId"
-                        params={{ userId: record.userId }}
+                        to="/manage/employees/$employeeId"
+                        params={{ employeeId: record.userId }}
                         className="break-words outline-none hover:underline focus-visible:underline"
                       >
                         {record.name}
@@ -82,8 +82,8 @@ export function EmployeeAccountsTable({
                   aria-label={`${record.name}: დეტალები`}
                   render={
                     <Link
-                      to="/admin/users/$userId"
-                      params={{ userId: record.userId }}
+                      to="/manage/employees/$employeeId"
+                      params={{ employeeId: record.userId }}
                     />
                   }
                 >

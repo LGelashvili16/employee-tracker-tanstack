@@ -100,7 +100,11 @@ export async function attendanceActor(
 ) {
   const identity = (
     await tx
-      .select({ roles: user.roles, state: user.accessState })
+      .select({
+        roles: user.roles,
+        permissionOverrides: user.permissionOverrides,
+        state: user.accessState,
+      })
       .from(user)
       .where(eq(user.id, actorId))
       .for('share')

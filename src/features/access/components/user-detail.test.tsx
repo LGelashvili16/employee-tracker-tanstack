@@ -6,13 +6,14 @@ import { UserDetail } from './user-detail'
 import type { Actor } from '#/lib/authorization/actor'
 import type { EmployeeAccountRecord } from '../access.types'
 
-const { getEmployeeAccount } = vi.hoisted(() => ({
+const { getEmployeeAccount, updateEmployeeDetails } = vi.hoisted(() => ({
   getEmployeeAccount: vi.fn(),
+  updateEmployeeDetails: vi.fn(),
 }))
 vi.mock('../access.functions', () => ({
   getEmployeeAccount,
   updateEmployeeAccount: vi.fn(),
-  updateEmployeeDetails: vi.fn(),
+  updateEmployeeDetails,
 }))
 vi.mock('#/features/scheduling/scheduling.functions', () => ({
   getScheduleSettings: vi.fn().mockResolvedValue({ ok: false, message: '' }),
@@ -32,12 +33,13 @@ vi.mock('@tanstack/react-router', () => ({
   }) => (
     <a
       href={
-        search
-          ? `${to}?${new URLSearchParams(Object.entries(search).map(([key, value]) => [key, String(value)]))}`
-          : to.replace(
-              /\$([A-Za-z]+)/g,
-              (_, name: string) => params?.[name] ?? `$${name}`,
-            )
+        to.replace(
+          /\$([A-Za-z]+)/g,
+          (_, name: string) => params?.[name] ?? `$${name}`,
+        ) +
+        (search
+          ? `?${new URLSearchParams(Object.entries(search).map(([key, value]) => [key, String(value)]))}`
+          : '')
       }
       {...props}
     >
@@ -86,14 +88,60 @@ function renderDetail(
 }
 
 describe('single account page', () => {
+  it('saves employee edits without requesting or submitting a reason', async () => {
+    updateEmployeeDetails.mockResolvedValue({ ok: true })
+    const user = userEvent.setup()
+    renderDetail()
+    await user.click(await screen.findByRole('button', { name: 'რედაქტირება' }))
+    await screen.findByRole('dialog')
+    expect(screen.queryByLabelText('ცვლილების მიზეზი')).not.toBeInTheDocument()
+    const name = screen.getByRole('textbox', { name: 'სახელი და გვარი' })
+    await user.clear(name)
+    await user.type(name, 'განახლებული სახელი')
+    await user.click(screen.getByRole('button', { name: 'შენახვა' }))
+    expect(updateEmployeeDetails).toHaveBeenCalledOnce()
+    expect(updateEmployeeDetails.mock.calls[0][0].data).toMatchObject({
+      name: 'განახლებული სახელი',
+      userId: 'employee',
+    })
+    expect(updateEmployeeDetails.mock.calls[0][0].data).not.toHaveProperty(
+      'reason',
+    )
+  })
+  it('lets HR edit employees and their schedules from management', async () => {
+    const user = userEvent.setup()
+    renderDetail({}, { ...actor, roles: ['hr_manager'] })
+    await screen.findByRole('heading', { name: 'ანა მაისურაძე' })
+    expect(
+      screen.getByRole('link', { name: 'თანამშრომლების ანგარიშები' }),
+    ).toHaveAttribute('href', '/manage/employees?page=1')
+    await user.click(await screen.findByRole('button', { name: 'რედაქტირება' }))
+    expect(await screen.findByRole('dialog')).toBeVisible()
+    expect(
+      screen.getByRole('switch', { name: 'კომპანიის განრიგის გამოყენება' }),
+    ).toBeInTheDocument()
+  })
+  it.each(['admin', 'owner'])(
+    'hides privileged %s account actions from HR',
+    async (role) => {
+      renderDetail({ roles: role }, { ...actor, roles: ['hr_manager'] })
+      await screen.findByRole('heading', { name: 'ანა მაისურაძე' })
+      expect(
+        screen.queryByRole('button', { name: 'რედაქტირება' }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'შეჩერება' }),
+      ).not.toBeInTheDocument()
+    },
+  )
   it('links authorized account managers to attendance and timesheets', async () => {
     renderDetail({}, { ...actor, roles: ['owner'] })
     expect(
       await screen.findByRole('link', { name: 'დასწრების ჩანაწერები' }),
-    ).toHaveAttribute('href', '/admin/attendance/employee')
+    ).toHaveAttribute('href', '/manage/attendance/employee')
     expect(
       screen.getByRole('link', { name: 'სამუშაო საათები' }),
-    ).toHaveAttribute('href', '/admin/timesheets?userId=employee')
+    ).toHaveAttribute('href', '/manage/attendance/employee?view=timesheet')
   })
 
   it('provides company read navigation to administrators', async () => {
@@ -101,17 +149,17 @@ describe('single account page', () => {
     await screen.findByRole('heading', { name: 'ანა მაისურაძე' })
     expect(
       screen.queryByRole('link', { name: 'დასწრების ჩანაწერები' }),
-    ).toHaveAttribute('href', '/admin/attendance/employee')
+    ).toHaveAttribute('href', '/manage/attendance/employee')
     expect(
       screen.queryByRole('link', { name: 'სამუშაო საათები' }),
-    ).toHaveAttribute('href', '/admin/timesheets?userId=employee')
+    ).toHaveAttribute('href', '/manage/attendance/employee?view=timesheet')
   })
 
   it('checks attendance and timesheet access separately', async () => {
     renderDetail({}, { ...actor, roles: ['operations_manager'] })
     expect(
       await screen.findByRole('link', { name: 'დასწრების ჩანაწერები' }),
-    ).toHaveAttribute('href', '/manage/attendance?userId=employee')
+    ).toHaveAttribute('href', '/manage/attendance/employee')
     expect(
       screen.queryByRole('link', { name: 'სამუშაო საათები' }),
     ).not.toBeInTheDocument()

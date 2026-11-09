@@ -6,10 +6,8 @@ import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Spinner } from '#/components/ui/spinner'
-import { Textarea } from '#/components/ui/textarea'
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -62,7 +60,6 @@ export function EmployeeDetailsDialog({
     phone: target.phone ?? '',
     // Undefined tells the server to leave the schedule untouched.
     workingWeek: canConfigureSchedule ? target.workingWeek : undefined,
-    reason: '',
   }
   const form = useForm({
     defaultValues,
@@ -163,32 +160,6 @@ export function EmployeeDetailsDialog({
                 )}
               </form.Field>
             ) : null}
-            <form.Field name="reason">
-              {(field) => (
-                <Field data-invalid={!field.state.meta.isValid}>
-                  <FieldLabel htmlFor="details-reason">
-                    ცვლილების მიზეზი
-                  </FieldLabel>
-                  <Textarea
-                    id="details-reason"
-                    name="reason"
-                    rows={3}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    aria-invalid={!field.state.meta.isValid}
-                    aria-describedby="details-reason-error"
-                  />
-                  <FieldDescription>
-                    მიზეზი ჩაიწერება აუდიტის ჟურნალში.
-                  </FieldDescription>
-                  <FieldError
-                    id="details-reason-error"
-                    errors={field.state.meta.errors}
-                  />
-                </Field>
-              )}
-            </form.Field>
             {error ? (
               <p role="alert" className="text-sm text-destructive">
                 {error}

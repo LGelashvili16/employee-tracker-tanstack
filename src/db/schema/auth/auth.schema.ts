@@ -8,6 +8,7 @@ import {
   integer,
   bigint,
   uniqueIndex,
+  jsonb,
 } from 'drizzle-orm/pg-core'
 
 /** One login identity per person; employment records remain a separate domain. */
@@ -28,6 +29,11 @@ export const user = pgTable('user', {
   emailVerified: boolean('email_verified').default(false).notNull(),
   /** Comma-separated server-provisioned roles; default grants only employee access. Client input is disabled. */
   roles: text('roles').default('employee').notNull(),
+  /** Explicit permission exceptions for this account. Empty allow/deny lists inherit its roles; denials take precedence. Changed only by access administrators. */
+  permissionOverrides: jsonb('permission_overrides')
+    .$type<{ allow: Array<string>; deny: Array<string> }>()
+    .notNull()
+    .default({ allow: [], deny: [] }),
   /** Optional account avatar URL; null when no avatar is provided. */
   image: text('image'),
   /** Time this record was created, managed by the authentication system. */

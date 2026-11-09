@@ -34,33 +34,36 @@ async function safeAccessAction<T>(action: () => Promise<T>) {
     }
   }
 }
-const administrator = permissionsMiddleware('admin.access', 'users.manage')
+const employeeManager = permissionsMiddleware(
+  'manage.access',
+  'employees.manage',
+)
 export const listAccounts = createServerFn({ method: 'GET' })
-  .middleware([administrator])
+  .middleware([employeeManager])
   .validator(accountListSchema)
   .handler(({ data, context }) =>
     safeAccessAction(() => listEmployeeAccounts(context.actor, data)),
   )
 export const getEmployeeAccount = createServerFn({ method: 'GET' })
-  .middleware([administrator])
+  .middleware([employeeManager])
   .validator(accountLookupSchema)
   .handler(({ data, context }) =>
     safeAccessAction(() => readEmployeeAccount(context.actor, data)),
   )
 export const createEmployeeAccount = createServerFn({ method: 'POST' })
-  .middleware([administrator])
+  .middleware([employeeManager])
   .validator(provisionAccountSchema)
   .handler(({ data, context }) =>
     safeAccessAction(() => provisionEmployee(context.actor, data)),
   )
 export const updateEmployeeAccount = createServerFn({ method: 'POST' })
-  .middleware([administrator])
+  .middleware([employeeManager])
   .validator(accountActionSchema)
   .handler(({ data, context }) =>
     safeAccessAction(() => manageEmployeeAccount(context.actor, data)),
   )
 export const updateEmployeeDetails = createServerFn({ method: 'POST' })
-  .middleware([administrator])
+  .middleware([employeeManager])
   .validator(employeeDetailsSchema)
   .handler(({ data, context }) =>
     safeAccessAction(() => editEmployeeDetails(context.actor, data)),

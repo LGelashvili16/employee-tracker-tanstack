@@ -30,12 +30,17 @@ export function AttendanceReviewDialog({
       <div className="flex flex-wrap gap-2">
         <Button
           variant="outline"
+          depth="raised"
           onClick={() => setMode('review')}
           disabled={!session.endedAt || session.reviewState !== 'pending'}
         >
           განხილვა
         </Button>
-        <Button variant="outline" onClick={() => setMode('correct')}>
+        <Button
+          variant="outline"
+          depth="raised"
+          onClick={() => setMode('correct')}
+        >
           შესწორება
         </Button>
       </div>

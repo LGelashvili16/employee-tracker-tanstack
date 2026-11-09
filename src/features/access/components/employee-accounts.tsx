@@ -44,9 +44,7 @@ export function EmployeeAccounts({
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          თანამშრომლების ანგარიშები
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight">თანამშრომლები</h1>
       </header>
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <Card
@@ -122,7 +120,8 @@ export function EmployeeAccounts({
         </Card>
         <ProvisionAccountForm
           onCode={setIssuedCode}
-          canAssignRoles={hasPermission(actor.roles, 'roles.manage')}
+          canAssignRoles={hasPermission(actor, 'roles.manage')}
+          canConfigureSchedule={hasPermission(actor, 'attendance.configure')}
         />
       </div>
       {issuedCode ? (

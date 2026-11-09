@@ -357,6 +357,99 @@ describe('persisted attendance dashboard', () => {
     ).toBeDisabled()
     expect(screen.getByText('დასწრების ჩანაწერები ჯერ არ არის.')).toBeVisible()
   })
+  it('requires confirmation on a nonworking day and cancellation does not start work', async () => {
+    const state = overview()
+    state.workday = {
+      ...state.workday,
+      kind: 'day_off',
+      startsAt: null,
+      endsAt: null,
+      start: null,
+      end: null,
+    }
+    calls.read.mockResolvedValue({ ok: true, value: state })
+    calls.start.mockResolvedValue({ ok: true, value: { id: sessionId } })
+    const user = userEvent.setup()
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    const button = await screen.findByRole('button', {
+      name: 'სამუშაოს დაწყება',
+    })
+    expect(button).toBeEnabled()
+    expect(screen.getByText('არასამუშაო დღე')).toBeVisible()
+    await user.click(button)
+    const dialog = await screen.findByRole('dialog', {
+      name: 'არასამუშაო დღეს მუშაობა',
+    })
+    expect(calls.start).not.toHaveBeenCalled()
+    await user.click(within(dialog).getByRole('button', { name: 'გაუქმება' }))
+    expect(calls.start).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    await user.click(button)
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: 'მუშაობის დაწყება',
+      }),
+    )
+    await waitFor(() => expect(calls.start).toHaveBeenCalledOnce())
+    expect(calls.start.mock.calls[0][0].data.confirmedNonWorkingDate).toBe(
+      '2026-11-04',
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    expect(calls.success).toHaveBeenCalledExactlyOnceWith(
+      'სამუშაოს დაწყება დაფიქსირდა.',
+    )
+  })
+  it('keeps nonworking confirmation open on failure and blocks repeated submission while pending', async () => {
+    const state = overview()
+    state.workday.kind = 'day_off'
+    calls.read.mockResolvedValue({ ok: true, value: state })
+    let complete: ((result: unknown) => void) | undefined
+    calls.start.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve
+        }),
+    )
+    const user = userEvent.setup()
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    await user.click(
+      await screen.findByRole('button', { name: 'სამუშაოს დაწყება' }),
+    )
+    const dialog = await screen.findByRole('dialog')
+    const confirm = within(dialog).getByRole('button', {
+      name: 'მუშაობის დაწყება',
+    })
+    await user.click(confirm)
+    expect(confirm).toBeDisabled()
+    expect(confirm).toHaveAttribute('aria-busy', 'true')
+    expect(
+      within(dialog).getByRole('button', { name: 'გაუქმება' }),
+    ).toBeDisabled()
+    await user.keyboard('{Escape}')
+    expect(dialog).toBeVisible()
+    expect(calls.start).toHaveBeenCalledOnce()
+    await act(async () => {
+      complete?.({ ok: false, message: 'მოთხოვნა ვერ დასრულდა.' })
+    })
+    await waitFor(() => expect(confirm).toBeEnabled())
+    expect(dialog).toBeVisible()
+    expect(calls.success).not.toHaveBeenCalled()
+    expect(calls.error).toHaveBeenCalledExactlyOnceWith(
+      'მოთხოვნა ვერ დასრულდა.',
+    )
+  })
   it('refetches the persisted server state after check-in and shows a success toast', async () => {
     let state = overview()
     calls.read.mockImplementation(async () => ({ ok: true, value: state }))

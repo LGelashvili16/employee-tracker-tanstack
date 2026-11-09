@@ -1,6 +1,6 @@
 # Employee accounts
 
-Employees cannot create accounts themselves. An authorized administrator provisions
+Employees cannot create accounts themselves. An authorized employee manager provisions
 one company employee and one linked Better Auth identity in a transaction. The
 employee then sets their own password using a one-time activation code.
 
@@ -32,10 +32,12 @@ This operator-only path revokes existing sessions and challenges, restores the s
 owner identity, audits the reason, and displays an activation or reset code once.
 It is never exposed by an HTTP route or server function.
 
-## Administrator workflow
+## Employee management workflow
 
-Open `/admin/users`. The route and every server function independently require
-`admin.access` and `users.manage`. Choose an immutable username, full name,
+Employee creation and account management live under the management sidebar group. The existing `hr_manager` role (პერსონალის მენეჯერი), administrators, and owners can use this workflow. HR may create ordinary employee accounts and manage their profile and access lifecycle. Assigning a management role, including HR, still requires `roles.manage`; administrator/owner creation remains excluded. Company schedule changes require `attendance.configure`, which HR managers now hold. Old admin user routes have been deleted; employee links use the management routes directly. The `$employeeId` route parameter carries the linked auth user ID, preserving existing account links.
+
+Open `/manage/employees`. The route and every server function independently require
+`manage.access` and `employees.manage`. Choose an immutable username, full name,
 optional email, job title, phone number, and role. Account creation records an automatic audit reason;
 subsequent access changes still require an administrative reason. Management-role assignment
 also requires `roles.manage`. This screen cannot create administrators or owners.
@@ -66,7 +68,7 @@ rate limited. The rules live in `access.rules.ts`.
   never activated still needs a new activation code. Inactive employment independently
   blocks login, activation, and password reset; account restoration cannot override it.
 - An administrator cannot suspend or reset themselves through this administrative
-  interface. Acting on an owner/admin account requires an owner. The operator
+  interface. Acting on an owner account requires an owner. Platform account administrators may manage other administrators; HR cannot. The operator
   recovery command is the emergency route for an inaccessible sole owner.
 
 Privileged operations re-read and lock the acting account and target account.
@@ -98,14 +100,14 @@ Email is not marked verified by provisioning. Email delivery is not configured; 
 
 Who may change what:
 
-- **Administrators** (`admin.access` and `users.manage`) edit full name, email, job title and
-  phone from the account page `/admin/users/$userId` (the lean list on `/admin/users` links to it;
-  button "რედაქტირება"). A reason is required
-  and audited as `account.details_updated`. The username and role cannot be edited here, and the
+- **Employee managers** (`manage.access` and `employees.manage`) edit full name, email, job title and
+  phone from the account page `/manage/employees/$employeeId` (the lean list on `/manage/employees` links to it;
+  button "რედაქტირება"). No free-text reason is required. The server records a fixed
+  action description, the authenticated actor, target account and timestamp as `account.details_updated`. The username and role cannot be edited here, and the
   usual target rules apply (not yourself, owner required for admin/owner accounts).
 - **Employees** edit only their own phone number on `/settings/profile`. The subject is always
   the signed-in account; no identifier is accepted from the browser.
-- **Email** changes are administrator-only because email is not verified yet. For accounts that
+- **Email** changes require employee-management access because email is not verified yet. For accounts that
   sign in with email, the login email follows the contact email, must stay unique, and cannot be
   removed. For email-less accounts the address is stored as contact information only.
 - **Passwords** are changed by the employee on `/settings/security` (current password required,
@@ -115,7 +117,7 @@ Who may change what:
 
 ## Assigned working week
 
-New employees inherit the effective company schedule by default. An administrator with
+New employees inherit the effective company schedule by default. An employee manager with
 `attendance.configure` may instead assign a complete seven-day recurring week during creation.
 Each day specifies start/end hours or explicitly marks a day off. The company timezone
 remains authoritative, and an active company schedule must exist before a custom assignment.
@@ -124,9 +126,10 @@ For example, office staff can work Monday through Friday while another employee 
 Existing employees without an assignment continue using company defaults. Open sessions retain
 their original expected times.
 
-An administrator with `attendance.configure` can later replace the week, or return the employee
-to the company schedule, from "რედაქტირება" on the account page `/admin/users/$userId`. The
-change reuses the required reason and is audited as `account.schedule_updated` only when the
+An employee manager with `attendance.configure` can later replace the week, or return the employee
+to the company schedule, from "რედაქტირება" on the account page `/manage/employees/$employeeId`. The
+change records the authenticated actor, target account, timestamp and a fixed server-owned description
+as `account.schedule_updated` only when the
 week really changed. Administrators without that permission do not see the schedule section and
 the server rejects the attempt. The account page shows the effective week as a seven-day strip,
 labelled "ინდივიდუალური" or "კომპანიის განრიგი". Employees see their own effective week, with
@@ -168,3 +171,7 @@ The integration suite requires a local PostgreSQL connection with permission to
 create databases. It creates a uniquely named test database, applies all migrations,
 and drops that database afterward. It refuses remote database hosts and does not
 provision test employees in the development employee roster.
+
+## Platform account controls
+
+Employee creation and HR profile management remain under `/manage/employees`. Administrators use `/admin/access` for all login identities, their role memberships and individual permission exceptions, suspension/restoration, and session revocation. This is an access directory, not a duplicate employee profile workflow. Owner accounts and self-access are protected. Apply migration `0016_user_permission_overrides.sql` before deploying these controls. It was applied to the verified local development database; other environments must run their normal reviewed migrations.

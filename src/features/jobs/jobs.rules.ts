@@ -11,7 +11,7 @@ export function hasJobCoordinates<
 export class JobWorkflowError extends Error {}
 export class JobConflictError extends JobWorkflowError {}
 export const canManageJobs = (actor: Actor) =>
-  hasPermission(actor.roles, 'jobs.manage')
+  hasPermission(actor, 'jobs.manage')
 
 export const canEditJob = (actor: Actor, job: { status: JobStatus }) =>
   canManageJobs(actor) &&
@@ -26,7 +26,7 @@ export function allowedJobTransitions(
   const manager = canManageJobs(actor)
   if (job.status === 'pending') {
     const transitions: Array<JobStatus> = []
-    if (hasPermission(actor.roles, 'jobs.claim')) transitions.push('en_route')
+    if (hasPermission(actor, 'jobs.claim')) transitions.push('en_route')
     if (manager) transitions.push('rejected')
     return transitions
   }

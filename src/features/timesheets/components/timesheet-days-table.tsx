@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link } from '@tanstack/react-router'
+import type { ReactElement } from 'react'
 import {
   createColumnHelper,
   tableFeatures,
@@ -15,17 +15,19 @@ import {
 } from '#/components/ui/table'
 import { Badge } from '#/components/ui/badge'
 import { TimesheetSortTitle } from './timesheet-sort-title'
-import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 import {
   formatAttendanceLocalInput,
   formatWorkedTime,
 } from '#/features/attendance/attendance.rules'
 import type { TimesheetDay, TimesheetSearch } from '../timesheets.types'
 
-type Row = TimesheetDay & { team: boolean; company?: boolean; month: string }
+type Row = TimesheetDay & { month: string }
 const features = tableFeatures({})
 const helper = createColumnHelper<typeof features, Row>()
-const makeColumns = (search?: TimesheetSearch) =>
+const makeColumns = (
+  search?: TimesheetSearch,
+  renderLink?: (search: TimesheetSearch) => ReactElement,
+) =>
   helper.columns([
     helper.accessor('employeeName', {
       header: () => (
@@ -33,45 +35,19 @@ const makeColumns = (search?: TimesheetSearch) =>
           label="თანამშრომელი"
           column="name"
           search={search}
+          renderLink={renderLink}
         />
       ),
-      cell: ({ row }) =>
-        row.original.company && row.original.userId ? (
-          <Link
-            className="group flex min-w-44 items-center gap-3 rounded-md font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            to="/admin/timesheets"
-            search={{ month: row.original.month, userId: row.original.userId }}
-          >
-            <Avatar aria-hidden="true">
-              <AvatarFallback>
-                {row.original.employeeName
-                  .trim()
-                  .split(/\s+/)
-                  .slice(0, 2)
-                  .map((part) => part[0])
-                  .join('')}
-              </AvatarFallback>
-            </Avatar>
-            <span className="group-hover:underline group-hover:underline-offset-4">
-              {row.original.employeeName}
-            </span>
-          </Link>
-        ) : row.original.team && row.original.userId ? (
-          <Link
-            className="underline underline-offset-4"
-            to="/manage/timesheets/$timesheetId"
-            params={{ timesheetId: row.original.userId }}
-            search={{ month: row.original.month }}
-          >
-            {row.original.employeeName}
-          </Link>
-        ) : (
-          row.original.employeeName
-        ),
+      cell: ({ row }) => row.original.employeeName,
     }),
     helper.accessor('date', {
       header: () => (
-        <TimesheetSortTitle label="სამუშაო დღე" column="date" search={search} />
+        <TimesheetSortTitle
+          label="სამუშაო დღე"
+          column="date"
+          search={search}
+          renderLink={renderLink}
+        />
       ),
       cell: ({ row }) => (
         <div className="flex flex-col gap-1">
@@ -106,6 +82,7 @@ const makeColumns = (search?: TimesheetSearch) =>
           label="აღრიცხული დრო"
           column="seconds"
           search={search}
+          renderLink={renderLink}
         />
       ),
       cell: ({ row }) => formatWorkedTime(row.original.seconds),
@@ -142,11 +119,18 @@ const makeColumns = (search?: TimesheetSearch) =>
 export function TimesheetDaysTable({
   rows,
   search,
+  renderLink,
+  hideEmployee = false,
 }: {
   rows: Array<Row>
   search?: TimesheetSearch
+  renderLink?: (search: TimesheetSearch) => ReactElement
+  hideEmployee?: boolean
 }) {
-  const columns = useMemo(() => makeColumns(search), [search])
+  const columns = useMemo(() => {
+    const result = makeColumns(search, renderLink)
+    return hideEmployee ? result.slice(1) : result
+  }, [search, renderLink, hideEmployee])
   const table = useTable({
     features,
     columns,

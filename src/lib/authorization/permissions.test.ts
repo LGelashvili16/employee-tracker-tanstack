@@ -6,10 +6,65 @@ import {
   hasPermission,
   parseRoles,
   permissionSchema,
+  parsePermissionOverrides,
+  permissionOverridesSchema,
 } from './permissions'
 import type { Actor } from './actor'
 
 describe('role and permission boundaries', () => {
+  it('rejects the retired team-management permission', () => {
+    expect(permissionSchema.safeParse('teams.manage').success).toBe(false)
+  })
+  it('applies per-user grants and denials consistently across role and all-permission checks', () => {
+    const employee = {
+      roles: ['employee'] as const,
+      permissionOverrides: {
+        allow: ['manage.access', 'jobs.manage'] as const,
+        deny: [],
+      },
+    }
+    expect(
+      hasPermission(
+        {
+          ...employee,
+          permissionOverrides: {
+            allow: [...employee.permissionOverrides.allow],
+            deny: [],
+          },
+        },
+        'jobs.manage',
+      ),
+    ).toBe(true)
+    const admin = {
+      roles: ['admin'] as const,
+      permissionOverrides: {
+        allow: [],
+        deny: ['admin.access'] as Array<'admin.access'>,
+      },
+    }
+    expect(hasPermission(admin, 'admin.access')).toBe(false)
+    expect(hasEveryPermission(admin, ['admin.access', 'users.manage'])).toBe(
+      false,
+    )
+    expect(
+      hasPermission(
+        {
+          roles: ['owner'],
+          permissionOverrides: parsePermissionOverrides({
+            allow: ['unknown'],
+            deny: [],
+          }),
+        },
+        'users.manage',
+      ),
+    ).toBe(false)
+    expect(
+      permissionOverridesSchema.safeParse({
+        allow: ['jobs.manage'],
+        deny: ['jobs.manage'],
+      }).success,
+    ).toBe(false)
+  })
   it('does not grant privileged access to employees or malformed stored roles', () => {
     for (const roles of [
       parseRoles('employee'),
@@ -28,6 +83,9 @@ describe('role and permission boundaries', () => {
   })
   it('grants administrators platform configuration and company reads without review grants', () => {
     const platformPermissions = [
+      'manage.access',
+      'employees.read',
+      'employees.manage',
       'jobs.claim',
       'attendance.read.all',
       'admin.access',
@@ -63,6 +121,23 @@ describe('role and permission boundaries', () => {
     expect(hasPermission(['operations_manager'], 'employees.manage')).toBe(
       false,
     )
+  })
+  it('lets HR manage employees without granting platform or role administration', () => {
+    expect(
+      hasEveryPermission(['hr_manager'], ['manage.access', 'employees.manage']),
+    ).toBe(true)
+    for (const permission of [
+      'admin.access',
+      'users.manage',
+      'roles.manage',
+    ] as const)
+      expect(hasPermission(['hr_manager'], permission)).toBe(false)
+    expect(
+      hasEveryPermission(
+        ['hr_manager'],
+        ['attendance.read.all', 'attendance.configure'],
+      ),
+    ).toBe(true)
   })
   it('rejects an unauthorized direct access check', () => {
     const actor: Actor = {

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link } from '@tanstack/react-router'
+import type { ReactElement } from 'react'
 import { IconClock, IconRefresh } from '@tabler/icons-react'
 import { DataPagination } from '#/components/common/data-pagination'
 import {
@@ -19,15 +19,17 @@ export function CompanyTimesheetResults({
   query,
   search,
   onRetry,
+  renderLink,
 }: {
   query: UseQueryResult<TimesheetResult, Error>
   search: TimesheetSearch
   onRetry: () => void
+  renderLink: (search: TimesheetSearch) => ReactElement
 }) {
   const result = query.data
   const month = result?.month ?? search.month
   const filtered = Boolean(
-    search.q || search.userId || (search.status && search.status !== 'all'),
+    search.q || (search.status && search.status !== 'all'),
   )
   const reset = {
     ...search,
@@ -35,14 +37,11 @@ export function CompanyTimesheetResults({
     page: 0,
     q: undefined,
     status: undefined,
-    userId: undefined,
   }
   const rows = useMemo(
     () =>
       result?.rows.map((row) => ({
         ...row,
-        team: false,
-        company: true,
         month: result.month,
       })) ?? [],
     [result],
@@ -94,7 +93,12 @@ export function CompanyTimesheetResults({
       ) : result ? (
         <>
           {rows.length ? (
-            <TimesheetDaysTable rows={rows} search={{ ...search, month }} />
+            <TimesheetDaysTable
+              rows={rows}
+              search={{ ...search, month }}
+              renderLink={renderLink}
+              hideEmployee
+            />
           ) : (
             <div
               role="status"
@@ -119,7 +123,7 @@ export function CompanyTimesheetResults({
                   depth="raised"
                   nativeButton={false}
                   role="link"
-                  render={<Link to="/admin/timesheets" search={reset} />}
+                  render={renderLink(reset)}
                 >
                   {filtered
                     ? 'ფილტრების გასუფთავება'
@@ -134,12 +138,9 @@ export function CompanyTimesheetResults({
               page={(search.page ?? 0) + 1}
               total={result.total}
               pageSize={result.pageSize}
-              renderLink={(page) => (
-                <Link
-                  to="/admin/timesheets"
-                  search={{ ...search, month, page: page - 1 }}
-                />
-              )}
+              renderLink={(page) =>
+                renderLink({ ...search, month, page: page - 1 })
+              }
             />
           </div>
           <p className="border-t px-4 py-3 text-xs leading-5 text-muted-foreground">

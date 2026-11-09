@@ -36,7 +36,7 @@ export const attendanceSession = pgTable(
       .references(() => companySchedule.effectiveFrom, {
         onDelete: 'restrict',
       }),
-    /** Expected start UTC instant captured when the employee checks in, without a grace period. */
+    /** Expected start UTC instant; equal endpoints represent confirmed work on a nonworking day. */
     expectedStartAt: timestamp('expected_start_at', {
       withTimezone: true,
     }).notNull(),
@@ -93,7 +93,7 @@ export const attendanceSession = pgTable(
     ),
     check(
       'attendance_expected_interval_valid',
-      sql`${table.expectedEndAt} > ${table.expectedStartAt}`,
+      sql`${table.expectedEndAt} >= ${table.expectedStartAt}`,
     ),
   ],
 )

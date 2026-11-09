@@ -59,17 +59,36 @@ describe('direct server authorization guards', () => {
     )
     expect(mocks.status).toHaveBeenCalledWith(401)
   })
+  it('authorizes employee management for HR, administrators, and owners only', async () => {
+    mocks.readActor.mockResolvedValue(null)
+    await expect(
+      requirePermissions('manage.access', 'employees.manage'),
+    ).rejects.toThrow('ავტორიზაცია')
+    for (const role of [
+      'employee',
+      'supervisor',
+      'operations_manager',
+    ] as const) {
+      mocks.readActor.mockResolvedValue({ ...actor, roles: [role] })
+      await expect(
+        requirePermissions('manage.access', 'employees.manage'),
+      ).rejects.toThrow(AuthorizationError)
+    }
+    for (const role of ['hr_manager', 'admin', 'owner'] as const) {
+      mocks.readActor.mockResolvedValue({ ...actor, roles: [role] })
+      await expect(
+        requirePermissions('manage.access', 'employees.manage'),
+      ).resolves.toMatchObject({ id: actor.id })
+    }
+  })
   it('denies direct operational access to platform-only administrators', async () => {
     mocks.readActor.mockResolvedValue({ ...actor, roles: ['admin'] })
     for (const permission of [
-      'manage.access',
       'attendance.read.team',
       'attendance.review.team',
       'timesheets.review.team',
       'schedule.manage',
       'jobs.manage',
-      'employees.manage',
-      'teams.manage',
       'leave.review',
       'reports.read',
     ] as const) {

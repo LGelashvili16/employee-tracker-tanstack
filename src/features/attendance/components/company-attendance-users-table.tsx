@@ -49,7 +49,7 @@ export function CompanyAttendanceUsersTable({
               role="link"
               render={
                 <Link
-                  to="/admin/attendance"
+                  to="/manage/attendance"
                   search={{
                     ...search,
                     page: 1,
@@ -73,7 +73,7 @@ export function CompanyAttendanceUsersTable({
           cell: ({ row }) => (
             <Link
               className="group flex min-w-48 items-center gap-3 rounded-md font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              to="/admin/attendance/$userId"
+              to="/manage/attendance/$userId"
               params={{ userId: row.original.userId }}
             >
               <Avatar aria-hidden="true">
@@ -102,7 +102,7 @@ export function CompanyAttendanceUsersTable({
               role="link"
               render={
                 <Link
-                  to="/admin/attendance"
+                  to="/manage/attendance"
                   search={{
                     ...search,
                     page: 1,
@@ -171,7 +171,7 @@ export function CompanyAttendanceUsersTable({
               role="link"
               render={
                 <Link
-                  to="/admin/attendance/$userId"
+                  to="/manage/attendance/$userId"
                   params={{ userId: row.original.userId }}
                   aria-label={`სესიების ნახვა: ${row.original.name}`}
                 />

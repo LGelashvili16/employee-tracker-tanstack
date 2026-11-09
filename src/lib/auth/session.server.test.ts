@@ -52,6 +52,7 @@ describe('trusted actor projection', () => {
       email: 'test@example.com',
       emailVerified: true,
       roles: [],
+      permissionOverrides: { allow: [], deny: [] },
     })
   })
   it('rejects an existing session when account or employment access is suspended', async () => {
@@ -70,5 +71,26 @@ describe('trusted actor projection', () => {
       },
     })
     expect((await readActor())?.email).toBeNull()
+  })
+  it('uses current persisted permission exceptions rather than values carried by the auth response', async () => {
+    mocks.getSession.mockResolvedValue({
+      user: {
+        id: 'user',
+        name: 'ტესტი',
+        email: 'test@example.com',
+        emailVerified: true,
+        roles: 'employee',
+        permissionOverrides: { allow: ['admin.access'], deny: [] },
+      },
+    })
+    mocks.loginAccess.mockResolvedValue({
+      allowed: true,
+      contactEmail: null,
+      permissionOverrides: { allow: ['jobs.manage'], deny: ['admin.access'] },
+    })
+    expect((await readActor())?.permissionOverrides).toEqual({
+      allow: ['jobs.manage'],
+      deny: ['admin.access'],
+    })
   })
 })

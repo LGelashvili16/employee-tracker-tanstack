@@ -31,7 +31,7 @@ export async function listAttendanceForReview(
       actor,
       scope === 'company' ? 'attendance.read.all' : 'attendance.read.team',
     )
-    if (scope === 'company') assertPermission(current, 'admin.access')
+    if (scope === 'company') assertPermission(current, 'manage.access')
     const now = new Date()
     const rows = await repository.reviewRows(
       tx,
@@ -63,8 +63,7 @@ export async function listAttendanceForReview(
         approvedOutsideSeconds: session.approvedOutsideSeconds,
         maxOpenHours: session.maxOpenHours,
         canReview:
-          scope === 'team' &&
-          hasPermission(current.roles, 'attendance.review.team'),
+          scope === 'team' && hasPermission(current, 'attendance.review.team'),
       }))
     return { items, hasMore: rows.length > 50, serverNow: now.toISOString() }
   })

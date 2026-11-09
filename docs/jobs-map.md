@@ -1,6 +1,6 @@
 # Jobs map
 
-The jobs feature owns company-visible installation, measurement and other jobs with optional map coordinates. The generic `other` category is labeled `სხვა სამუშაო`, with a briefcase icon. All three categories share the same permissions, optional location, workflow and history. `/jobs` is the shared map/list workspace. Existing `/manage/jobs` and job detail URLs redirect to this workspace, preserving working entry points. `/manage/jobs/new` opens the same editor.
+The jobs feature owns company-visible installation, measurement and other jobs with optional map coordinates. The generic `other` category is labeled `სხვა სამუშაო`, with a briefcase icon. All three categories share the same permissions, optional location, workflow and history. `/jobs` is the shared map/list workspace. Job creation and details open inside this workspace. Selected jobs use the validated `pin` search parameter. Redundant management/detail aliases and the separate new-job route have been deleted.
 
 ## Workflow and permissions
 

@@ -1,6 +1,15 @@
-import { FeaturePage } from '#/components/common/feature-page'
-import { auditLogContent } from '../audit-log.content'
+import { PlannedFeaturePage } from '#/components/common/planned-feature-page'
 
 export function AuditLogPage() {
-  return <FeaturePage {...auditLogContent.auditLog} />
+  return (
+    <PlannedFeaturePage
+      title="მოქმედებების ჟურნალი"
+      items={[
+        'წვდომის, როლების, დასწრების შესწორებებისა და პარამეტრების ცვლილებების გაერთიანებული ისტორია.',
+        'ძიება მოქმედი მომხმარებლის, სამიზნის, პერიოდისა და მოქმედების ტიპის მიხედვით.',
+        'ცვლილებამდე და ცვლილების შემდეგ მნიშვნელობების უსაფრთხო შედარება.',
+        'უფლებებით დაცული ექსპორტი და შენახვის ვადის მართვა.',
+      ]}
+    />
+  )
 }

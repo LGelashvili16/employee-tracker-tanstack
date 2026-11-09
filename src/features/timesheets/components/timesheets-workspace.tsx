@@ -18,21 +18,14 @@ import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Spinner } from '#/components/ui/spinner'
 import { formatWorkedTime } from '#/features/attendance/attendance.rules'
-import {
-  getCompanyTimesheets,
-  getOwnTimesheets,
-  getTeamTimesheets,
-} from '../timesheets.functions'
+import { getOwnTimesheets } from '../timesheets.functions'
 import { shiftTimesheetMonth } from '../timesheets.rules'
 import { TimesheetDaysTable } from './timesheet-days-table'
 import type { TimesheetSearch } from '../timesheets.types'
 import type { Actor } from '#/lib/authorization/actor'
-import { hasPermission } from '#/lib/authorization/permissions'
 
 type Props = {
   actor: Actor
-  team?: boolean
-  company?: boolean
   search: TimesheetSearch
   onSearchChange: (value: TimesheetSearch) => void
 }
@@ -45,30 +38,12 @@ export function TimesheetsWorkspace(props: Props) {
   )
 }
 
-function TimesheetsOverview({
-  actor,
-  team = false,
-  company = false,
-  search,
-  onSearchChange,
-}: Props) {
+function TimesheetsOverview({ actor, search, onSearchChange }: Props) {
   const page = search.page ?? 0
   const query = useQuery({
-    queryKey: [
-      'timesheets',
-      actor.id,
-      team,
-      company,
-      search.month,
-      search.userId,
-      page,
-    ],
+    queryKey: ['timesheets', actor.id, search.month, search.userId, page],
     queryFn: () =>
-      (company
-        ? getCompanyTimesheets
-        : team
-          ? getTeamTimesheets
-          : getOwnTimesheets)({
+      getOwnTimesheets({
         data: { month: search.month, page, userId: search.userId },
       }),
     retry: false,
@@ -81,11 +56,9 @@ function TimesheetsOverview({
     () =>
       result?.rows.map((row) => ({
         ...row,
-        team,
-        company,
         month: result.month,
       })) ?? [],
-    [result, team, company],
+    [result],
   )
   const changeMonth = (change: number) => {
     if (!month) return
@@ -99,13 +72,7 @@ function TimesheetsOverview({
     <section className="flex min-w-0 flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold">
-            {company
-              ? 'ყველა თანამშრომლის სამუშაო საათები'
-              : team
-                ? 'გუნდის სამუშაო საათები'
-                : 'ჩემი სამუშაო საათები'}
-          </h1>
+          <h1 className="text-2xl font-semibold">ჩემი სამუშაო საათები</h1>
           <p className="text-sm text-muted-foreground">
             საათები ეფუძნება დასწრების ჩანაწერებს. მიმდინარე ჩანაწერების დრო
             წინასწარია.
@@ -127,7 +94,7 @@ function TimesheetsOverview({
             წინა თვე
           </Button>
           <span className="min-w-20 text-center font-medium" aria-live="polite">
-            {!team && !company && month ? (
+            {month ? (
               <Link
                 className="underline underline-offset-4"
                 to="/timesheets/$timesheetId"
@@ -149,29 +116,6 @@ function TimesheetsOverview({
           </Button>
         </div>
       </div>
-      {(team || company) &&
-      search.userId &&
-      hasPermission(
-        actor.roles,
-        company ? 'attendance.read.all' : 'attendance.read.team',
-      ) ? (
-        <Link
-          className="w-fit text-sm underline underline-offset-4"
-          to={company ? '/admin/attendance' : '/manage/attendance'}
-          search={{ userId: search.userId }}
-        >
-          თანამშრომლის დასწრების ჩანაწერები
-        </Link>
-      ) : null}
-      {(team || company) && search.userId ? (
-        <Link
-          className="w-fit text-sm underline underline-offset-4"
-          to={company ? '/admin/timesheets' : '/manage/timesheets'}
-          search={{ month }}
-        >
-          ყველა ხელმისაწვდომი თანამშრომელი
-        </Link>
-      ) : null}
       {query.isPending ? (
         <div role="status" aria-busy="true">
           <span className="sr-only">სამუშაო საათები იტვირთება</span>

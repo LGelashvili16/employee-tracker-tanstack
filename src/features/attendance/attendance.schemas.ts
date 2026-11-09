@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { recordIdSchema } from '#/lib/route-schemas'
+import { scheduleDateSchema } from '#/features/scheduling/scheduling.schemas'
 
 export const attendanceSearchSchema = z.object({
   userId: recordIdSchema.optional(),
@@ -10,6 +11,7 @@ export const checkInSchema = z.object(
   {
     requestId: identifier,
     expectedLastSessionId: identifier.nullable(),
+    confirmedNonWorkingDate: scheduleDateSchema.optional(),
   },
   { error: 'შესვლის მოთხოვნა არასწორია.' },
 )

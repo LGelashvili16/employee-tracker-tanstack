@@ -49,10 +49,12 @@ export function CompanyTimesheetFilters({
   search,
   onChange,
   period,
+  hideSearch = false,
 }: {
   search: Search
   onChange: (search: Search, replace: boolean) => void
   period?: ReactNode
+  hideSearch?: boolean
 }) {
   const pending = useRef(new Set<string>())
   const applied = signature(search)
@@ -113,43 +115,48 @@ export function CompanyTimesheetFilters({
       className="min-w-0 flex-1"
     >
       <FieldGroup className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start">
-        <form.Field name="q">
-          {(field) => (
-            <Field
-              className="min-w-0 flex-1 sm:max-w-md"
-              data-invalid={!field.state.meta.isValid}
-            >
-              <FieldLabel htmlFor="timesheet-user-search" className="sr-only">
-                თანამშრომლის ძიება
-              </FieldLabel>
-              <InputGroup>
-                <InputGroupAddon>
-                  <IconSearch aria-hidden="true" />
-                </InputGroupAddon>
-                <InputGroupInput
-                  id="timesheet-user-search"
-                  name="q"
-                  placeholder="სახელი ან მომხმარებლის სახელი"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'Enter' || event.nativeEvent.isComposing)
-                      return
-                    event.preventDefault()
-                    void form.handleSubmit()
-                  }}
-                  aria-invalid={!field.state.meta.isValid}
-                  aria-describedby="timesheet-user-search-error"
+        {!hideSearch ? (
+          <form.Field name="q">
+            {(field) => (
+              <Field
+                className="min-w-0 flex-1 sm:max-w-md"
+                data-invalid={!field.state.meta.isValid}
+              >
+                <FieldLabel htmlFor="timesheet-user-search" className="sr-only">
+                  თანამშრომლის ძიება
+                </FieldLabel>
+                <InputGroup>
+                  <InputGroupAddon>
+                    <IconSearch aria-hidden="true" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="timesheet-user-search"
+                    name="q"
+                    placeholder="სახელი ან მომხმარებლის სახელი"
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key !== 'Enter' ||
+                        event.nativeEvent.isComposing
+                      )
+                        return
+                      event.preventDefault()
+                      void form.handleSubmit()
+                    }}
+                    aria-invalid={!field.state.meta.isValid}
+                    aria-describedby="timesheet-user-search-error"
+                  />
+                </InputGroup>
+                <FieldError
+                  id="timesheet-user-search-error"
+                  errors={field.state.meta.errors}
                 />
-              </InputGroup>
-              <FieldError
-                id="timesheet-user-search-error"
-                errors={field.state.meta.errors}
-              />
-            </Field>
-          )}
-        </form.Field>
+              </Field>
+            )}
+          </form.Field>
+        ) : null}
         <form.Field name="status">
           {(field) => (
             <Field

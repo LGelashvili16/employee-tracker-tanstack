@@ -13,7 +13,7 @@ import { PwaInstallButton } from '#/components/common/pwa-install-button'
 import { authClient } from '#/lib/auth/auth-client'
 import { AppSidebar } from './app-sidebar'
 import { WorkspaceUserMenu } from './workspace-user-menu'
-import { navigationItems } from './navigation'
+import { isNavigationItemActive, navigationItems } from './navigation'
 import { Separator } from '#/components/ui/separator'
 import {
   Breadcrumb,
@@ -30,7 +30,10 @@ export function AppShell({ actor }: { actor: Actor }) {
   const pathname = useLocation({ select: (location) => location.pathname })
   const pageTitle =
     navigationItems.find((item) => item.to === pathname.replace(/\/$/, ''))
-      ?.label ?? 'სამუშაო სივრცე'
+      ?.label ??
+    navigationItems.find((item) => isNavigationItemActive(pathname, item.to))
+      ?.label ??
+    'სამუშაო სივრცე'
   const [signingOut, setSigningOut] = useState(false)
   async function signOut() {
     setSigningOut(true)

@@ -1,7 +1,10 @@
 import '@tanstack/react-start/server-only'
 import { assertPermission } from '#/lib/authorization/access'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
-import { parseRoles, hasPermission } from '#/lib/authorization/permissions'
+import {
+  hasPermission,
+  currentAuthorization,
+} from '#/lib/authorization/permissions'
 import {
   companyScheduleSchema,
   saveCompanyScheduleSchema,
@@ -26,7 +29,7 @@ async function requireScheduleAdministrator(
     (person && person.status !== 'active')
   )
     throw new AuthorizationError()
-  if (!hasPermission(parseRoles(identity.roles), 'attendance.configure'))
+  if (!hasPermission(currentAuthorization(identity), 'attendance.configure'))
     throw new AuthorizationError()
 }
 
@@ -131,7 +134,7 @@ async function authorize(
   )
     throw new AuthorizationError()
   assertPermission(
-    { ...actor, roles: parseRoles(identity.roles) },
+    { ...actor, ...currentAuthorization(identity) },
     'attendance.configure',
   )
   return actor

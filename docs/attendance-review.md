@@ -12,7 +12,7 @@ retains the resolved expectations so subsequent schedule changes cannot rewrite 
 - Midnight does not create a checkout, reset the counter, or mark attendance as missing.
 - A new check-in requires the previous session to be closed. It belongs to the new check-in date, even before 10:00.
 - Several sessions on one date are summed without counting gaps. The dashboard continues showing the entire starting day's total during overnight work.
-- Check-in still requires a configured working day. Starting a new session on a configured day off and planned overnight schedules remain outside the current schedule model. An existing session can continue into a day off.
+- Check-in requires a configured employee schedule. On a configured nonworking day, the employee can start after confirming in the shared dialog. The server checks the confirmed company-local date against the current effective employee workday. Unconfigured schedules remain blocked. Existing sessions can continue into a day off; planned overnight schedules remain outside the current schedule model.
 
 ## Labels and time calculations
 
@@ -35,15 +35,15 @@ The duration badge retains the eight-hour reference: yellow below eight recorded
 
 ## Reviewer setup and permissions
 
-The administrative attendance page is an account directory at `/admin/attendance`, including accounts without sessions. Search by name or employee code and sort by either column. `page`, `q` and `sort` search parameters drive server-side filtering, sorting and 20-account pagination. Opening an account navigates to `/admin/attendance/<userId>`, with its own `page` and `sort` parameters. The detail page paginates 10 complete work dates, then loads all sessions for those dates in the requested chronological order. Session groups never split across pages. Both pages use the shared shadcn pagination primitives. Legacy `/admin/attendance?userId=...` links redirect to the detail route. Both server entry points independently recheck company-wide read permissions.
+The company attendance page is an account directory at `/manage/attendance`, including accounts without sessions. Search by name or employee code and sort by either column. `page`, `q` and `sort` search parameters drive server-side filtering, sorting and 20-account pagination using shared shadcn controls. Opening an account navigates to `/manage/attendance/<userId>`. Its validated `date` parameter selects one work date, defaulting to the company-local current day. A single table shows every session for that date in chronological order. Legacy `/manage/attendance?userId=...` links redirect to the detail route. Both server entry points independently recheck company-wide or assigned-employee read permissions.
 
-Administrators and owners can view all employees in the read-only `/admin/attendance` and `/admin/timesheets` pages without reviewer assignments. This separate `attendance.read.all` grant covers reads only. The assignment rules below continue to govern management review and correction actions.
+HR managers, administrators, and owners can view all employees through the read-only `/manage/attendance` directory and its employee detail tabs for attendance and monthly hours without reviewer assignments. This separate `attendance.read.all` grant covers reads only. The assignment rules below continue to govern management review and correction actions.
 
 1. Give the reviewer an existing role with `attendance.read.team` and `attendance.review.team`, such as supervisor or HR manager.
-2. An account with `attendance.configure` assigns that reviewer to the relevant employee in `/admin/settings/attendance`.
-3. The reviewer uses `/manage/attendance` for session history and `/manage/attendance/exceptions` for pending closed sessions and overdue open sessions.
+2. An account with `attendance.configure` assigns that reviewer to the relevant employee in `/manage/schedule`.
+3. The reviewer opens `/manage/attendance`, selects an assigned employee, and uses that employee's attendance tab for session history, pending reviews, corrections and overdue-session warnings.
 
-Explicit employee assignments provide scope while broader team membership remains unimplemented. Roles, assignments and access state are rechecked from persistence on every protected server operation. Owner status does not bypass assignments. No account can review or correct itself. Assignments can be revoked, including assignments to inactive reviewers. Configuration lists are bounded at 500 entries and display a truncation notice if needed. Manager pages load 50 sessions at a time.
+Direct employee-to-reviewer assignments provide scope. Teams and team memberships are outside current product scope. Roles, assignments and access state are rechecked from persistence on every protected server operation. Owner status does not bypass assignments. No account can review or correct itself. Assignments can be revoked, including assignments to inactive reviewers. Configuration lists are bounded at 500 entries and display a truncation notice if needed. Company-wide read access does not grant review or correction permissions. Hours-only readers receive no raw attendance sessions.
 
 ## Approval and corrections
 
@@ -66,3 +66,15 @@ Warning and summary data refresh from the server every minute while the timer re
 `pnpm test` exercises display rules, forms, manager UI and existing authorization tests. `$env:RUN_ATTENDANCE_DB_TESTS='1'; pnpm exec vitest run src/features/attendance/server/attendance.integration.test.ts` runs the workflow suite in an isolated temporary local PostgreSQL database. It never fabricates punches in the application database.
 
 Migration `0007_attendance_review.sql` adds review state, original-punch retention, revision counters, warning snapshots, reviewer assignments, settings and audit history. Existing punches are backfilled into the original-punch columns before corrections are used.
+
+## Employee attendance day view
+
+`/manage/attendance/$userId` shows a single selected work date. Validated `date` URL state replaces date sorting and ten-day pagination. The service resolves the default date and today from the configured company timezone in the same transaction as the scoped read. Repository queries filter the employee and retained work date in SQL, returning all sessions for that day in chronological order. Overnight sessions remain on their clock-in work date; their historical timezone is preserved.
+
+The shared day picker provides previous day, next day and today controls with a Georgian calendar. Future dates are disabled in the picker. Date changes preserve focus, show local loading rows, and retain the selected date when switching to monthly hours. A single table and compact session count and duration replace repeated day cards. An empty day means no records, without inferring absence. Monthly timesheet filters remain independent URL state. Review and correction actions retain their existing authorization checks.
+
+## Confirmed work on nonworking days
+
+Migration `0018_nonworking_day_attendance` permits an empty retained expected interval, with equal expected endpoints captured from the server at check-in. This represents no scheduled hours rather than an invented shift. The actual interval remains unchanged. All recorded time is outside schedule, with no late-arrival, early-start or early-departure deviation and no automatic approval. Reviewer and correction scope stays unchanged. Day summaries and per-session calculations share these semantics. The management table labels these intervals as nonworking days in Georgian.
+
+The employee clock shows a nonworking-day badge near the start action. Canceling the confirmation makes no request. Confirmation includes the work date, preserves the operation key across lost responses, prevents repeat submission and dismissal while pending, and uses existing Georgian outcome toasts.

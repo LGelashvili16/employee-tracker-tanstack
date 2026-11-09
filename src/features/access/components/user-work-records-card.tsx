@@ -13,26 +13,34 @@ import {
   CardTitle,
 } from '#/components/ui/card'
 import { hasEveryPermission } from '#/lib/authorization/permissions'
-import type { Role } from '#/lib/authorization/permissions'
+import type { PermissionOverrides, Role } from '#/lib/authorization/permissions'
 
-/** Prefer explicit company read access; assigned management review remains a separate workflow. */
+/** The employee attendance workspace enforces company or assigned-employee scope on the server. */
 export function UserWorkRecordsCard({
   roles,
+  permissionOverrides,
   userId,
 }: {
   roles: ReadonlyArray<Role>
+  permissionOverrides?: PermissionOverrides
   userId: string
 }) {
-  const canReadCompany = hasEveryPermission(roles, [
-    'admin.access',
+  const canReadCompany = hasEveryPermission({ roles, permissionOverrides }, [
+    'manage.access',
     'attendance.read.all',
   ])
   const canReadAttendance =
     canReadCompany ||
-    hasEveryPermission(roles, ['manage.access', 'attendance.read.team'])
+    hasEveryPermission({ roles, permissionOverrides }, [
+      'manage.access',
+      'attendance.read.team',
+    ])
   const canReviewTimesheets =
     canReadCompany ||
-    hasEveryPermission(roles, ['manage.access', 'timesheets.review.team'])
+    hasEveryPermission({ roles, permissionOverrides }, [
+      'manage.access',
+      'timesheets.review.team',
+    ])
   if (!canReadAttendance && !canReviewTimesheets) return null
 
   return (
@@ -48,14 +56,11 @@ export function UserWorkRecordsCard({
         {canReadAttendance ? (
           <Button
             variant="outline"
+            depth="raised"
             nativeButton={false}
             role="link"
             render={
-              canReadCompany ? (
-                <Link to="/admin/attendance/$userId" params={{ userId }} />
-              ) : (
-                <Link to="/manage/attendance" search={{ userId }} />
-              )
+              <Link to="/manage/attendance/$userId" params={{ userId }} />
             }
           >
             <IconCalendarClock data-icon="inline-start" aria-hidden="true" />
@@ -66,12 +71,14 @@ export function UserWorkRecordsCard({
         {canReviewTimesheets ? (
           <Button
             variant="outline"
+            depth="raised"
             nativeButton={false}
             role="link"
             render={
               <Link
-                to={canReadCompany ? '/admin/timesheets' : '/manage/timesheets'}
-                search={{ userId }}
+                to="/manage/attendance/$userId"
+                params={{ userId }}
+                search={{ view: 'timesheet' }}
               />
             }
           >

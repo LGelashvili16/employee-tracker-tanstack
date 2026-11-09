@@ -11,10 +11,10 @@ vi.mock('@tanstack/react-router', () => ({
     ...props
   }: {
     to: string
-    params: { userId: string }
+    params: { employeeId: string }
     children?: React.ReactNode
   }) => (
-    <a href={to.replace('$userId', params.userId)} {...props}>
+    <a href={to.replace('$employeeId', params.employeeId)} {...props}>
       {children}
     </a>
   ),
@@ -48,12 +48,12 @@ describe('employee accounts table', () => {
     expect(rows).toHaveLength(2)
     expect(
       within(rows[0]).getByRole('link', { name: 'ანა მაისურაძე' }),
-    ).toHaveAttribute('href', '/admin/users/u1')
+    ).toHaveAttribute('href', '/manage/employees/u1')
     expect(within(rows[0]).getByText('აქტიური')).toBeVisible()
     expect(within(rows[1]).getByText('გასააქტიურებელი')).toBeVisible()
     expect(within(rows[1]).getByText('თქვენ')).toBeVisible()
     expect(
       within(rows[1]).getByRole('link', { name: 'გიორგი ბერიძე: დეტალები' }),
-    ).toHaveAttribute('href', '/admin/users/u2')
+    ).toHaveAttribute('href', '/manage/employees/u2')
   })
 })

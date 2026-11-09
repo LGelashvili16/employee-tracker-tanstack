@@ -135,6 +135,7 @@ export async function attendanceDays(
   since?: string,
 ): Promise<Array<AttendanceDay>> {
   const actualEnd = sql`coalesce(${attendanceSession.endedAt}, ${now}::timestamptz)`
+  const scheduled = sql`${attendanceSession.expectedEndAt} > ${attendanceSession.expectedStartAt}`
   const beforeSchedule = sql`greatest(0, extract(epoch from (least(${actualEnd}, ${attendanceSession.expectedStartAt}) - ${attendanceSession.startedAt})))`
   const afterSchedule = sql`greatest(0, extract(epoch from (${actualEnd} - greatest(${attendanceSession.startedAt}, ${attendanceSession.expectedEndAt}))))`
   const rows = await tx
@@ -152,16 +153,16 @@ export async function attendanceDays(
           Number,
         ),
       lateSeconds:
-        sql<number>`greatest(0, extract(epoch from (min(${attendanceSession.startedAt}) - min(${attendanceSession.expectedStartAt}))))`.mapWith(
+        sql<number>`greatest(0, extract(epoch from (min(${attendanceSession.startedAt}) filter (where ${scheduled}) - min(${attendanceSession.expectedStartAt}) filter (where ${scheduled}))))`.mapWith(
           Number,
         ),
       earlySeconds:
-        sql<number>`case when bool_or(${attendanceSession.endedAt} is null) then 0 else greatest(0, extract(epoch from (max(${attendanceSession.expectedEndAt}) - max(${attendanceSession.endedAt})))) end`.mapWith(
+        sql<number>`case when bool_or(${attendanceSession.endedAt} is null) then 0 else greatest(0, extract(epoch from (max(${attendanceSession.expectedEndAt}) filter (where ${scheduled}) - max(${attendanceSession.endedAt}) filter (where ${scheduled})))) end`.mapWith(
           Number,
         ),
       incomplete: sql<boolean>`bool_or(${attendanceSession.endedAt} is null)`,
       earlyStartSeconds:
-        sql<number>`greatest(0, extract(epoch from (min(${attendanceSession.expectedStartAt}) - min(${attendanceSession.startedAt}))))`.mapWith(
+        sql<number>`greatest(0, extract(epoch from (min(${attendanceSession.expectedStartAt}) filter (where ${scheduled}) - min(${attendanceSession.startedAt}) filter (where ${scheduled}))))`.mapWith(
           Number,
         ),
       outsideSeconds:

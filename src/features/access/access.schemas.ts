@@ -86,7 +86,6 @@ export const employeeDetailsSchema = z.object({
   phone: phoneSchema,
   /** Omitted leaves the schedule untouched, null returns to the company schedule, an array assigns a custom week. */
   workingWeek: employeeWorkingWeekSchema.nullable().optional(),
-  reason: reasonSchema,
 })
 /** The only field employees may change themselves; everything else is administrator-controlled. */
 export const ownPhoneSchema = z.object({ phone: phoneSchema })

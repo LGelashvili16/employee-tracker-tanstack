@@ -1,21 +1,25 @@
-import { parseRoles } from '#/lib/authorization/permissions'
+import { hasEveryPermission, parseRoles } from '#/lib/authorization/permissions'
 import type { Actor } from '#/lib/authorization/actor'
 import type { AccountAction } from './components/account-action-content'
 import type { EmployeeAccountSummary } from './access.types'
 
 /**
  * Interface guidance only: the server re-checks every rule. Mirrors checkTarget in the service:
- * nobody manages their own account, and administrator or owner accounts need an owner.
+ * nobody manages their own account. Owner accounts need an owner; administrator accounts need platform account authority.
  */
 export function canManageAccount(
   record: Pick<EmployeeAccountSummary, 'userId' | 'roles'>,
   actor: Actor,
 ) {
-  const privileged = parseRoles(record.roles).some(
-    (role) => role === 'admin' || role === 'owner',
-  )
+  const targetRoles = parseRoles(record.roles)
+  const privileged = targetRoles.includes('owner')
+    ? !actor.roles.includes('owner')
+    : targetRoles.includes('admin') &&
+      !hasEveryPermission(actor, ['admin.access', 'users.manage'])
   return (
-    record.userId !== actor.id && (!privileged || actor.roles.includes('owner'))
+    hasEveryPermission(actor, ['manage.access', 'employees.manage']) &&
+    record.userId !== actor.id &&
+    !privileged
   )
 }
 

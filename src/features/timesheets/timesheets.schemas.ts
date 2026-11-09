@@ -49,3 +49,26 @@ export const timesheetFiltersSchema = z.object({
   q: timesheetSearchSchema.shape.q.unwrap(),
   status: timesheetSearchSchema.shape.status.unwrap(),
 })
+
+export const employeeTimesheetSearchSchema = z.object({
+  view: z
+    .enum(['attendance', 'timesheet'], { error: 'განყოფილება არასწორია.' })
+    .optional(),
+  month: timesheetMonthSchema.optional(),
+  hoursPage: timesheetSearchSchema.shape.page,
+  hoursSort: timesheetSearchSchema.shape.sort,
+  hoursStatus: timesheetSearchSchema.shape.status,
+})
+
+/** Keep timesheet controls independent from the attendance history's page and sort. */
+export function employeeTimesheetSearch(
+  search: z.infer<typeof timesheetSearchSchema>,
+) {
+  return employeeTimesheetSearchSchema.parse({
+    view: 'timesheet',
+    month: search.month,
+    hoursPage: search.page,
+    hoursSort: search.sort,
+    hoursStatus: search.status,
+  })
+}

@@ -1,7 +1,10 @@
 import '@tanstack/react-start/server-only'
 import { assertPermission } from '#/lib/authorization/access'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
-import { parseRoles } from '#/lib/authorization/permissions'
+import {
+  currentAuthorization,
+  hasPermission,
+} from '#/lib/authorization/permissions'
 import { getCompanyWorkday } from '#/features/scheduling/server/scheduling.service.server'
 import { timesheetRequestSchema } from '../timesheets.schemas'
 import { timesheetMonthBounds } from '../timesheets.rules'
@@ -19,6 +22,7 @@ export async function readTimesheets(
     throw new AuthorizationError()
   return repository.transactTimesheets(
     async (tx) => {
+      let effectiveScope = scope
       const identity = await repository.currentTimesheetActor(tx, actor.id)
       if (
         !identity ||
@@ -28,14 +32,19 @@ export async function readTimesheets(
       )
         throw new AuthorizationError()
       if (scope === 'team') {
-        const current = { ...actor, roles: parseRoles(identity.roles) }
+        const current = { ...actor, ...currentAuthorization(identity) }
         assertPermission(current, 'manage.access')
         assertPermission(current, 'timesheets.review.team')
       }
       if (scope === 'company') {
-        const current = { ...actor, roles: parseRoles(identity.roles) }
-        assertPermission(current, 'admin.access')
-        assertPermission(current, 'attendance.read.all')
+        const current = { ...actor, ...currentAuthorization(identity) }
+        assertPermission(current, 'manage.access')
+        if (!hasPermission(current, 'attendance.read.all')) {
+          assertPermission(current, 'timesheets.review.team')
+          if (identity.employmentStatus !== 'active')
+            throw new AuthorizationError()
+          effectiveScope = 'team'
+        }
       }
       const now = new Date()
       const month =
@@ -44,7 +53,7 @@ export async function readTimesheets(
       const result = await repository.readPeriod(
         tx,
         actor.id,
-        scope,
+        effectiveScope,
         start,
         end,
         data,

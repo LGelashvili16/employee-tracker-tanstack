@@ -1,10 +1,10 @@
 export const leaveContent = {
   leave: {
-    title: 'შვებულება და გაცდენა',
+    title: 'შვებულება',
     description: 'თქვენი შვებულებისა და გაცდენის მოთხოვნები.',
   },
   reviewLeave: {
-    title: 'შვებულების განხილვა',
+    title: 'შვებულებები',
     description: 'შვებულებისა და გაცდენის მოთხოვნების განხილვა.',
   },
   leaveSettings: {

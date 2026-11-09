@@ -24,12 +24,6 @@ export const getOwnTimesheets = createServerFn({ method: 'GET' })
   .handler(({ context, data }) =>
     safely(() => readTimesheets(context.actor, data, 'self')),
   )
-export const getTeamTimesheets = createServerFn({ method: 'GET' })
-  .middleware([authenticatedMiddleware])
-  .validator(timesheetRequestSchema)
-  .handler(({ context, data }) =>
-    safely(() => readTimesheets(context.actor, data, 'team')),
-  )
 export const getCompanyTimesheets = createServerFn({ method: 'GET' })
   .middleware([authenticatedMiddleware])
   .validator(timesheetRequestSchema)

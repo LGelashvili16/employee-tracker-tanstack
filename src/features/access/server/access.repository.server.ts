@@ -1,6 +1,8 @@
 import '@tanstack/react-start/server-only'
-import { and, asc, count, eq, gt, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, count, eq, gt, ne, or, ilike, sql } from 'drizzle-orm'
 import { db } from '#/db'
+import type { AdminAccountList } from '../admin-access.schemas'
+import { parsePermissionOverrides } from '#/lib/authorization/permissions'
 import {
   account,
   user,
@@ -87,6 +89,7 @@ export async function readAccountAccess(userId: string) {
   const result = await db
     .select({
       state: user.accessState,
+      permissionOverrides: user.permissionOverrides,
       employment: employee.status,
       contactEmail: employee.contactEmail,
     })
@@ -95,6 +98,7 @@ export async function readAccountAccess(userId: string) {
     .where(eq(user.id, userId))
     .then((rows) => rows.at(0))
   return {
+    permissionOverrides: result?.permissionOverrides,
     allowed:
       result?.state === 'active' &&
       (!result.employment || result.employment === 'active'),
@@ -264,4 +268,57 @@ export async function updateOwnPhone(userId: string, phone: string | null) {
     .where(and(eq(employee.userId, userId), eq(employee.status, 'active')))
     .returning({ id: employee.id })
   return updated.length === 1
+}
+
+/** Every login identity is included, even accounts without an employee profile. Results and counts share one filtered snapshot. */
+export async function queryAdminAccounts(search: AdminAccountList) {
+  const q = search.q.replace(
+    /[\\%_]/g,
+    (value) => String.fromCharCode(92) + value,
+  )
+  const where = and(
+    q
+      ? or(ilike(user.name, '%' + q + '%'), ilike(user.username, '%' + q + '%'))
+      : undefined,
+    search.state && search.state !== 'all'
+      ? eq(user.accessState, search.state)
+      : undefined,
+  )
+  const column = search.sort.startsWith('name') ? user.name : user.username
+  return db.transaction(
+    async (tx) => {
+      const [items, totals] = await Promise.all([
+        tx
+          .select({
+            userId: user.id,
+            name: user.name,
+            username: user.username,
+            roles: user.roles,
+            permissionOverrides: user.permissionOverrides,
+            state: user.accessState,
+            employmentStatus: employee.status,
+          })
+          .from(user)
+          .leftJoin(employee, eq(employee.userId, user.id))
+          .where(where)
+          .orderBy(
+            search.sort.endsWith('desc') ? desc(column) : asc(column),
+            asc(user.id),
+          )
+          .limit(20)
+          .offset((search.page - 1) * 20),
+        tx.select({ total: count() }).from(user).where(where),
+      ])
+      return {
+        items: items.map((item) => ({
+          ...item,
+          permissionOverrides: parsePermissionOverrides(
+            item.permissionOverrides,
+          ),
+        })),
+        total: totals[0]?.total ?? 0,
+      }
+    },
+    { isolationLevel: 'repeatable read' },
+  )
 }

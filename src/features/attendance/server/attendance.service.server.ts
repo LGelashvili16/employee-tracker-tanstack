@@ -99,10 +99,14 @@ export async function checkIn(actor: Actor | null, input: unknown) {
         'დროის აღრიცხვა დროებით მიუწვდომელია. სცადეთ ხელახლა.',
       )
     const workday = await getEmployeeWorkday(now, employeeId, tx)
+    const nonWorkingDay = workday.kind === 'day_off'
+    if (nonWorkingDay && result.data.confirmedNonWorkingDate !== workday.date)
+      throw new AttendanceWorkflowError(
+        'დაადასტურეთ არასამუშაო დღეს მუშაობის დაწყება.',
+      )
     if (
-      workday.kind !== 'scheduled' ||
-      !workday.startsAt ||
-      !workday.endsAt ||
+      workday.kind === 'unconfigured' ||
+      (!nonWorkingDay && (!workday.startsAt || !workday.endsAt)) ||
       !workday.effectiveFrom
     )
       throw new AttendanceWorkflowError(
@@ -114,8 +118,10 @@ export async function checkIn(actor: Actor | null, input: unknown) {
       workDate: workday.date,
       timezone: workday.timezone,
       scheduleEffectiveFrom: workday.effectiveFrom,
-      expectedStartAt: new Date(workday.startsAt),
-      expectedEndAt: new Date(workday.endsAt),
+      // An empty expected interval retains the absence of scheduled hours.
+      // Every actual second is outside schedule and remains subject to review.
+      expectedStartAt: nonWorkingDay ? now : new Date(workday.startsAt!),
+      expectedEndAt: nonWorkingDay ? now : new Date(workday.endsAt!),
       startedAt: now,
       originalStartedAt: now,
       maxOpenHours:

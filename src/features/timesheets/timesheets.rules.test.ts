@@ -4,9 +4,31 @@ import {
   shiftTimesheetMonth,
   timesheetMonthBounds,
 } from './timesheets.rules'
-import { timesheetRequestSchema } from './timesheets.schemas'
+import {
+  timesheetRequestSchema,
+  employeeTimesheetSearchSchema,
+} from './timesheets.schemas'
 
 describe('timesheet periods', () => {
+  it('validates the employee detail tab and its independent timesheet filters', () => {
+    for (const value of [
+      { view: 'unknown' },
+      { hoursPage: -1 },
+      { hoursPage: 10001 },
+      { hoursSort: 'unsafe' },
+      { hoursStatus: 'unsafe' },
+      { month: '2026-13' },
+    ])
+      expect(employeeTimesheetSearchSchema.safeParse(value).success).toBe(false)
+    expect(
+      employeeTimesheetSearchSchema.safeParse({
+        view: 'timesheet',
+        hoursPage: 0,
+        hoursStatus: 'approved',
+        month: '2026-11',
+      }).success,
+    ).toBe(true)
+  })
   it('uses calendar months including leap years and year changes', () => {
     expect(timesheetMonthBounds('2024-02')).toEqual({
       start: '2024-02-01',

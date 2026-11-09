@@ -30,7 +30,7 @@ function BackLink() {
       variant="ghost"
       size="sm"
       className="w-fit"
-      render={<Link to="/admin/users" search={{ page: 1 }} />}
+      render={<Link to="/manage/employees" search={{ page: 1 }} />}
     >
       <IconArrowLeft data-icon="inline-start" aria-hidden="true" />
       თანამშრომლების ანგარიშები
@@ -118,7 +118,11 @@ export function UserDetail({
         />
       </div>
       <UserScheduleCard week={record.workingWeek} companyWeek={companyWeek} />
-      <UserWorkRecordsCard roles={actor.roles} userId={record.userId} />
+      <UserWorkRecordsCard
+        roles={actor.roles}
+        permissionOverrides={actor.permissionOverrides}
+        userId={record.userId}
+      />
       {action ? (
         <AccountActionDialog
           target={record}
@@ -130,10 +134,7 @@ export function UserDetail({
       {editing ? (
         <EmployeeDetailsDialog
           target={record}
-          canConfigureSchedule={hasPermission(
-            actor.roles,
-            'attendance.configure',
-          )}
+          canConfigureSchedule={hasPermission(actor, 'attendance.configure')}
           onClose={() => setEditing(false)}
         />
       ) : null}

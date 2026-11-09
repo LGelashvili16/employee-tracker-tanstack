@@ -4,7 +4,10 @@ import {
   setResponseHeader,
 } from '@tanstack/react-start/server'
 import { auth } from './auth'
-import { parseRoles } from '#/lib/authorization/permissions'
+import {
+  parseRoles,
+  parsePermissionOverrides,
+} from '#/lib/authorization/permissions'
 import type { Actor } from '#/lib/authorization/actor'
 import { getLoginAccess } from '#/features/access/server/access.service.server'
 import { isSyntheticAuthEmail } from '#/features/access/access.rules'
@@ -26,6 +29,7 @@ export async function readActor(): Promise<Actor | null> {
       ? access.contactEmail
       : session.user.email,
     emailVerified: session.user.emailVerified,
+    permissionOverrides: parsePermissionOverrides(access.permissionOverrides),
     roles: parseRoles(session.user.roles ?? 'employee'),
   }
 }

@@ -58,7 +58,12 @@ export function AttendanceCorrectionForm({
       }
       toast.success('დრო შესწორებულია. ჩანაწერი კვლავ განხილვის მოლოდინშია.')
       close()
-      await client.invalidateQueries({ queryKey: ['team-attendance'] })
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['team-attendance'] }),
+        client.invalidateQueries({ queryKey: ['company-attendance-user'] }),
+        client.invalidateQueries({ queryKey: ['company-attendance-users'] }),
+        client.invalidateQueries({ queryKey: ['company-timesheets'] }),
+      ])
     },
   })
   return (

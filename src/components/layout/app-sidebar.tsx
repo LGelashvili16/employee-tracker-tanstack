@@ -51,7 +51,7 @@ export function AppSidebar({
       ),
     },
     {
-      label: 'გუნდის მართვა',
+      label: 'მართვა',
       items: navigationItems.filter(
         (item) =>
           item.to.startsWith('/manage') &&
@@ -60,13 +60,16 @@ export function AppSidebar({
     },
     {
       label: 'ადმინისტრირება',
-      // Surface working admin workflows as they ship; keep unfinished routes out of navigation.
-      items: navigationItems.filter(
-        (item) =>
-          item.to === '/admin/users' ||
-          item.to === '/admin/attendance' ||
-          item.to === '/admin/timesheets' ||
-          item.to === '/admin/settings/attendance',
+      items: navigationItems.filter((item) =>
+        [
+          '/admin/access',
+          '/admin/roles',
+          '/admin/audit-log',
+          '/admin/settings/security',
+          '/admin/settings/company',
+          '/admin/settings/notifications',
+          '/admin/integrations',
+        ].includes(item.to),
       ),
     },
   ]
@@ -97,13 +100,23 @@ export function AppSidebar({
       <SidebarContent>
         {groups.map((group) => {
           if (
+            group.label === 'მართვა' &&
+            !hasPermission(actor, 'manage.access')
+          )
+            return null
+          if (
             group.label === 'ადმინისტრირება' &&
-            !hasPermission(actor.roles, 'admin.access')
+            !hasPermission(actor, 'admin.access')
           )
             return null
           const items = group.items.filter(
             (item) =>
-              !item.permission || hasPermission(actor.roles, item.permission),
+              !item.permission ||
+              (typeof item.permission === 'string'
+                ? hasPermission(actor, item.permission)
+                : item.permission.some((permission) =>
+                    hasPermission(actor, permission),
+                  )),
           )
           if (!items.length) return null
           const content = (
@@ -151,7 +164,7 @@ export function AppSidebar({
                       <CollapsibleTrigger render={<SidebarMenuButton />}>
                         {group.label === 'ჩემი სივრცე' ? (
                           <IconLayoutDashboard aria-hidden="true" />
-                        ) : group.label === 'გუნდის მართვა' ? (
+                        ) : group.label === 'მართვა' ? (
                           <IconUsers aria-hidden="true" />
                         ) : (
                           <IconSettings aria-hidden="true" />

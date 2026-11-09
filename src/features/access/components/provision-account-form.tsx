@@ -73,9 +73,11 @@ const textFields = [
 export function ProvisionAccountForm({
   onCode,
   canAssignRoles,
+  canConfigureSchedule = false,
 }: {
   onCode: (value: IssuedAccountCode) => void
   canAssignRoles: boolean
+  canConfigureSchedule?: boolean
 }) {
   const client = useQueryClient()
   const [error, setError] = useState('')
@@ -212,18 +214,20 @@ export function ProvisionAccountForm({
                 </Field>
               )}
             </form.Field>
-            <form.Field name="workingWeek">
-              {(field) => (
-                <Field data-invalid={!field.state.meta.isValid}>
-                  <EmployeeScheduleField
-                    value={field.state.value ?? null}
-                    onChange={field.handleChange}
-                    disabled={mutation.isPending}
-                  />
-                  <FieldError errors={field.state.meta.errors} />
-                </Field>
-              )}
-            </form.Field>
+            {canConfigureSchedule ? (
+              <form.Field name="workingWeek">
+                {(field) => (
+                  <Field data-invalid={!field.state.meta.isValid}>
+                    <EmployeeScheduleField
+                      value={field.state.value ?? null}
+                      onChange={field.handleChange}
+                      disabled={mutation.isPending}
+                    />
+                    <FieldError errors={field.state.meta.errors} />
+                  </Field>
+                )}
+              </form.Field>
+            ) : null}
             {error ? (
               <p role="alert" className="text-sm text-destructive">
                 {error}

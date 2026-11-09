@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '#/components/ui/alert'
 import { AttendanceDeviationBadges } from './attendance-deviation-badges'
 import { useModal } from '#/hooks/use-modal'
 import { FinishWorkConfirmation } from './finish-work-confirmation'
+import { StartNonworkingDayConfirmation } from './start-nonworking-day-confirmation'
 import { ChartStatFlow } from '#/components/charts/chart-stat-flow'
 import { useAttendanceActions } from '../hooks/use-attendance-actions'
 import { useElapsedSeconds } from '../hooks/use-elapsed-seconds'
@@ -95,11 +96,23 @@ export function AttendanceClock({
           <Button
             className="relative h-11 w-full sm:w-auto sm:min-w-52"
             disabled={
-              action.pending || (!open && overview.workday.kind !== 'scheduled')
+              action.pending ||
+              (!open && overview.workday.kind === 'unconfigured')
             }
             aria-busy={action.pending}
             onClick={() => {
-              if (!open) void action.start()
+              if (!open && overview.workday.kind === 'day_off') {
+                openModal(
+                  <StartNonworkingDayConfirmation
+                    start={() => action.start(true)}
+                    submitting={submitting}
+                  />,
+                  {
+                    title: 'არასამუშაო დღეს მუშაობა',
+                    canClose: () => !submitting.current,
+                  },
+                )
+              } else if (!open) void action.start()
               else {
                 openModal(
                   <FinishWorkConfirmation
@@ -136,6 +149,11 @@ export function AttendanceClock({
             </span>
             {open ? 'სამუშაოს დასრულება' : 'სამუშაოს დაწყება'}
           </Button>
+          {overview.workday.kind === 'day_off' ? (
+            <Badge variant="secondary" className="relative">
+              არასამუშაო დღე
+            </Badge>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
           <span>

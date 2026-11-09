@@ -4,7 +4,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 
 const attendanceLinks = [
   { to: '/attendance', label: 'დასწრება' },
-  { to: '/attendance/history', label: 'დასწრების ისტორია' },
   { to: '/attendance/corrections', label: 'დროის შესწორებები' },
   { to: '/timesheets', label: 'სამუშაო საათები' },
 ] as const

@@ -1,6 +1,6 @@
 import '@tanstack/react-start/server-only'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
-import { parseRoles } from '#/lib/authorization/permissions'
+import { currentAuthorization } from '#/lib/authorization/permissions'
 import { allowedJobTransitions, canManageJobs } from '../jobs.rules'
 import { currentIdentity } from './jobs.repository.server'
 import type { Actor } from '#/lib/authorization/actor'
@@ -17,9 +17,9 @@ export async function requireJobActor(
   const { identity, person } = await currentIdentity(tx, actor.id, write)
   if (!identity || identity.state !== 'active' || person?.status === 'inactive')
     throw new AuthorizationError()
-  const roles = parseRoles(identity.roles)
-  if (!roles.length) throw new AuthorizationError()
-  return { ...actor, roles }
+  const authorization = currentAuthorization(identity)
+  if (!authorization.roles.length) throw new AuthorizationError()
+  return { ...actor, ...authorization }
 }
 export function assertJobManager(actor: Actor) {
   if (!canManageJobs(actor)) throw new AuthorizationError()

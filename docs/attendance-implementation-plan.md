@@ -1,6 +1,6 @@
 # Teamwork attendance implementation plan
 
-This document tracks delivery in small, verifiable steps. Company work schedules are configured at `/admin/settings/attendance`. The dashboard and attendance page now share working self-service check-in/out, a persistent timer, today's schedule, weekly summaries, and recent attendance. Other unimplemented workflows remain explicit shells. Notification delivery, manager attendance, corrections, and breaks remain pending.
+This document tracks delivery in small, verifiable steps. Company work schedules are configured at `/manage/schedule`. The dashboard and attendance page now share working self-service check-in/out, a persistent timer, today's schedule, weekly summaries, and recent attendance. Other unimplemented workflows remain explicit shells. Notification delivery, manager attendance, corrections, and breaks remain pending.
 
 ## Product rules
 
@@ -37,10 +37,10 @@ Versions are append-only. The first version may start today; subsequent versions
 
 ## 3. Schedule exceptions and assignments
 
-The shared sidebar has personal, team-management, and administration groups, filtered by permissions. The administration group sits at the bottom and currently surfaces only Users and Attendance Rules. It opens automatically on admin URLs; personal navigation and the account menu remain available there. The `/admin` entry opens Users. Other existing admin routes retain their guards and URLs but stay hidden until their workflows are needed. Attendance settings uses compact weekday rows and separate effective-date and reminder panels with a sticky save footer. Saved versions remain in the database and are not listed on this settings page.
+The shared sidebar has personal, employee-management, and administration groups, filtered by permissions. The administration group sits at the bottom and currently surfaces only Users and Attendance Rules. It opens automatically on admin URLs; personal navigation and the account menu remain available there. The `/admin` entry opens Users. Other existing admin routes retain their guards and URLs but stay hidden until their workflows are needed. Attendance settings uses compact weekday rows and separate effective-date and reminder panels with a sticky save footer. Saved versions remain in the database and are not listed on this settings page.
 
 - [ ] Add holidays and single-date exceptions; integrate approved leave through its service contract when available.
-- [ ] Add employee/team overrides only with real assignment workflows. Define precedence: date exception, employee override, team override, company default. Resolve competing team assignments explicitly.
+- [ ] Add employee schedule overrides only with real assignment workflows. Define precedence: date exception, employee override, company default. Teams are outside the current scope.
 - [ ] Define employment eligibility and unscheduled work policy. Do not label an unscheduled employee late or absent.
 - [ ] Test effective-date changes, leave, holidays, and historical interpretation.
 
@@ -53,7 +53,7 @@ The shared sidebar has personal, team-management, and administration groups, fil
 - [ ] Add personal attendance history with bounded, Zod-validated pagination/date filters and self-only authorization.
 - [x] Test concurrent check-ins/check-outs, repeated check-outs, inactive employment, and direct unauthorized service calls against PostgreSQL.
 
-The first delivery includes five recent attendance days, not a full paginated history. One day can contain several nonoverlapping sessions; the first arrival determines lateness and the last completed departure determines early departure. Gaps are excluded from worked duration. Missing prior-day check-outs remain open and block a new interval; closing one records the current actual time after confirmation. Corrections are explicitly unavailable until step 6. No unscheduled/day-off check-ins are accepted yet; holiday/leave exceptions still require step 3. Browser counters use a monotonic elapsed clock anchored to a server sample and recover from persisted timestamps after reopening. Ordinary punches do not accept historical client timestamps. DST gaps in schedule hours are rejected; repeated wall times use PostgreSQL's standard-time interpretation.
+The first delivery includes five recent attendance days, not a full paginated history. One day can contain several nonoverlapping sessions; the first arrival determines lateness and the last completed departure determines early departure. Gaps are excluded from worked duration. Missing prior-day check-outs remain open and block a new interval; closing one records the current actual time after confirmation. Corrections are explicitly unavailable until step 6. Configured day-off check-ins now require date-bound employee confirmation and retain all time as outside-schedule work; unconfigured schedules remain blocked; holiday/leave exceptions still require step 3. Browser counters use a monotonic elapsed clock anchored to a server sample and recover from persisted timestamps after reopening. Ordinary punches do not accept historical client timestamps. DST gaps in schedule hours are rejected; repeated wall times use PostgreSQL's standard-time interpretation.
 
 Bklit UI's `chart-stat-flow` source was installed from its official registry with the MIT license retained under `src/components/charts/`. Motion and `@number-flow/react` power the dashboard's transitions and animated numeric widgets. The component was adapted to existing aliases, Georgian formatting, semantic tokens, and deterministic SSR hydration; no second component library or chart dataset was introduced. Motion respects reduced-motion preferences, and the timer avoids live screen-reader announcements each second.
 
@@ -61,7 +61,7 @@ Bklit UI's `chart-stat-flow` source was installed from its official registry wit
 
 - [ ] Calculate late and early seconds against retained schedule expectations. Keep original punches independent of flags and summaries.
 - [ ] Show expected, checked in, checked out, late, on leave, and incomplete states. Keep confirmed absence separate from missing check-in.
-- [ ] Implement manager scope in SQL for records, counts, searches, and summaries. Platform administration alone does not grant team attendance access.
+- [ ] Implement manager scope in SQL for records, counts, searches, and summaries. Platform administration alone does not grant assigned-employee attendance access.
 - [ ] Test exact schedule boundaries, date boundaries, corrected records, and independent late/early flags.
 
 ## 6. Corrections and attendance review

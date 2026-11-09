@@ -1,0 +1,2 @@
+ALTER TABLE "attendance_session" DROP CONSTRAINT "attendance_expected_interval_valid";--> statement-breakpoint
+ALTER TABLE "attendance_session" ADD CONSTRAINT "attendance_expected_interval_valid" CHECK ("attendance_session"."expected_end_at" >= "attendance_session"."expected_start_at");

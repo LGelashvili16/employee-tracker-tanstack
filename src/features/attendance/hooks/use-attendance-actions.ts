@@ -49,15 +49,20 @@ export function useAttendanceActions(
   }
   return {
     pending: mutation.isPending,
-    start: () => {
+    start: (confirmNonWorkingDay = false) => {
       // Retain an operation key across a lost response; retries must not create another working interval.
       if (
         !request.current ||
-        request.current.expectedLastSessionId !== overview.lastSessionId
+        request.current.expectedLastSessionId !== overview.lastSessionId ||
+        request.current.confirmedNonWorkingDate !==
+          (confirmNonWorkingDay ? overview.workday.date : undefined)
       )
         request.current = {
           requestId: crypto.randomUUID(),
           expectedLastSessionId: overview.lastSessionId,
+          confirmedNonWorkingDate: confirmNonWorkingDay
+            ? overview.workday.date
+            : undefined,
         }
       return execute({ kind: 'in', data: request.current })
     },

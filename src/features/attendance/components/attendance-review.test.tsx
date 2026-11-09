@@ -9,11 +9,10 @@ import {
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { AttendanceReviewTable } from './attendance-review-table'
+import { CompanyAttendanceSessionsTable } from './company-attendance-sessions-table'
 import type { ReviewSession } from '../attendance.types'
 
 const calls = vi.hoisted(() => ({
-  read: vi.fn(),
   review: vi.fn(),
   correct: vi.fn(),
   history: vi.fn(),
@@ -21,8 +20,6 @@ const calls = vi.hoisted(() => ({
   error: vi.fn(),
 }))
 vi.mock('../attendance.functions', () => ({
-  readTeamAttendance: calls.read,
-  readCompanyAttendance: calls.read,
   decideAttendance: calls.review,
   amendAttendance: calls.correct,
   readAttendanceReviewHistory: calls.history,
@@ -53,65 +50,46 @@ function session(): ReviewSession {
     isLastOfDay: true,
   }
 }
-function mount() {
+function mount(canReview = true) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return render(
     <QueryClientProvider client={client}>
-      <AttendanceReviewTable actorId="manager" />
+      <CompanyAttendanceSessionsTable
+        rows={[
+          {
+            ...session(),
+            canReview,
+            date: session().workDate,
+            serverNow: '2026-11-04T16:00:00.000Z',
+          },
+        ]}
+      />
     </QueryClientProvider>,
   )
 }
 beforeEach(() => {
   vi.clearAllMocks()
-  calls.read.mockResolvedValue({
-    ok: true,
-    value: {
-      items: [session()],
-      hasMore: false,
-      serverNow: '2026-11-04T16:00:00.000Z',
-    },
-  })
   calls.history.mockResolvedValue({
     ok: true,
     value: { items: [], hasMore: false },
   })
 })
 describe('manager attendance workflow', () => {
-  it('renders the company overview without approval or correction controls', async () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <AttendanceReviewTable actorId="admin" company />
-      </QueryClientProvider>,
-    )
-    expect(await screen.findByText('ანა')).toBeVisible()
-    expect(
-      screen.queryByRole('columnheader', { name: 'მოქმედებები' }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'განხილვა' }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'შესწორება' }),
-    ).not.toBeInTheDocument()
-  })
-  it('shows real deviations and respects read-only access', async () => {
-    calls.read.mockResolvedValue({
-      ok: true,
-      value: {
-        items: [{ ...session(), canReview: false }],
-        hasMore: false,
-        serverNow: '2026-11-04T16:00:00.000Z',
-      },
-    })
-    mount()
-    expect(await screen.findByText('ანა')).toBeVisible()
+  it('shows deviations without actions when the server does not authorize review', () => {
+    mount(false)
     expect(screen.getByText('განხილვის მოლოდინში')).toBeVisible()
     expect(screen.getByText('გვიან დაწყება 00:05')).toBeVisible()
     expect(screen.getByText('განრიგს გარეთ 00:30')).toBeVisible()
     expect(
+      screen.queryByRole('columnheader', { name: 'მოქმედებები' }),
+    ).not.toBeInTheDocument()
+    expect(
       screen.queryByRole('button', { name: 'შესწორება' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'განხილვა' }),
     ).not.toBeInTheDocument()
   })
   it('validates the reason and keeps overtime approval separate from attendance approval', async () => {
