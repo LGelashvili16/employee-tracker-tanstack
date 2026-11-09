@@ -24,6 +24,7 @@
   border-radius: inherit;
   pointer-events: none;
   color: white;
+  contain: paint;
 }
 
 .work-current__wash {
@@ -65,7 +66,10 @@
     -5px 0 5px color-mix(in oklch, currentColor 70%, transparent);
 }
 
-.work-current-button[aria-busy='true'] .work-current > * {
+.work-current-button[aria-busy='true'] .work-current > *,
+/* Moving content beneath a full-screen backdrop blur requires repeated filtering.
+   Freeze decoration through dialog entry/exit without pausing the work timer. */
+:root:has([data-slot='dialog-overlay']) .work-current > * {
   animation-play-state: paused;
 }
 
