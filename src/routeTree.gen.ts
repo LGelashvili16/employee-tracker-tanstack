@@ -19,6 +19,7 @@ import { Route as AuthenticatedManageRouteRouteImport } from './routes/_authenti
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
 import { Route as AuthenticatedVacationRouteImport } from './routes/_authenticated/vacation'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthMfaRouteImport } from './routes/auth/mfa'
@@ -107,6 +108,11 @@ const AuthenticatedVacationRoute = AuthenticatedVacationRouteImport.update({
   id: '/vacation',
   path: '/vacation',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   id: '/forgot-password',
@@ -326,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/vacation': typeof AuthenticatedVacationRoute
+  '/api/health': typeof ApiHealthRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/mfa': typeof AuthMfaRoute
@@ -372,6 +379,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/vacation': typeof AuthenticatedVacationRoute
+  '/api/health': typeof ApiHealthRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/mfa': typeof AuthMfaRoute
@@ -420,6 +428,7 @@ export interface FileRoutesById {
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
   '/_authenticated/vacation': typeof AuthenticatedVacationRoute
+  '/api/health': typeof ApiHealthRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/mfa': typeof AuthMfaRoute
@@ -469,6 +478,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedule'
     | '/vacation'
+    | '/api/health'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/mfa'
@@ -515,6 +525,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedule'
     | '/vacation'
+    | '/api/health'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/mfa'
@@ -562,6 +573,7 @@ export interface FileRouteTypes {
     | '/_authenticated/notifications'
     | '/_authenticated/schedule'
     | '/_authenticated/vacation'
+    | '/api/health'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/mfa'
@@ -604,6 +616,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -678,6 +691,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/vacation'
       preLoaderRoute: typeof AuthenticatedVacationRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/auth/forgot-password': {
       id: '/auth/forgot-password'
@@ -1102,6 +1122,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRouteRoute: AuthRouteRouteWithChildren,
+  ApiHealthRoute: ApiHealthRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

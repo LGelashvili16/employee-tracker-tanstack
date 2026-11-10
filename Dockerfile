@@ -11,6 +11,9 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 COPY . .
 RUN pnpm build
 
+FROM build AS migrations
+CMD ["pnpm", "db:migrate"]
+
 FROM node:26-bookworm-slim AS runtime
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0

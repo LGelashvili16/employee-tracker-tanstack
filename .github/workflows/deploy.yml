@@ -1,0 +1,101 @@
+name: Production deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize the entire release. Never interrupt a deployment during a proxy switch.
+concurrency:
+  group: teamwork-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.publish.outputs.image }}
+      migrations: ${{ steps.publish.outputs.migrations }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build and check the committed source
+        env:
+          BUILD_IMAGE: teamwork-checks:${{ github.sha }}
+        run: |
+          bash -n docker/deploy/release.sh
+          bash docker/deploy/test-release.sh
+          docker build --target build --tag "$BUILD_IMAGE" .
+          docker run --rm "$BUILD_IMAGE" pnpm lint
+          docker run --rm "$BUILD_IMAGE" pnpm exec tsc --noEmit
+          docker run --rm "$BUILD_IMAGE" pnpm test
+      - name: Publish immutable runtime and migration images
+        id: publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_USER: ${{ github.actor }}
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          repository="ghcr.io/${REPOSITORY,,}"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          docker build --target runtime --label "org.opencontainers.image.source=https://github.com/$REPOSITORY" --tag "$repository:$REVISION" .
+          docker build --target migrations --label "org.opencontainers.image.source=https://github.com/$REPOSITORY" --tag "$repository:migrate-$REVISION" .
+          docker push "$repository:$REVISION"
+          docker push "$repository:migrate-$REVISION"
+          docker pull "$repository:$REVISION"
+          docker pull "$repository:migrate-$REVISION"
+          echo "image=$(docker inspect --format '{{index .RepoDigests 0}}' "$repository:$REVISION")" >> "$GITHUB_OUTPUT"
+          echo "migrations=$(docker inspect --format '{{index .RepoDigests 0}}' "$repository:migrate-$REVISION")" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Deploy over verified SSH
+        env:
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_USER: ${{ secrets.VPS_USER }}
+          SSH_PORT: ${{ secrets.VPS_PORT }}
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          IMAGE: ${{ needs.build.outputs.image }}
+          MIGRATIONS: ${{ needs.build.outputs.migrations }}
+          REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9.-]+$ ]]
+          [[ "$SSH_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          SSH_PORT=${SSH_PORT:-22}
+          [[ "$SSH_PORT" =~ ^[0-9]+$ ]]
+          [[ "$IMAGE" =~ ^ghcr\.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$ ]]
+          [[ "$MIGRATIONS" =~ ^ghcr\.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$ ]]
+          [[ "$REVISION" =~ ^[a-f0-9]{40}$ ]]
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$SSH_KEY" > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+          trap 'rm -f "$HOME/.ssh/deploy_key"' EXIT
+          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15)
+          destination="$SSH_USER@$SSH_HOST"
+          release="/opt/teamwork/releases/$REVISION-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          ssh "${options[@]}" -p "$SSH_PORT" "$destination" "mkdir -p '$release'"
+          tar -czf release.tgz compose.yaml compose.prod.yaml compose.vps.yaml docker/deploy/release.sh docker/backup.sh
+          scp "${options[@]}" -P "$SSH_PORT" release.tgz "$destination:$release/release.tgz"
+          ssh "${options[@]}" -p "$SSH_PORT" "$destination" "tar -xzf '$release/release.tgz' -C '$release' && bash '$release/docker/deploy/release.sh' '$IMAGE' '$MIGRATIONS'"

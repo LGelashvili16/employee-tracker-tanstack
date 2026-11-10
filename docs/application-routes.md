@@ -39,6 +39,7 @@ The starter about page, old admin landing pages, admin user aliases, invitation-
 | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `/`                                                     | Entry redirects to the signed-in workspace or login.                                                                  |
 | `/api/auth/$`                                           | Better Auth HTTP protocol handler.                                                                                    |
+| `/api/health`                                           | Public deployment readiness probe. Returns only availability, verifies database connectivity, and disables caching.   |
 | `/auth/login`, `/auth/register`, `/auth/reset-password` | Login, activation, and code-based reset forms.                                                                        |
 | `/auth/forgot-password`                                 | Recovery instructions and the reset form link.                                                                        |
 | `/dashboard`, `/attendance`                             | Shared attendance clock and summaries in landing and focused layouts.                                                 |

@@ -7,6 +7,7 @@
 !**/.env*.example
 **/*.local
 backups
+.deploy
 dist
 dist-ssr
 .next
