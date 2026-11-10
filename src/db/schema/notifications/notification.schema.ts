@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm'
-import { check, index, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import {
+  check,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core'
+import { announcement } from '../announcements/announcement.schema'
 import { createdAt, uuidv7PrimaryKey } from '../_shared/columns'
 import { user } from '../auth/auth.schema'
 
@@ -17,12 +26,20 @@ export const notification = pgTable(
     title: text('title').notNull(),
     /** Georgian message containing only information appropriate for the recipient. */
     body: text('body').notNull(),
+    /** Optional company announcement destination; null for other notification workflows. */
+    announcementId: uuid('announcement_id').references(() => announcement.id, {
+      onDelete: 'restrict',
+    }),
     /** Delivery instant, used with the identity for stable newest-first ordering. */
     createdAt: createdAt(),
     /** Explicit acknowledgement, cleared when the recipient marks the entry unseen again. */
     seenAt: timestamp('seen_at', { withTimezone: true }),
   },
   (table) => [
+    uniqueIndex('notification_announcement_recipient').on(
+      table.announcementId,
+      table.recipientId,
+    ),
     index('notification_recipient_recent').on(
       table.recipientId,
       table.createdAt.desc(),

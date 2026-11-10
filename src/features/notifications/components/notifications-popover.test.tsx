@@ -20,9 +20,20 @@ vi.mock('../notifications.functions', () => ({
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
     to,
+    search,
     ...props
-  }: AnchorHTMLAttributes<HTMLAnchorElement> & { to: string }) => (
-    <a href={to} {...props} />
+  }: AnchorHTMLAttributes<HTMLAnchorElement> & {
+    to: string
+    search?: { announcementId?: string }
+  }) => (
+    <a
+      href={
+        search?.announcementId
+          ? `${to}?announcementId=${search.announcementId}`
+          : to
+      }
+      {...props}
+    />
   ),
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
@@ -77,6 +88,28 @@ beforeEach(() => {
 })
 
 describe('notifications popover', () => {
+  it('links announcement alerts to their full content and closes the bell popup', async () => {
+    items = [
+      {
+        ...items[0],
+        announcementId: '019aac01-0000-7000-8000-000000000002',
+        title: 'ახალი განცხადება',
+      },
+    ]
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: /შეტყობინებები/ }))
+    const link = await screen.findByRole('link', { name: 'ახალი განცხადება' })
+    expect(link).toHaveAttribute(
+      'href',
+      '/announcements?announcementId=019aac01-0000-7000-8000-000000000002',
+    )
+    await user.click(link)
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('link', { name: 'ახალი განცხადება' }),
+      ).not.toBeInTheDocument(),
+    )
+  })
   it('restores the row and bell dots when a seen notification is marked unseen', async () => {
     items = items.map((item) => ({ ...item, seenAt: '2026-11-05T09:00:00Z' }))
     const user = setup()

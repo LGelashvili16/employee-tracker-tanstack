@@ -15,6 +15,12 @@ import {
 import type { Actor } from './actor'
 
 describe('role and permission boundaries', () => {
+  it('grants announcement publishing only to HR and platform administrators by default', () => {
+    for (const role of roleSchema.options)
+      expect(hasPermission([role], 'announcements.manage')).toBe(
+        ['hr_manager', 'admin', 'owner'].includes(role),
+      )
+  })
   it('offers exactly the five employee roles, with administration kept separate', () => {
     expect(employeeRoleSchema.options.map((role) => roleLabels[role])).toEqual([
       'თანამშრომელი',
@@ -129,6 +135,7 @@ describe('role and permission boundaries', () => {
   })
   it('grants administrators platform configuration, company reads, and vacation review', () => {
     const platformPermissions = [
+      'announcements.manage',
       'manage.access',
       'employees.read',
       'employees.manage',

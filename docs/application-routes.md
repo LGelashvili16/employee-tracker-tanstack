@@ -12,6 +12,8 @@ This project serves one company. Payroll, finance, CRM, and sales functionality 
 
 ## Current functionality
 
+Company announcements live at `/announcements`, with HR/admin publishing at `/manage/announcements`. Publishers choose persistent next-login modal delivery or a linked alert in the existing notification bell/inbox. Dismissal and explicit reading are stored independently per employee. See [announcements](announcements.md) for delivery, permissions, and migration details.
+
 The shared `/jobs` workspace implements installation and measurement pins, map/list views, creation, editing, claims, arrival, completion, rejection and reopening. Creation and details open inside the shared workspace. See [the jobs map](jobs-map.md) for permissions, state transitions, map limits and persistence.
 
 Employee management exposes the `დასწრებები` directory at `/manage/attendance`. Opening `/manage/attendance/$userId` shows that employee's attendance and monthly timesheet in local tabs. HR managers, administrators, and owners can view every employee without reviewer assignments through the explicit `attendance.read.all` permission. Actors with `attendance.read.team` or `timesheets.review.team` use this same directory restricted to assigned employees; attendance and hours tabs are independently authorized. Review and correction appear in the selected employee's attendance sessions and retain the existing assignment, permission and self-review checks. Employee profile shortcuts open the company views filtered to that employee.

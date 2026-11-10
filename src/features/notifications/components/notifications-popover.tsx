@@ -101,7 +101,12 @@ export function NotificationsPopover({ actorId }: { actorId: string }) {
         </div>
         <Separator className="shrink-0" />
         <div className="app-scrollbar min-h-0 overflow-y-auto overscroll-contain">
-          {open ? <NotificationsFeed actorId={actorId} /> : null}
+          {open ? (
+            <NotificationsFeed
+              actorId={actorId}
+              onNavigate={() => setOpen(false)}
+            />
+          ) : null}
         </div>
         <Separator className="shrink-0" />
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 bg-muted/15 px-5 py-2">

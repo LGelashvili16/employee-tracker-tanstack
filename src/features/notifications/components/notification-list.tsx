@@ -6,6 +6,7 @@ import {
   IconMail,
 } from '@tabler/icons-react'
 import { cn } from 'cn'
+import { Link } from '@tanstack/react-router'
 import { Button } from '#/components/ui/button'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Spinner } from '#/components/ui/spinner'
@@ -26,11 +27,13 @@ export function NotificationList({
   pendingIds,
   onMarkSeen,
   onMarkUnseen,
+  onNavigate,
 }: {
   items: Array<NotificationItem>
   pendingIds: Array<string>
   onMarkSeen: (ids: Array<string>) => void
   onMarkUnseen: (ids: Array<string>) => void
+  onNavigate?: () => void
 }) {
   return (
     <ul aria-label="შეტყობინებების სია" className="flex flex-col gap-1 p-2">
@@ -72,7 +75,18 @@ export function NotificationList({
                   !unseen && 'text-muted-foreground',
                 )}
               >
-                {item.title}
+                {item.announcementId ? (
+                  <Link
+                    to="/announcements"
+                    onClick={onNavigate}
+                    search={{ announcementId: item.announcementId }}
+                    className="rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    {item.title}
+                  </Link>
+                ) : (
+                  item.title
+                )}
                 {unseen ? <span className="sr-only">, ახალი</span> : null}
               </p>
               <p className="text-[0.8125rem] leading-5 wrap-anywhere text-muted-foreground">

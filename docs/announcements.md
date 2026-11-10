@@ -1,0 +1,17 @@
+# Company announcements
+
+`/announcements` is the authenticated employee announcement directory. `/manage/announcements` adds publishing through a right-side shadcn Sheet and requires `manage.access` plus `announcements.manage`. HR, admins, and the existing protected owner have publishing grants. Permissions and active account/employment state are rechecked from persistence inside each service transaction. Ordinary employees can read company announcements and acknowledge only their own reading state.
+
+Published announcements are immutable in this first version. The publisher enters a title and plain-text body and selects a delivery mode. A request ID scoped to the publisher makes retries idempotent; altered content with the same request ID is rejected. Publication, the eligible employee snapshot, and any inbox delivery commit atomically.
+
+- With login display enabled, recipients see announcements published no later than their current Better Auth session's creation time. An announcement published during an existing session waits for a subsequent login. Eligible pending announcements appear one at a time, oldest first. Merely receiving or fetching an announcement does not count as acknowledgement.
+- With login display disabled, recipients receive a linked alert in the existing bell and notification inbox. These announcements never open automatically.
+- Closing the automatic modal records `dismissed_at`; choosing წავიკითხე also records `read_at`. Both suppress future automatic display across devices. Dismissal does not claim that the employee read the announcement. Acknowledgements are idempotent and concurrent dismissal cannot undo a recorded reading.
+- Voluntary viewing remains available after dismissal or reading. Closing a voluntarily opened announcement changes no acknowledgement state. Explicit reading also marks that employee's corresponding bell notification seen. Marking a bell item seen does not itself claim the announcement was read.
+- Publication targets currently active or invited accounts with active employee records. Suspended/inactive accounts do not receive new delivery records. Future employees can browse historical announcements voluntarily without receiving a backlog of old login popups.
+
+The directory uses validated URL search, read/unread filtering, stable newest/oldest sorting, 20-row server pagination, TanStack Table, and shared shadcn controls. Content is rendered through React escaping. Responses and query caches are private and scoped to the actor. Login-modal eligibility uses a server-read session timestamp, never client-provided identity, timestamps, browser storage, or a role snapshot.
+
+Migration `0027_announcements.sql` adds announcement/recipient persistence and an optional announcement link on existing notifications. Existing inbox entries retain their content and read status. PostgreSQL 18 supplies UUIDv7 identities. No publication editing, deletion, rich HTML, attachments, scheduling, targeting UI, or complaints workflow is included in this version.
+
+Verification uses Vitest/React Testing Library for publishing, acknowledgement failure/retry, manual versus automatic display, bell links, and URL search synchronization. `RUN_ANNOUNCEMENTS_DB_TESTS=1` enables an isolated local PostgreSQL suite covering authorization, revoked grants, validation, retry concurrency, delivery mode, login cutoffs, recipient isolation, sticky reading, historical browsing, and list behavior. It creates and removes a dedicated test database and never publishes fixtures to the application database.

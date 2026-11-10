@@ -11,6 +11,9 @@ const mocks = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
 }))
+vi.mock('#/features/announcements/components/login-announcement', () => ({
+  LoginAnnouncement: () => null,
+}))
 vi.mock('#/hooks/use-mobile', () => ({ useIsMobile: () => false }))
 vi.mock('#/components/ThemeToggle', () => ({ default: () => null }))
 vi.mock('#/components/common/pwa-install-button', () => ({

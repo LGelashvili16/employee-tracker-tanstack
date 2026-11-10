@@ -6,6 +6,7 @@ import {
   IconCalendarWeek,
   IconCalendarOff,
   IconBell,
+  IconSpeakerphone,
   IconUserCircle,
   IconLock,
   IconCalendarCog,
@@ -77,6 +78,13 @@ export const navigationItems = [
     label: 'არყოფნა',
     permission: null,
   },
+
+  {
+    to: '/announcements',
+    icon: IconSpeakerphone,
+    label: 'განცხადებები',
+    permission: null,
+  },
   {
     to: '/notifications',
     secondary: true,
@@ -115,6 +123,13 @@ export const navigationItems = [
     icon: IconCalendarCheck,
     label: 'არყოფნების მართვა',
     permission: 'leave.review',
+  },
+
+  {
+    to: '/manage/announcements',
+    icon: IconSpeakerphone,
+    label: 'განცხადებების მართვა',
+    permission: 'announcements.manage',
   },
   {
     to: '/manage/reports',

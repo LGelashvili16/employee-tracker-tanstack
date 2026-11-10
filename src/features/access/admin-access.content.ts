@@ -1,6 +1,7 @@
 import type { Permission } from '#/lib/authorization/permissions'
 
 export const permissionLabels: Record<Permission, string> = {
+  'announcements.manage': 'განცხადებების გამოქვეყნება',
   'manage.access': 'მართვის განყოფილების გახსნა',
   'attendance.read.team': 'მინიჭებული თანამშრომლების დასწრების ნახვა',
   'attendance.read.all': 'კომპანიის დასწრებისა და საათების ნახვა',

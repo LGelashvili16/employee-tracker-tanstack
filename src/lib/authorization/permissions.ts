@@ -11,6 +11,7 @@ export const permissionSchema = z.enum(
     'schedule.manage',
     'jobs.manage',
     'jobs.claim',
+    'announcements.manage',
     'employees.read',
     'employees.manage',
     'leave.review',
@@ -90,6 +91,7 @@ export function currentAuthorization(value: {
 }
 
 const administrationPermissions = [
+  'announcements.manage',
   'manage.access',
   'employees.read',
   'employees.manage',
@@ -124,6 +126,7 @@ const managementPermissions: Record<
     'employees.read',
   ],
   hr_manager: [
+    'announcements.manage',
     'manage.access',
     'attendance.read.all',
     'attendance.configure',

@@ -8,6 +8,7 @@ import {
 } from '#/components/ui/sidebar'
 import { NotificationsPopover } from '#/features/notifications/components/notifications-popover'
 import { NotificationsProvider } from '#/features/notifications/components/notifications-provider'
+import { LoginAnnouncement } from '#/features/announcements/components/login-announcement'
 import ThemeToggle from '#/components/ThemeToggle'
 import { PwaInstallButton } from '#/components/common/pwa-install-button'
 import { authClient } from '#/lib/auth/auth-client'
@@ -52,6 +53,7 @@ export function AppShell({ actor }: { actor: Actor }) {
   }
   return (
     <NotificationsProvider key={actor.id}>
+      <LoginAnnouncement actorId={actor.id} />
       <SidebarProvider className="h-dvh min-h-0 overflow-hidden">
         <a
           className="sr-only focus:absolute focus:top-3 focus:left-3 focus:z-30 focus:not-sr-only focus:rounded-md focus:bg-background focus:p-3"

@@ -2,6 +2,7 @@ export type NotificationItem = {
   id: string
   title: string
   body: string
+  announcementId?: string | null
   createdAt: string
   seenAt: string | null
 }

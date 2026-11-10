@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
+import { Route as AuthenticatedAnnouncementsRouteImport } from './routes/_authenticated/announcements'
 import { Route as AuthenticatedAttendanceRouteRouteImport } from './routes/_authenticated/attendance/route'
 import { Route as AuthenticatedLeaveRouteImport } from './routes/_authenticated/leave'
 import { Route as AuthenticatedManageRouteRouteImport } from './routes/_authenticated/manage/route'
@@ -36,6 +37,7 @@ import { Route as AuthenticatedAttendanceIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedAttendanceCorrectionsRouteImport } from './routes/_authenticated/attendance/corrections'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedJobsIndexRouteImport } from './routes/_authenticated/jobs/index'
+import { Route as AuthenticatedManageAnnouncementsRouteImport } from './routes/_authenticated/manage/announcements'
 import { Route as AuthenticatedManageAttendanceRouteRouteImport } from './routes/_authenticated/manage/attendance/route'
 import { Route as AuthenticatedManageLeaveRouteImport } from './routes/_authenticated/manage/leave'
 import { Route as AuthenticatedManageReportsRouteImport } from './routes/_authenticated/manage/reports'
@@ -76,6 +78,12 @@ const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAnnouncementsRoute =
+  AuthenticatedAnnouncementsRouteImport.update({
+    id: '/announcements',
+    path: '/announcements',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAttendanceRouteRoute =
   AuthenticatedAttendanceRouteRouteImport.update({
     id: '/attendance',
@@ -202,6 +210,12 @@ const AuthenticatedJobsIndexRoute = AuthenticatedJobsIndexRouteImport.update({
   path: '/jobs/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedManageAnnouncementsRoute =
+  AuthenticatedManageAnnouncementsRouteImport.update({
+    id: '/announcements',
+    path: '/announcements',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
 const AuthenticatedManageAttendanceRouteRoute =
   AuthenticatedManageAttendanceRouteRouteImport.update({
     id: '/attendance',
@@ -328,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/attendance': typeof AuthenticatedAttendanceRouteRouteWithChildren
   '/manage': typeof AuthenticatedManageRouteRouteWithChildren
+  '/announcements': typeof AuthenticatedAnnouncementsRoute
   '/leave': typeof AuthenticatedLeaveRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
@@ -347,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/admin/locations': typeof AuthenticatedAdminLocationsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
+  '/manage/announcements': typeof AuthenticatedManageAnnouncementsRoute
   '/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/manage/reports': typeof AuthenticatedManageReportsRoute
   '/manage/schedule': typeof AuthenticatedManageScheduleRoute
@@ -375,6 +391,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteRouteWithChildren
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/manage': typeof AuthenticatedManageRouteRouteWithChildren
+  '/announcements': typeof AuthenticatedAnnouncementsRoute
   '/leave': typeof AuthenticatedLeaveRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
@@ -393,6 +410,7 @@ export interface FileRoutesByTo {
   '/admin/locations': typeof AuthenticatedAdminLocationsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
+  '/manage/announcements': typeof AuthenticatedManageAnnouncementsRoute
   '/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/manage/reports': typeof AuthenticatedManageReportsRoute
   '/manage/schedule': typeof AuthenticatedManageScheduleRoute
@@ -424,6 +442,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/attendance': typeof AuthenticatedAttendanceRouteRouteWithChildren
   '/_authenticated/manage': typeof AuthenticatedManageRouteRouteWithChildren
+  '/_authenticated/announcements': typeof AuthenticatedAnnouncementsRoute
   '/_authenticated/leave': typeof AuthenticatedLeaveRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
@@ -443,6 +462,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/locations': typeof AuthenticatedAdminLocationsRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/attendance/corrections': typeof AuthenticatedAttendanceCorrectionsRoute
+  '/_authenticated/manage/announcements': typeof AuthenticatedManageAnnouncementsRoute
   '/_authenticated/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/_authenticated/manage/reports': typeof AuthenticatedManageReportsRoute
   '/_authenticated/manage/schedule': typeof AuthenticatedManageScheduleRoute
@@ -474,6 +494,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/attendance'
     | '/manage'
+    | '/announcements'
     | '/leave'
     | '/notifications'
     | '/schedule'
@@ -493,6 +514,7 @@ export interface FileRouteTypes {
     | '/admin/locations'
     | '/admin/roles'
     | '/attendance/corrections'
+    | '/manage/announcements'
     | '/manage/leave'
     | '/manage/reports'
     | '/manage/schedule'
@@ -521,6 +543,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin'
     | '/manage'
+    | '/announcements'
     | '/leave'
     | '/notifications'
     | '/schedule'
@@ -539,6 +562,7 @@ export interface FileRouteTypes {
     | '/admin/locations'
     | '/admin/roles'
     | '/attendance/corrections'
+    | '/manage/announcements'
     | '/manage/leave'
     | '/manage/reports'
     | '/manage/schedule'
@@ -569,6 +593,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/attendance'
     | '/_authenticated/manage'
+    | '/_authenticated/announcements'
     | '/_authenticated/leave'
     | '/_authenticated/notifications'
     | '/_authenticated/schedule'
@@ -588,6 +613,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/locations'
     | '/_authenticated/admin/roles'
     | '/_authenticated/attendance/corrections'
+    | '/_authenticated/manage/announcements'
     | '/_authenticated/manage/leave'
     | '/_authenticated/manage/reports'
     | '/_authenticated/manage/schedule'
@@ -648,6 +674,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/announcements': {
+      id: '/_authenticated/announcements'
+      path: '/announcements'
+      fullPath: '/announcements'
+      preLoaderRoute: typeof AuthenticatedAnnouncementsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/attendance': {
@@ -810,6 +843,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/jobs/'
       preLoaderRoute: typeof AuthenticatedJobsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/manage/announcements': {
+      id: '/_authenticated/manage/announcements'
+      path: '/announcements'
+      fullPath: '/manage/announcements'
+      preLoaderRoute: typeof AuthenticatedManageAnnouncementsRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
     }
     '/_authenticated/manage/attendance': {
       id: '/_authenticated/manage/attendance'
@@ -1032,6 +1072,7 @@ const AuthenticatedManageAttendanceRouteRouteWithChildren =
 
 interface AuthenticatedManageRouteRouteChildren {
   AuthenticatedManageAttendanceRouteRoute: typeof AuthenticatedManageAttendanceRouteRouteWithChildren
+  AuthenticatedManageAnnouncementsRoute: typeof AuthenticatedManageAnnouncementsRoute
   AuthenticatedManageLeaveRoute: typeof AuthenticatedManageLeaveRoute
   AuthenticatedManageReportsRoute: typeof AuthenticatedManageReportsRoute
   AuthenticatedManageScheduleRoute: typeof AuthenticatedManageScheduleRoute
@@ -1044,6 +1085,8 @@ const AuthenticatedManageRouteRouteChildren: AuthenticatedManageRouteRouteChildr
   {
     AuthenticatedManageAttendanceRouteRoute:
       AuthenticatedManageAttendanceRouteRouteWithChildren,
+    AuthenticatedManageAnnouncementsRoute:
+      AuthenticatedManageAnnouncementsRoute,
     AuthenticatedManageLeaveRoute: AuthenticatedManageLeaveRoute,
     AuthenticatedManageReportsRoute: AuthenticatedManageReportsRoute,
     AuthenticatedManageScheduleRoute: AuthenticatedManageScheduleRoute,
@@ -1063,6 +1106,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedAttendanceRouteRoute: typeof AuthenticatedAttendanceRouteRouteWithChildren
   AuthenticatedManageRouteRoute: typeof AuthenticatedManageRouteRouteWithChildren
+  AuthenticatedAnnouncementsRoute: typeof AuthenticatedAnnouncementsRoute
   AuthenticatedLeaveRoute: typeof AuthenticatedLeaveRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
@@ -1080,6 +1124,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAttendanceRouteRoute:
     AuthenticatedAttendanceRouteRouteWithChildren,
   AuthenticatedManageRouteRoute: AuthenticatedManageRouteRouteWithChildren,
+  AuthenticatedAnnouncementsRoute: AuthenticatedAnnouncementsRoute,
   AuthenticatedLeaveRoute: AuthenticatedLeaveRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,

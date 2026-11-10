@@ -17,10 +17,12 @@ export function NotificationsFeed({
   actorId,
   limit = 5,
   offset = 0,
+  onNavigate,
 }: {
   actorId: string
   limit?: number
   offset?: number
+  onNavigate?: () => void
 }) {
   const query = useQuery(notificationsQueryOptions(actorId, limit, offset))
   const markSeen = useMarkNotificationsSeen(actorId)
@@ -54,6 +56,7 @@ export function NotificationsFeed({
   if (query.data.items.length === 0) return <NotificationsEmpty />
   return (
     <NotificationList
+      onNavigate={onNavigate}
       items={query.data.items}
       pendingIds={markSeen.pendingIds}
       onMarkSeen={(ids) => markSeen.mutate(ids)}
