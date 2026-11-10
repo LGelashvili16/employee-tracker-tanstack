@@ -8,9 +8,10 @@ import {
   isNotNull,
   isNull,
   sql,
+  notExists,
 } from 'drizzle-orm'
 import { db } from '#/db'
-import { notification } from '#/db/schema'
+import { announcement, notification } from '#/db/schema'
 
 export async function listForRecipient(
   recipientId: string,
@@ -19,6 +20,21 @@ export async function listForRecipient(
 ) {
   return db.transaction(
     async (tx) => {
+      // Also hides self-delivery rows from publications created before author exclusion.
+      const visible = and(
+        eq(notification.recipientId, recipientId),
+        notExists(
+          tx
+            .select({ id: announcement.id })
+            .from(announcement)
+            .where(
+              and(
+                eq(announcement.id, notification.announcementId),
+                eq(announcement.authorId, recipientId),
+              ),
+            ),
+        ),
+      )
       const items = await tx
         .select({
           id: notification.id,
@@ -29,19 +45,14 @@ export async function listForRecipient(
           seenAt: notification.seenAt,
         })
         .from(notification)
-        .where(eq(notification.recipientId, recipientId))
+        .where(visible)
         .orderBy(desc(notification.createdAt), desc(notification.id))
         .limit(limit + 1)
         .offset(offset)
       const [summary] = await tx
         .select({ value: count() })
         .from(notification)
-        .where(
-          and(
-            eq(notification.recipientId, recipientId),
-            isNull(notification.seenAt),
-          ),
-        )
+        .where(and(visible, isNull(notification.seenAt)))
       return { items, unseenCount: summary.value }
     },
     { isolationLevel: 'repeatable read', accessMode: 'read only' },

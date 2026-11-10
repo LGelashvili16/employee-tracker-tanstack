@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 32. Last updated: 2026-11-10.
+Status: required project instructions. Version: 36. Last updated: 2026-11-10.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -104,7 +104,14 @@ Choose feedback by purpose and lifetime. These components complement one another
 | A record has a persistent state                                                      | A shadcn Badge with an established semantic color and explicit Georgian label.                                     |
 | Ordinary navigation, pagination, debounced search, filtering, or background fetching | Appropriate local loading/error state, without routine success toasts.                                             |
 
+### Announcement reading and delivery
+
+- Personal `/announcements` uses a full-width TanStack Table with Georgian dates, titles, sortable publication date and read status. Omit delivery details from this view. `/manage/announcements` retains its management table and ჩვენება column.
+- Modal publications appear immediately for signed-in employees and after sign-in for others. Show one oldest-first announcement at a time with a progress indicator; new arrivals join after the open item. Closing advances the queue and allows a reminder after a later sign-in. Explicit წავიკითხე acknowledgement stops future modal reminders. Suppress the publication toast for modal announcements, and pause automatic delivery while a manual announcement reader is open.
+
 ### Toasts
+
+- A new non-modal live announcement shows one informational Sonner toast per open app tab at the bottom right for 6 seconds, with a Georgian ნახვა action. Reconnect snapshots do not replay old announcement toasts. Keep the announcement in its directory after the toast expires; toast dismissal never marks it read. Use an accessible unread dot in personal announcement navigation, without another header icon.
 
 - Use `toast` from `sonner` and the single app-wide `Toaster` from `#/components/ui/sonner`. Do not mount another toaster or introduce the Base UI toast manager alongside it.
 - Emit one outcome toast per action. Avoid duplicates from hooks, components, retries, rerenders, and cache invalidation.
@@ -298,6 +305,10 @@ When the user changes a shared UI standard, update this file instead of creating
 | 30      | 2026-11-10 | Keep jobs-map buildings flat initially and provide an independent 3D toggle that survives map style and full-screen changes.                                                                                           |
 | 31      | 2026-11-10 | Keep dark-map country borders high contrast and fully opaque across zoom levels, preserving provider boundary data and disputed-line patterns.                                                                         |
 | 32      | 2026-11-10 | Use the full available width for employee profiles, matching right-side sheets for employee creation and profile editing, and რედაქტირება for the leave-balance action.                                                |
+| 33      | 2026-11-10 | Use a four-second bottom-right toast for live announcements and an accessible unread navigation dot, without replaying historical alerts on reconnect.                                                                 |
+| 34      | 2026-11-10 | Extend live announcement toasts to 6 seconds while retaining bottom-right placement.                                                                                                                                   |
+| 35      | 2026-11-10 | Use an employee announcement reading feed, preserve the management delivery table, and queue immediate/sign-in modal announcements with next-sign-in reminders after dismissal.                                        |
+| 36      | 2026-11-10 | Restore the employee announcement table while keeping delivery details exclusive to management.                                                                                                                        |
 
 ## Employee creation and day-off allowance
 

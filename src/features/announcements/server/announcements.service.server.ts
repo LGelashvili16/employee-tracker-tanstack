@@ -2,6 +2,7 @@ import '@tanstack/react-start/server-only'
 import { currentAuthorization } from '#/lib/authorization/permissions'
 import { assertPermission } from '#/lib/authorization/access'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
+import { signalRealtime } from '#/lib/realtime/postgres-events.server'
 import {
   acknowledgeAnnouncementNotification,
   deliverAnnouncementNotifications,
@@ -66,11 +67,17 @@ export async function getAnnouncement(actor: Actor | null, input: unknown) {
   })
 }
 export async function getLoginAnnouncement(actor: Actor | null, loginAt: Date) {
-  return repository.transact(async (tx) => {
-    const actorId = await authorized(tx, actor)
-    const result = await repository.nextLogin(tx, actorId, loginAt)
-    return result ? serialize(result) : null
-  })
+  return repository.transact(
+    async (tx) => {
+      const actorId = await authorized(tx, actor)
+      const result = await repository.nextLogin(tx, actorId, loginAt)
+      return {
+        item: result.item ? serialize(result.item) : null,
+        remaining: result.remaining,
+      }
+    },
+    { isolationLevel: 'repeatable read' },
+  )
 }
 export async function publishAnnouncement(actor: Actor | null, input: unknown) {
   const data = publishAnnouncementSchema.parse(input)
@@ -95,12 +102,13 @@ export async function publishAnnouncement(actor: Actor | null, input: unknown) {
         )
       return { id: existing.id }
     }
-    await repository.snapshotRecipients(tx, created.id)
+    await repository.snapshotRecipients(tx, created.id, actorId)
     if (!data.showOnLogin)
       await deliverAnnouncementNotifications(tx, {
         id: created.id,
         title: data.title,
       })
+    await signalRealtime(tx, { topic: 'announcements', subjectId: created.id })
     return created
   })
 }
@@ -116,6 +124,35 @@ export async function acknowledgeAnnouncement(
     await repository.acknowledge(tx, actorId, data.id, data.action)
     if (data.action === 'read')
       await acknowledgeAnnouncementNotification(tx, actorId, data.id)
+    await signalRealtime(tx, { topic: 'announcements', recipientId: actorId })
     return { id: data.id }
+  })
+}
+
+/** Minimal stream projection; recipients and current account access are checked in persistence. */
+export async function announcementRealtimeState(
+  actor: Actor | null,
+  publishedId?: string,
+) {
+  if (publishedId)
+    publishedId = announcementLookupSchema.shape.id.parse(publishedId)
+  return repository.transact(async (tx) => {
+    const actorId = await authorized(tx, actor)
+    const unreadCount = await repository.unreadCount(tx, actorId)
+    const publication = publishedId
+      ? await repository.deliveredPublication(tx, actorId, publishedId)
+      : undefined
+    return {
+      unreadCount,
+      ...(publication && publication.authorId !== actorId
+        ? {
+            published: {
+              id: publication.id,
+              title: publication.title,
+              showOnLogin: publication.showOnLogin,
+            },
+          }
+        : {}),
+    }
   })
 }

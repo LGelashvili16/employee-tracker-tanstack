@@ -29,9 +29,9 @@ export const announcement = pgTable(
     title: text('title').notNull(),
     /** Plain-text announcement contents; no executable or rich HTML is stored. */
     body: text('body').notNull(),
-    /** True selects one-time next-login delivery; false selects the existing notification inbox. */
+    /** Legacy column name: true selects immediate/sign-in modal delivery until explicit reading; false selects the inbox. */
     showOnLogin: boolean('show_on_login').notNull().default(false),
-    /** Database publication instant in UTC; determines ordering and eligibility for a later login. */
+    /** Database publication instant in UTC; determines chronological listing and modal queue order. */
     publishedAt: timestamp('published_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -65,13 +65,17 @@ export const announcementRecipient = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'restrict' }),
-    /** UTC instant of dismissal or reading; null means the login modal has not been acknowledged. */
+    /** Last UTC dismissal/reading instant. Unread dismissals before the current sign-in are eligible for reminders. */
     dismissedAt: timestamp('dismissed_at', { withTimezone: true }),
     /** UTC instant of explicit reading; null also covers a dismissed but unread announcement. */
     readAt: timestamp('read_at', { withTimezone: true }),
   },
   (table) => [
     primaryKey({ columns: [table.announcementId, table.userId] }),
+    // Live unread state includes dismissed publications until the employee explicitly reads them.
+    index('announcement_recipient_unread')
+      .on(table.userId)
+      .where(sql`${table.readAt} is null`),
     index('announcement_recipient_pending')
       .on(table.userId, table.announcementId)
       .where(sql`${table.dismissedAt} is null and ${table.readAt} is null`),

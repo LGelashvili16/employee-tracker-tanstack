@@ -14,6 +14,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock('#/features/announcements/components/login-announcement', () => ({
   LoginAnnouncement: () => null,
 }))
+vi.mock('#/features/announcements/hooks/use-announcement-realtime', () => ({
+  useAnnouncementRealtime: () => ({ hasUnreadAnnouncements: false }),
+}))
 vi.mock('#/hooks/use-mobile', () => ({ useIsMobile: () => false }))
 vi.mock('#/components/ThemeToggle', () => ({ default: () => null }))
 vi.mock('#/components/common/pwa-install-button', () => ({

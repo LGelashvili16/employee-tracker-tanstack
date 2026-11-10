@@ -158,7 +158,7 @@ export function PublishAnnouncementSheet({
                 <Field data-invalid={!field.state.meta.isValid}>
                   <div className="flex items-center justify-between gap-4">
                     <FieldLabel htmlFor="announcement-login">
-                      შესვლისას ფანჯარაში ჩვენება
+                      ფანჯარაში ჩვენება
                     </FieldLabel>
                     <Switch
                       id="announcement-login"
@@ -173,7 +173,7 @@ export function PublishAnnouncementSheet({
                     className="text-sm leading-6 text-muted-foreground"
                   >
                     {field.state.value
-                      ? 'თანამშრომელი განცხადებას მომდევნო შესვლისას ნახავს. დახურვის ან წაკითხვის შემდეგ ფანჯარა აღარ გაიხსნება.'
+                      ? 'სისტემაში მყოფი თანამშრომელი ფანჯარას მაშინვე ნახავს, დანარჩენები შესვლის შემდეგ. დახურული განცხადება შემდეგი შესვლისას კვლავ გამოჩნდება, სანამ წაკითხულად არ მოინიშნება.'
                       : 'თანამშრომლები განცხადების შესახებ შეტყობინებას ზარის მენიუში მიიღებენ.'}
                   </p>
                   <FieldError errors={field.state.meta.errors} />

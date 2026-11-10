@@ -94,6 +94,12 @@ export function AnnouncementsPage({
 }) {
   const query = useQuery(announcementsQuery(actorId, search))
   const pages = Math.max(1, Math.ceil((query.data?.total ?? 0) / 20))
+  const changeSort = () =>
+    onSearch({
+      ...search,
+      sort: search.sort === 'newest' ? 'oldest' : 'newest',
+      page: 1,
+    })
   return (
     <div className="flex w-full min-w-0 flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -137,15 +143,11 @@ export function AnnouncementsPage({
             </Alert>
           ) : query.data.items.length ? (
             <AnnouncementsTable
+              showDelivery={manage}
+              showAuthor={manage}
               items={query.data.items}
               sort={search.sort}
-              onSort={() =>
-                onSearch({
-                  ...search,
-                  sort: search.sort === 'newest' ? 'oldest' : 'newest',
-                  page: 1,
-                })
-              }
+              onSort={changeSort}
               onOpen={(id) => onSearch({ ...search, announcementId: id })}
             />
           ) : (

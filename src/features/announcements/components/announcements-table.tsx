@@ -16,20 +16,24 @@ import {
   TableRow,
 } from '#/components/ui/table'
 import { formatAnnouncementDate } from '../announcements.format'
-import type { AnnouncementSummary } from '../announcements.types'
+import type { AnnouncementListItem } from '../announcements.types'
 
 const features = tableFeatures({})
-const helper = createColumnHelper<typeof features, AnnouncementSummary>()
+const helper = createColumnHelper<typeof features, AnnouncementListItem>()
 export function AnnouncementsTable({
   items,
   sort,
   onSort,
   onOpen,
+  showDelivery = false,
+  showAuthor = false,
 }: {
-  items: Array<AnnouncementSummary>
+  items: Array<AnnouncementListItem>
   sort: 'newest' | 'oldest'
   onSort: () => void
   onOpen: (id: string) => void
+  showDelivery?: boolean
+  showAuthor?: boolean
 }) {
   const columns = useMemo(
     () =>
@@ -46,6 +50,18 @@ export function AnnouncementsTable({
             </Button>
           ),
         }),
+        ...(showAuthor
+          ? [
+              helper.accessor('authorName', {
+                header: 'ავტორი',
+                cell: ({ row }) => (
+                  <span className="whitespace-normal wrap-anywhere">
+                    {row.original.authorName}
+                  </span>
+                ),
+              }),
+            ]
+          : []),
         helper.accessor('publishedAt', {
           header: () => (
             <Button variant="link" onClick={onSort}>
@@ -55,14 +71,20 @@ export function AnnouncementsTable({
           ),
           cell: ({ row }) => formatAnnouncementDate(row.original.publishedAt),
         }),
-        helper.accessor('showOnLogin', {
-          header: 'ჩვენება',
-          cell: ({ row }) => (
-            <Badge variant={row.original.showOnLogin ? 'blue' : 'secondary'}>
-              {row.original.showOnLogin ? 'შესვლისას' : 'შეტყობინება'}
-            </Badge>
-          ),
-        }),
+        ...(showDelivery
+          ? [
+              helper.accessor('showOnLogin', {
+                header: 'ჩვენება',
+                cell: ({ row }) => (
+                  <Badge
+                    variant={row.original.showOnLogin ? 'blue' : 'secondary'}
+                  >
+                    {row.original.showOnLogin ? 'მოდალი' : 'შეტყობინება'}
+                  </Badge>
+                ),
+              }),
+            ]
+          : []),
         helper.accessor('readAt', {
           header: 'სტატუსი',
           cell: ({ row }) => (
@@ -72,7 +94,7 @@ export function AnnouncementsTable({
           ),
         }),
       ]),
-    [onOpen, onSort],
+    [onOpen, onSort, showDelivery, showAuthor],
   )
   const table = useTable({
     features,

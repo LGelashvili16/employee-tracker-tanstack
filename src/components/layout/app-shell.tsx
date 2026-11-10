@@ -9,6 +9,7 @@ import {
 import { NotificationsPopover } from '#/features/notifications/components/notifications-popover'
 import { NotificationsProvider } from '#/features/notifications/components/notifications-provider'
 import { LoginAnnouncement } from '#/features/announcements/components/login-announcement'
+import { useAnnouncementRealtime } from '#/features/announcements/hooks/use-announcement-realtime'
 import ThemeToggle from '#/components/ThemeToggle'
 import { PwaInstallButton } from '#/components/common/pwa-install-button'
 import { authClient } from '#/lib/auth/auth-client'
@@ -27,6 +28,15 @@ import {
 import type { Actor } from '#/lib/authorization/actor'
 
 export function AppShell({ actor }: { actor: Actor }) {
+  return (
+    <NotificationsProvider key={actor.id}>
+      <WorkspaceShell actor={actor} />
+    </NotificationsProvider>
+  )
+}
+
+function WorkspaceShell({ actor }: { actor: Actor }) {
+  const { hasUnreadAnnouncements } = useAnnouncementRealtime(actor.id)
   const router = useRouter()
   const pathname = useLocation({ select: (location) => location.pathname })
   const pageTitle =
@@ -52,7 +62,7 @@ export function AppShell({ actor }: { actor: Actor }) {
     }
   }
   return (
-    <NotificationsProvider key={actor.id}>
+    <>
       <LoginAnnouncement actorId={actor.id} />
       <SidebarProvider className="h-dvh min-h-0 overflow-hidden">
         <a
@@ -63,6 +73,7 @@ export function AppShell({ actor }: { actor: Actor }) {
         </a>
         <AppSidebar
           actor={actor}
+          hasUnreadAnnouncements={hasUnreadAnnouncements}
           inset
           footer={
             <WorkspaceUserMenu
@@ -108,6 +119,6 @@ export function AppShell({ actor }: { actor: Actor }) {
         </SidebarInset>
         <PwaInstallButton />
       </SidebarProvider>
-    </NotificationsProvider>
+    </>
   )
 }

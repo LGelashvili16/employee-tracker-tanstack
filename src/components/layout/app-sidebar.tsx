@@ -33,10 +33,12 @@ export function AppSidebar({
   actor,
   inset = false,
   footer,
+  hasUnreadAnnouncements = false,
 }: {
   actor: Actor
   inset?: boolean
   footer?: ReactNode
+  hasUnreadAnnouncements?: boolean
 }) {
   const pathname = useLocation({ select: (location) => location.pathname })
   const { setOpenMobile } = useSidebar()
@@ -135,6 +137,19 @@ export function AppSidebar({
                     >
                       <item.icon aria-hidden="true" />
                       <span>{item.label}</span>
+                      {item.to === '/announcements' &&
+                      hasUnreadAnnouncements ? (
+                        <>
+                          <span
+                            aria-hidden="true"
+                            data-slot="announcement-unread-dot"
+                            className="ml-auto size-2 shrink-0 rounded-full bg-destructive"
+                          />
+                          <span className="sr-only">
+                            , წაუკითხავი განცხადებები
+                          </span>
+                        </>
+                      ) : null}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}

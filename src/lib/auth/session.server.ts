@@ -14,10 +14,21 @@ import { isSyntheticAuthEmail } from '#/features/access/access.rules'
 
 export async function readActor(): Promise<Actor | null> {
   setResponseHeader('Cache-Control', 'private, no-store')
+  return readActorFromHeaders(getRequestHeaders())
+}
+
+/** Long-lived HTTP streams revalidate captured request headers without mutating response headers. */
+export async function readActorFromHeaders(
+  headers: Headers,
+  disableRefresh = false,
+): Promise<Actor | null> {
   // Role changes and revocation must apply even if cookie caching is later enabled.
   const session = await auth.api.getSession({
-    headers: getRequestHeaders(),
-    query: { disableCookieCache: true },
+    headers,
+    query: {
+      disableCookieCache: true,
+      ...(disableRefresh ? { disableRefresh: true } : {}),
+    },
   })
   if (!session) return null
   const access = await getLoginAccess(session.user.id)

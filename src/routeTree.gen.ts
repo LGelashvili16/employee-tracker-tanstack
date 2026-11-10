@@ -20,6 +20,7 @@ import { Route as AuthenticatedManageRouteRouteImport } from './routes/_authenti
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
 import { Route as AuthenticatedVacationRouteImport } from './routes/_authenticated/vacation'
+import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
@@ -116,6 +117,11 @@ const AuthenticatedVacationRoute = AuthenticatedVacationRouteImport.update({
   id: '/vacation',
   path: '/vacation',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiEventsRoute = ApiEventsRouteImport.update({
+  id: '/api/events',
+  path: '/api/events',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
@@ -347,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/vacation': typeof AuthenticatedVacationRoute
+  '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -396,6 +403,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/vacation': typeof AuthenticatedVacationRoute
+  '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -447,6 +455,7 @@ export interface FileRoutesById {
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
   '/_authenticated/vacation': typeof AuthenticatedVacationRoute
+  '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -499,6 +508,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedule'
     | '/vacation'
+    | '/api/events'
     | '/api/health'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -548,6 +558,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedule'
     | '/vacation'
+    | '/api/events'
     | '/api/health'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -598,6 +609,7 @@ export interface FileRouteTypes {
     | '/_authenticated/notifications'
     | '/_authenticated/schedule'
     | '/_authenticated/vacation'
+    | '/api/events'
     | '/api/health'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -642,6 +654,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
+  ApiEventsRoute: typeof ApiEventsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -724,6 +737,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/vacation'
       preLoaderRoute: typeof AuthenticatedVacationRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/events': {
+      id: '/api/events'
+      path: '/api/events'
+      fullPath: '/api/events'
+      preLoaderRoute: typeof ApiEventsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/health': {
       id: '/api/health'
@@ -1167,6 +1187,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRouteRoute: AuthRouteRouteWithChildren,
+  ApiEventsRoute: ApiEventsRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

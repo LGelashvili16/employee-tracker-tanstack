@@ -1,25 +1,35 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useLocation } from '@tanstack/react-router'
 import { pendingAnnouncementQuery } from '../announcements.queries'
 import { AnnouncementDialog } from './announcement-dialog'
 
-/** Session time and persisted acknowledgements determine eligibility on the server. No browser storage is used. */
+/** The server owns pending order and sign-in reminder state; SSE invalidates this query on arrival. */
 export function LoginAnnouncement({ actorId }: { actorId: string }) {
-  const pathname = useLocation({ select: (location) => location.pathname })
-  const browsing =
-    pathname === '/announcements' || pathname === '/manage/announcements'
+  const reading = useLocation({
+    select: (location) => Boolean(location.search.announcementId),
+  })
+  const [completed, setCompleted] = useState(0)
   const query = useQuery({
     ...pendingAnnouncementQuery(actorId),
-    enabled: !browsing,
+    enabled: !reading,
   })
-  if (browsing || !query.data) return null
+  const pending = query.data
+  const item = pending?.item
+  if (reading || !pending || !item) return null
   return (
     <AnnouncementDialog
-      key={query.data.id}
+      key={item.id}
       actorId={actorId}
-      value={query.data}
+      value={item}
       automatic
-      onClose={() => {}}
+      progress={{
+        current: completed + 1,
+        total: completed + pending.remaining,
+      }}
+      onClose={() =>
+        setCompleted((count) => (pending.remaining > 1 ? count + 1 : 0))
+      }
     />
   )
 }

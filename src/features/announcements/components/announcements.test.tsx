@@ -12,7 +12,7 @@ const api = vi.hoisted(() => ({
   pending: vi.fn(),
   success: vi.fn(),
   error: vi.fn(),
-  pathname: '/dashboard',
+  manualReader: false,
 }))
 vi.mock('../announcements.functions', () => ({
   markAnnouncement: api.mark,
@@ -21,7 +21,9 @@ vi.mock('../announcements.functions', () => ({
   getAnnouncements: vi.fn(),
   getAnnouncementDetail: vi.fn(),
 }))
-vi.mock('@tanstack/react-router', () => ({ useLocation: () => api.pathname }))
+vi.mock('@tanstack/react-router', () => ({
+  useLocation: () => api.manualReader,
+}))
 vi.mock('sonner', () => ({ toast: { success: api.success, error: api.error } }))
 const value = {
   id: '019aac01-0000-7000-8000-000000000001',
@@ -49,10 +51,13 @@ function wrapper({ children }: { children: React.ReactNode }) {
 }
 beforeEach(() => {
   vi.clearAllMocks()
-  api.pathname = '/dashboard'
+  api.manualReader = false
   api.mark.mockResolvedValue({ ok: true, value: { id: value.id } })
   api.create.mockResolvedValue({ ok: true, value: { id: value.id } })
-  api.pending.mockResolvedValue({ ok: true, value })
+  api.pending.mockResolvedValue({
+    ok: true,
+    value: { item: value, remaining: 1 },
+  })
 })
 describe('announcement delivery', () => {
   it('checks again after signing back into the same account with a cached empty result', async () => {
@@ -62,7 +67,10 @@ describe('announcement delivery', () => {
     const sharedWrapper = ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     )
-    api.pending.mockResolvedValueOnce({ ok: true, value: null })
+    api.pending.mockResolvedValueOnce({
+      ok: true,
+      value: { item: null, remaining: 0 },
+    })
     const firstMount = render(<LoginAnnouncement actorId="worker" />, {
       wrapper: sharedWrapper,
     })
@@ -98,6 +106,66 @@ describe('announcement delivery', () => {
     })
     expect(api.success).toHaveBeenCalledOnce()
   })
+  it('queues live arrivals after the open modal and advances through all items once', async () => {
+    const user = userEvent.setup()
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const second = {
+      ...value,
+      id: '019aac01-0000-7000-8000-000000000002',
+      title: 'მეორე განცხადება',
+    }
+    const third = {
+      ...value,
+      id: '019aac01-0000-7000-8000-000000000003',
+      title: 'მესამე განცხადება',
+    }
+    let items = [value, second]
+    api.pending.mockImplementation(async () => ({
+      ok: true,
+      value: { item: items[0] ?? null, remaining: items.length },
+    }))
+    api.mark.mockImplementation(async ({ data }: { data: { id: string } }) => {
+      items = items.filter((item) => item.id !== data.id)
+      return { ok: true, value: { id: data.id } }
+    })
+    render(
+      <QueryClientProvider client={client}>
+        <LoginAnnouncement actorId="worker" />
+      </QueryClientProvider>,
+    )
+    expect(
+      await screen.findByRole('dialog', { name: value.title }),
+    ).toBeVisible()
+    expect(screen.getByRole('status')).toHaveTextContent('განცხადება 1 / 2')
+    items.push(third)
+    await client.invalidateQueries({ queryKey: ['announcements', 'worker'] })
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('განცხადება 1 / 3'),
+    )
+    expect(screen.getByRole('dialog', { name: value.title })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'დახურვა' }))
+    expect(
+      await screen.findByRole('dialog', { name: second.title }),
+    ).toBeVisible()
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('განცხადება 2 / 3'),
+    )
+    await user.click(screen.getByRole('button', { name: 'წავიკითხე' }))
+    expect(
+      await screen.findByRole('dialog', { name: third.title }),
+    ).toBeVisible()
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('განცხადება 3 / 3'),
+    )
+    await user.click(screen.getByRole('button', { name: 'დახურვა' }))
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    expect(api.mark).toHaveBeenCalledTimes(3)
+    client.clear()
+  })
   it('keeps the modal open if acknowledgement fails and permits a retry', async () => {
     const user = userEvent.setup()
     const close = vi.fn()
@@ -132,8 +200,25 @@ describe('announcement delivery', () => {
     expect(close).toHaveBeenCalledOnce()
     expect(api.mark).not.toHaveBeenCalled()
   })
-  it('does not interrupt employees while they voluntarily browse announcements', () => {
-    api.pathname = '/announcements'
+  it('defers a delivered modal opened manually before resuming the automatic queue', async () => {
+    const user = userEvent.setup()
+    const close = vi.fn()
+    render(
+      <AnnouncementDialog
+        actorId="worker"
+        value={{ ...value, isRecipient: true }}
+        onClose={close}
+      />,
+      { wrapper },
+    )
+    await user.click(screen.getByRole('button', { name: 'დახურვა' }))
+    await waitFor(() => expect(close).toHaveBeenCalledOnce())
+    expect(api.mark).toHaveBeenCalledWith({
+      data: { id: value.id, action: 'dismiss' },
+    })
+  })
+  it('waits while another announcement reader is open instead of stacking dialogs', () => {
+    api.manualReader = true
     render(<LoginAnnouncement actorId="worker" />, { wrapper })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(api.pending).not.toHaveBeenCalled()
@@ -160,9 +245,7 @@ describe('announcement delivery', () => {
       value.title,
     )
     await user.type(screen.getByRole('textbox', { name: 'ტექსტი' }), value.body)
-    await user.click(
-      screen.getByRole('switch', { name: 'შესვლისას ფანჯარაში ჩვენება' }),
-    )
+    await user.click(screen.getByRole('switch', { name: 'ფანჯარაში ჩვენება' }))
     await user.click(screen.getByRole('button', { name: 'გამოქვეყნება' }))
     await waitFor(() => expect(published).toHaveBeenCalledOnce())
     expect(api.create).toHaveBeenCalledWith({

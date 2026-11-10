@@ -21,13 +21,17 @@ export function AnnouncementDialog({
   actorId,
   automatic = false,
   onClose,
+  progress,
 }: {
   value: AnnouncementDetail
   actorId: string
   automatic?: boolean
   onClose: () => void
+  progress?: { current: number; total: number }
 }) {
   const client = useQueryClient()
+  const deferOnClose =
+    automatic || (value.showOnLogin && value.isRecipient && !value.readAt)
   const mutation = useMutation({
     mutationFn: async (action: 'dismiss' | 'read') => {
       const result = await markAnnouncement({ data: { id: value.id, action } })
@@ -50,7 +54,7 @@ export function AnnouncementDialog({
   })
   function close() {
     if (mutation.isPending) return
-    if (automatic) mutation.mutate('dismiss')
+    if (deferOnClose) mutation.mutate('dismiss')
     else onClose()
   }
   return (
@@ -69,10 +73,20 @@ export function AnnouncementDialog({
           <DialogDescription>
             {formatAnnouncementDate(value.publishedAt)}
           </DialogDescription>
+          {progress ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              განცხადება {progress.current} / {progress.total}
+            </p>
+          ) : null}
         </DialogHeader>
         <p className="min-h-0 overflow-y-auto text-sm leading-7 whitespace-pre-wrap wrap-anywhere">
           {value.body}
         </p>
+        {deferOnClose ? (
+          <p className="shrink-0 text-sm text-muted-foreground">
+            დახურული განცხადება შემდეგი შესვლისას კვლავ გამოჩნდება.
+          </p>
+        ) : null}
         <DialogFooter className="shrink-0">
           <Button
             depth="raised"

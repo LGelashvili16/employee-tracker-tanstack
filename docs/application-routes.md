@@ -12,7 +12,7 @@ This project serves one company. Payroll, finance, CRM, and sales functionality 
 
 ## Current functionality
 
-Company announcements live at `/announcements`, with HR/admin publishing at `/manage/announcements`. Publishers choose persistent next-login modal delivery or a linked alert in the existing notification bell/inbox. Dismissal and explicit reading are stored independently per employee. See [announcements](announcements.md) for delivery, permissions, and migration details.
+Company announcements use an employee table at `/announcements`, with HR/admin publishing and a delivery-details table at `/manage/announcements`. Publishers choose an immediate/sign-in modal queue or a linked alert in the existing notification bell/inbox. Modal dismissal advances the queue until another sign-in; explicit reading stops reminders. See [announcements](announcements.md) for delivery, permissions, and migration details.
 
 The shared `/jobs` workspace implements installation and measurement pins, map/list views, creation, editing, claims, arrival, completion, rejection and reopening. Creation and details open inside the shared workspace. See [the jobs map](jobs-map.md) for permissions, state transitions, map limits and persistence.
 
@@ -37,22 +37,23 @@ Removed obsolete routes rather than keeping compatibility redirects. Old bookmar
 
 The starter about page, old admin landing pages, admin user aliases, invitation-acceptance shell, attendance-history alias, job detail aliases, and separate new-job page have been removed. The admin layout remains solely to guard its child pages and rejects the bare admin URL. The attendance tabs and sidebar use current destinations directly.
 
-| Routes                                                  | Current state                                                                                                         |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `/`                                                     | Entry redirects to the signed-in workspace or login.                                                                  |
-| `/api/auth/$`                                           | Better Auth HTTP protocol handler.                                                                                    |
-| `/api/health`                                           | Public deployment readiness probe. Returns only availability, verifies database connectivity, and disables caching.   |
-| `/auth/login`, `/auth/register`, `/auth/reset-password` | Login, activation, and code-based reset forms.                                                                        |
-| `/auth/forgot-password`                                 | Recovery instructions and the reset form link.                                                                        |
-| `/dashboard`, `/attendance`                             | Shared attendance clock and summaries in landing and focused layouts.                                                 |
-| `/timesheets`, `/timesheets/$timesheetId`               | Personal monthly totals and daily attendance records.                                                                 |
-| `/jobs`                                                 | Shared job workspace with creation and job details in dialogs.                                                        |
-| `/schedule`                                             | Personal schedule view.                                                                                               |
-| `/notifications`                                        | Persisted notification feed with read state and pagination.                                                           |
-| `/settings/profile`, `/settings/security`               | Profile/phone and password controls.                                                                                  |
-| `/manage/employees`, `/manage/employees/$employeeId`    | Employee creation, account lifecycle, profile, schedule, and attendance shortcuts for HR, administrators, and owners. |
-| `/manage/attendance`, `/manage/attendance/$userId`      | Unified attendance and employee timesheets, with scoped review/correction controls.                                   |
-| `/manage/schedule`                                      | Company schedules, day-off allowance defaults, reviewer assignments, and attendance limits.                           |
+| Routes                                                  | Current state                                                                                                                                          |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/`                                                     | Entry redirects to the signed-in workspace or login.                                                                                                   |
+| `/api/auth/$`                                           | Better Auth HTTP protocol handler.                                                                                                                     |
+| `/api/events`                                           | Authenticated same-origin SSE stream for announcement unread state and live publications. See [live announcement delivery](announcements-realtime.md). |
+| `/api/health`                                           | Public deployment readiness probe. Returns only availability, verifies database connectivity, and disables caching.                                    |
+| `/auth/login`, `/auth/register`, `/auth/reset-password` | Login, activation, and code-based reset forms.                                                                                                         |
+| `/auth/forgot-password`                                 | Recovery instructions and the reset form link.                                                                                                         |
+| `/dashboard`, `/attendance`                             | Shared attendance clock and summaries in landing and focused layouts.                                                                                  |
+| `/timesheets`, `/timesheets/$timesheetId`               | Personal monthly totals and daily attendance records.                                                                                                  |
+| `/jobs`                                                 | Shared job workspace with creation and job details in dialogs.                                                                                         |
+| `/schedule`                                             | Personal schedule view.                                                                                                                                |
+| `/notifications`                                        | Persisted notification feed with read state and pagination.                                                                                            |
+| `/settings/profile`, `/settings/security`               | Profile/phone and password controls.                                                                                                                   |
+| `/manage/employees`, `/manage/employees/$employeeId`    | Employee creation, account lifecycle, profile, schedule, and attendance shortcuts for HR, administrators, and owners.                                  |
+| `/manage/attendance`, `/manage/attendance/$userId`      | Unified attendance and employee timesheets, with scoped review/correction controls.                                                                    |
+| `/manage/schedule`                                      | Company schedules, day-off allowance defaults, reviewer assignments, and attendance limits.                                                            |
 
 Leave requests at `/leave` support day-off, vacation, and open-ended sick-leave submissions for every active account role. `/manage/leave` provides company-wide review for HR, administrators, and owners through `leave.review`. Reviewers can adjust pending dates, approve, or reject with an optional description. Personal history is scoped to the authenticated requester. Self-review, overlapping pending/approved requests, and stale reviews are rejected. Request changes and their before/after audit records commit together. Both lists use validated URL search, status filters, server sorting, and pagination. Attendance calculations are unchanged. Approved day-off requests debit one day from the employee allowance atomically with review; paid vacations use a separate working-day balance.
 

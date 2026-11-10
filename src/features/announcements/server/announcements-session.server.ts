@@ -3,7 +3,7 @@ import { getRequestHeaders } from '@tanstack/react-start/server'
 import { auth } from '#/lib/auth/auth'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
 
-/** The modal cutoff comes from Better Auth's current session, never a browser-supplied date. */
+/** Reminders use the trusted session start to distinguish this sign-in from a previous dismissal. */
 export async function currentLoginAt(actorId: string) {
   const session = await auth.api.getSession({
     headers: getRequestHeaders(),

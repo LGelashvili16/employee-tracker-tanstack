@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { readActor } from './session.server'
+import { readActor, readActorFromHeaders } from './session.server'
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -33,6 +33,16 @@ describe('trusted actor projection', () => {
       'Cache-Control',
       'private, no-store',
     )
+  })
+  it('checks a stream session without refreshing it or writing response headers', async () => {
+    mocks.getSession.mockResolvedValue(null)
+    const headers = new Headers()
+    expect(await readActorFromHeaders(headers, true)).toBeNull()
+    expect(mocks.getSession).toHaveBeenCalledWith({
+      headers,
+      query: { disableCookieCache: true, disableRefresh: true },
+    })
+    expect(mocks.header).not.toHaveBeenCalled()
   })
   it('projects safe fields and denies malformed persisted grants', async () => {
     mocks.getSession.mockResolvedValue({

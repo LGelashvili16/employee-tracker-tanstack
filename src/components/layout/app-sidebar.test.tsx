@@ -26,10 +26,12 @@ function renderSidebar(
   role: Role | ReadonlyArray<Role>,
   inset = false,
   permissionOverrides?: PermissionOverrides,
+  hasUnreadAnnouncements = false,
 ) {
   return render(
     <SidebarProvider>
       <AppSidebar
+        hasUnreadAnnouncements={hasUnreadAnnouncements}
         inset={inset}
         actor={{
           id: 'test',
@@ -45,6 +47,17 @@ function renderSidebar(
 }
 
 describe('workspace navigation', () => {
+  it('labels the announcement unread dot accessibly without adding another header icon', () => {
+    const { container } = renderSidebar('employee', false, undefined, true)
+    expect(
+      screen.getByRole('link', {
+        name: /განცხადებები.*წაუკითხავი განცხადებები/,
+      }),
+    ).toHaveAttribute('href', '/announcements')
+    expect(
+      container.querySelector('[data-slot="announcement-unread-dot"]'),
+    ).toHaveAttribute('aria-hidden', 'true')
+  })
   it('shows the dedicated work schedule entry and keeps only it active on that page', () => {
     location.pathname = '/manage/schedule'
     const { container } = renderSidebar('owner')

@@ -8,7 +8,8 @@ import {
   ilike,
   isNotNull,
   isNull,
-  lte,
+  lt,
+  ne,
   or,
   sql,
 } from 'drizzle-orm'
@@ -97,8 +98,12 @@ const summary = {
   title: announcement.title,
   publishedAt: announcement.publishedAt,
   showOnLogin: announcement.showOnLogin,
-  readAt: announcementRecipient.readAt,
 }
+// Authors already know their publication; keep it visible with read status, without delivery.
+const reading = (actorId: string) =>
+  sql<Date | null>`case when ${announcement.authorId} = ${actorId} then ${announcement.publishedAt} else ${announcementRecipient.readAt} end`.mapWith(
+    announcement.publishedAt,
+  )
 const recipientJoin = (actorId: string) =>
   and(
     eq(announcementRecipient.announcementId, announcement.id),
@@ -116,15 +121,20 @@ export async function list(
       ? or(ilike(announcement.title, term), ilike(announcement.body, term))
       : undefined,
     input.status === 'unread'
-      ? isNull(announcementRecipient.readAt)
+      ? isNull(reading(actorId))
       : input.status === 'read'
-        ? isNotNull(announcementRecipient.readAt)
+        ? isNotNull(reading(actorId))
         : undefined,
   )
   const order = input.sort === 'newest' ? desc : asc
   const items = await tx
-    .select(summary)
+    .select({
+      ...summary,
+      readAt: reading(actorId),
+      authorName: user.name,
+    })
     .from(announcement)
+    .innerJoin(user, eq(user.id, announcement.authorId))
     .leftJoin(announcementRecipient, recipientJoin(actorId))
     .where(where)
     .orderBy(order(announcement.publishedAt), order(announcement.id))
@@ -145,7 +155,12 @@ export async function detail(
   return (
     (
       await tx
-        .select({ ...summary, body: announcement.body })
+        .select({
+          ...summary,
+          readAt: reading(actorId),
+          body: announcement.body,
+          isRecipient: sql<boolean>`${announcementRecipient.userId} is not null`,
+        })
         .from(announcement)
         .leftJoin(announcementRecipient, recipientJoin(actorId))
         .where(eq(announcement.id, id))
@@ -158,32 +173,37 @@ export async function nextLogin(
   actorId: string,
   loginAt: Date,
 ) {
-  return (
-    (
-      await tx
-        .select({ ...summary, body: announcement.body })
-        .from(announcement)
-        .innerJoin(announcementRecipient, recipientJoin(actorId))
-        .where(
-          and(
-            eq(announcement.showOnLogin, true),
-            lte(announcement.publishedAt, loginAt),
-            isNull(announcementRecipient.dismissedAt),
-            isNull(announcementRecipient.readAt),
-          ),
-        )
-        .orderBy(asc(announcement.publishedAt), asc(announcement.id))
-        .limit(1)
-    ).at(0) ?? null
+  const where = and(
+    eq(announcement.showOnLogin, true),
+    ne(announcement.authorId, actorId),
+    isNull(announcementRecipient.readAt),
+    or(
+      isNull(announcementRecipient.dismissedAt),
+      lt(announcementRecipient.dismissedAt, loginAt),
+    ),
   )
+  const items = await tx
+    .select({ ...summary, readAt: reading(actorId), body: announcement.body })
+    .from(announcement)
+    .innerJoin(announcementRecipient, recipientJoin(actorId))
+    .where(where)
+    .orderBy(asc(announcement.publishedAt), asc(announcement.id))
+    .limit(1)
+  const [total] = await tx
+    .select({ value: count() })
+    .from(announcement)
+    .innerJoin(announcementRecipient, recipientJoin(actorId))
+    .where(where)
+  return { item: items.at(0) ?? null, remaining: total.value }
 }
 export async function snapshotRecipients(
   tx: AnnouncementTransaction,
   id: string,
+  authorId: string,
 ) {
   await tx.execute(sql`insert into ${announcementRecipient} (announcement_id, user_id)
     select ${id}::uuid, ${user.id} from ${user} inner join ${employee} on ${employee.userId} = ${user.id}
-    where ${employee.status} = 'active' and ${user.accessState} in ('active', 'invited')`)
+    where ${employee.status} = 'active' and ${user.accessState} in ('active', 'invited') and ${user.id} <> ${authorId}`)
 }
 export async function acknowledge(
   tx: AnnouncementTransaction,
@@ -191,13 +211,26 @@ export async function acknowledge(
   id: string,
   action: 'dismiss' | 'read',
 ) {
+  if (action === 'dismiss') {
+    // Closing historical content must not enroll a later employee in old modal delivery.
+    await tx
+      .update(announcementRecipient)
+      .set({ dismissedAt: sql`now()` })
+      .where(
+        and(
+          eq(announcementRecipient.announcementId, id),
+          eq(announcementRecipient.userId, actorId),
+        ),
+      )
+    return
+  }
   await tx
     .insert(announcementRecipient)
     .values({
       announcementId: id,
       userId: actorId,
       dismissedAt: sql`now()`,
-      readAt: action === 'read' ? sql`now()` : null,
+      readAt: sql`now()`,
     })
     .onConflictDoUpdate({
       target: [
@@ -205,10 +238,48 @@ export async function acknowledge(
         announcementRecipient.userId,
       ],
       set: {
-        dismissedAt: sql`coalesce(${announcementRecipient.dismissedAt}, now())`,
-        ...(action === 'read'
-          ? { readAt: sql`coalesce(${announcementRecipient.readAt}, now())` }
-          : {}),
+        dismissedAt: sql`now()`,
+        readAt: sql`coalesce(${announcementRecipient.readAt}, now())`,
       },
     })
+}
+
+export async function unreadCount(
+  tx: AnnouncementTransaction,
+  actorId: string,
+) {
+  const [result] = await tx
+    .select({ value: count() })
+    .from(announcementRecipient)
+    .innerJoin(
+      announcement,
+      eq(announcement.id, announcementRecipient.announcementId),
+    )
+    .where(
+      and(
+        eq(announcementRecipient.userId, actorId),
+        isNull(announcementRecipient.readAt),
+        ne(announcement.authorId, actorId),
+      ),
+    )
+  return result.value
+}
+
+export async function deliveredPublication(
+  tx: AnnouncementTransaction,
+  actorId: string,
+  id: string,
+) {
+  return (
+    await tx
+      .select({
+        id: announcement.id,
+        title: announcement.title,
+        authorId: announcement.authorId,
+        showOnLogin: announcement.showOnLogin,
+      })
+      .from(announcement)
+      .innerJoin(announcementRecipient, recipientJoin(actorId))
+      .where(and(eq(announcement.id, id), isNull(announcementRecipient.readAt)))
+  ).at(0)
 }

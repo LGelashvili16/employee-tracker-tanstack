@@ -121,7 +121,7 @@ export const navigationItems = [
   {
     to: '/manage/leave',
     icon: IconCalendarCheck,
-    label: 'არყოფნების მართვა',
+    label: 'არყოფნები',
     permission: 'leave.review',
   },
 
