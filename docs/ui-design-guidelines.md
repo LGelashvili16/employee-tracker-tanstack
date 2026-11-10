@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 26. Last updated: 2026-11-09.
+Status: required project instructions. Version: 32. Last updated: 2026-11-10.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -71,7 +71,13 @@ Place the page title outside and above a route-aware tabs wrapper when that wrap
 - Hide decorative icons from assistive technology. Icon-only actions need concise Georgian accessible names and tooltips where their meaning is not obvious.
 - An unread dot is a status indicator, not a numeric badge. Preserve its accessible unread meaning. Notification row dots sit beside the corresponding bell icon, as established in the notification UI.
 
+The personal schedule uses a sky-blue daylight-to-night palette. Its today panel has soft sunlight over a blue sky at the top, fading into twilight and a dark blue star-lit bottom. Keep atmospheric layers static, decorative, behind the text, and scoped through the schedule styles in `src/styles.css`. Use dark start-time text and light end-time text, stacked on mobile. Weekday work blocks follow the same light-to-dark direction, with a brighter sky treatment for today and quiet cool accents for days off. These calendar colors describe the schedule, not attendance completion or approval. Preserve explicit today/day-off labels and readable contrast in both themes.
+
 ### Map cartography
+
+Dark country borders use a distinct high-contrast stroke, full opacity, and a nonzero width at every zoom. Keep smaller administrative boundaries subordinate and preserve the provider filters and disputed-boundary dash patterns.
+
+The jobs map starts with flat buildings. Its separate 3D buildings control exposes a pressed state and toggles building height without changing the camera or hiding footprints. Preserve the choice across theme/POI changes and full-screen map remounts.
 
 Map cartography has its own reference palette, maintained in `src/components/ui/map-styles.ts`. Dark maps use the approved slate terrain (`#314256`), deep blue water (`#1c347a`), teal parks (`#00615e`), and muted gray road/building hierarchy with colored place labels. Apply the palette to geographic layers rather than tinting the canvas with a CSS filter. Map controls, search, dialogs, job markers and statuses continue to use the existing application tokens. Light map colors remain provider-owned.
 
@@ -286,10 +292,17 @@ When the user changes a shared UI standard, update this file instead of creating
 | 18      | 2026-11-09 | Use /manage/attendance for attendance and employee detail; replace the scheduling placeholder with the working work-schedule/settings page at /manage/schedule and remove the attendance shortcut.                     |
 | 19      | 2026-11-09 | Organize employee attendance around one work date, defaulting to company-local today; use shared date controls and one table instead of repeated day cards and sorting controls.                                       |
 | 20      | 2026-11-09 | Use one calendar date for day-off requests and date ranges for vacations, including reviewer date changes.                                                                                                             |
+| 27      | 2026-11-10 | Use coordinated blue and purple accents for the personal schedule, with a restrained gradient for today and matching mobile colors.                                                                                    |
+| 28      | 2026-11-10 | Associate the today panel start time with warm morning colors and the end time with evening blue, preserving readable text and vertical order in both themes.                                                          |
+| 29      | 2026-11-10 | Use a sunlit sky-to-night today panel with quiet stars and matching daylight-to-evening weekday blocks.                                                                                                                |
+| 30      | 2026-11-10 | Keep jobs-map buildings flat initially and provide an independent 3D toggle that survives map style and full-screen changes.                                                                                           |
+| 31      | 2026-11-10 | Keep dark-map country borders high contrast and fully opaque across zoom levels, preserving provider boundary data and disputed-line patterns.                                                                         |
+| 32      | 2026-11-10 | Use the full available width for employee profiles, matching right-side sheets for employee creation and profile editing, and რედაქტირება for the leave-balance action.                                                |
 
 ## Employee creation and day-off allowance
 
 - Open employee creation in a right shadcn Sheet from the page action; the employee list uses the full available width. Keep the form scrollable and preserve the one-time activation-code dialog.
+- Employee profiles also use the full available content width. Profile editing opens in a matching right shadcn Sheet, with the same desktop width, full width on mobile, a fixed title header, and a scrollable form. Label the leave-balance action რედაქტირება.
 - Schedule settings define the starting day-off allowance (initially 4) and a toggle for calendar-year resets. Employee creation inherits the company default with an optional override. Employee profiles show remaining days and permit authorized HR adjustments. Approved day offs consume one day; vacations are separate.
 
 ## Schedule settings organization

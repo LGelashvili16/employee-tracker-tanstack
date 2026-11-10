@@ -16,7 +16,7 @@ All active, authenticated company accounts can read pins. Claiming a pending tas
 
 Managers may also return an active task to `pending`. Reopening removes its assignee. Rejection and reopening require a reason. Terminal jobs must be reopened before editing their location/instructions. A manager acting on a claimed task preserves its responsible person.
 
-The existing supervisor, operations manager and owner grants permit job management. The new `sales_manager` role grants only `manage.access` and `jobs.manage`, is provisioned through the existing account administration, and adds no CRM or sales module. Administrators can read shared work and have the separate claim grant. Platform administration alone does not grant job management. An account can hold multiple roles.
+Production leads (`supervisor`, წარმოების უფროსი) and owners have job-management grants. Sales managers (`sales_manager`, გაყიდვების მენეჯერი) retain only `manage.access` and `jobs.manage` and are available in employee creation. The retired operations role is no longer available; migration `0026_consolidate_employee_roles.sql` preserves its existing access as individual permission exceptions. Administrators can read shared work and have the separate claim grant. Platform administration alone does not grant job management. An account can hold multiple roles.
 
 The fixed `production_specialist` role is labeled `წარმოების სპეციალისტი` and is also available during employee provisioning. It can read shared jobs, claim pending work and progress its own work, but cannot create, edit, reopen or override other people's jobs. Like all roles, it is stored in the existing server-owned `user.roles` text column; no duplicate role table or new accounts are created.
 

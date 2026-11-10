@@ -32,17 +32,18 @@ export const permissionSchema = z.enum(
   { error: 'წვდომის მოთხოვნა არასწორია.' },
 )
 export type Permission = z.infer<typeof permissionSchema>
-export const roleSchema = z.enum(
+export const employeeRoleSchema = z.enum(
   [
     'employee',
     'production_specialist',
     'supervisor',
-    'operations_manager',
     'sales_manager',
     'hr_manager',
-    'admin',
-    'owner',
   ],
+  { error: 'თანამშრომლის როლი არასწორია.' },
+)
+export const roleSchema = z.enum(
+  [...employeeRoleSchema.options, 'admin', 'owner'],
   { error: 'როლი არასწორია.' },
 )
 export type Role = z.infer<typeof roleSchema>
@@ -111,7 +112,7 @@ const administrationPermissions = [
 ] as const satisfies ReadonlyArray<Permission>
 
 const managementPermissions: Record<
-  'supervisor' | 'operations_manager' | 'hr_manager',
+  'supervisor' | 'hr_manager',
   ReadonlyArray<Permission>
 > = {
   supervisor: [
@@ -121,14 +122,6 @@ const managementPermissions: Record<
     'timesheets.review.team',
     'jobs.manage',
     'employees.read',
-  ],
-  operations_manager: [
-    'manage.access',
-    'attendance.read.team',
-    'schedule.manage',
-    'jobs.manage',
-    'employees.read',
-    'reports.read',
   ],
   hr_manager: [
     'manage.access',
@@ -147,10 +140,9 @@ const managementPermissions: Record<
 export const roleLabels: Record<Role, string> = {
   employee: 'თანამშრომელი',
   production_specialist: 'წარმოების სპეციალისტი',
-  supervisor: 'ჯგუფის ხელმძღვანელი',
-  operations_manager: 'ოპერაციების მენეჯერი',
+  supervisor: 'წარმოების უფროსი',
   sales_manager: 'გაყიდვების მენეჯერი',
-  hr_manager: 'პერსონალის მენეჯერი',
+  hr_manager: 'HR',
   admin: 'ადმინისტრატორი',
   owner: 'კომპანიის მფლობელი',
 }
@@ -173,9 +165,6 @@ export const roles = {
   production_specialist: accessControl.newRole({ teamwork: ['jobs.claim'] }),
   supervisor: accessControl.newRole({
     teamwork: managementPermissions.supervisor,
-  }),
-  operations_manager: accessControl.newRole({
-    teamwork: managementPermissions.operations_manager,
   }),
   sales_manager: accessControl.newRole({
     teamwork: ['manage.access', 'jobs.manage'],

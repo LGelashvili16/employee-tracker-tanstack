@@ -16,7 +16,7 @@ export function OwnWeekList({
     (first, second) => first.weekday - second.weekday,
   )
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className="divide-y">
       {ordered.map(({ weekday, hours }) => {
         const today = weekday === todayWeekday
         return (
@@ -24,21 +24,21 @@ export function OwnWeekList({
             key={weekday}
             aria-current={today ? 'date' : undefined}
             className={cn(
-              'flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl border px-4 py-3',
-              today && 'border-primary/30 bg-primary/10',
-              !hours && !today && 'border-transparent bg-muted/40',
+              'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-4',
+              today && 'bg-badge-blue/20',
+              !hours && !today && 'bg-muted/30 text-muted-foreground',
             )}
           >
-            <span className="flex items-center gap-2 text-sm font-medium">
+            <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
               {weekdayLabels[weekday - 1]}
-              {today ? <Badge variant="default">დღეს</Badge> : null}
+              {today ? <Badge variant="blue">დღეს</Badge> : null}
             </span>
             {hours ? (
-              <span className="flex items-center gap-3 text-sm tabular-nums">
+              <span className="flex flex-col items-end gap-1 text-sm text-badge-blue-foreground tabular-nums">
                 <span>
                   {hours.start} - {hours.end}
                 </span>
-                <span className="w-16 text-right text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   {formatDuration(shiftMinutes(hours))}
                 </span>
               </span>

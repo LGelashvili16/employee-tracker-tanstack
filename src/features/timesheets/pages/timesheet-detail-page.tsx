@@ -9,7 +9,10 @@ export function TimesheetDetailPage() {
   const search = route.useSearch()
   const navigate = route.useNavigate()
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex min-w-0 flex-col gap-6">
+      <h1 className="text-2xl font-semibold tracking-tight">
+        ჩემი სამუშაო საათები
+      </h1>
       <Link
         to="/timesheets"
         className="w-fit text-sm underline underline-offset-4"
@@ -20,12 +23,21 @@ export function TimesheetDetailPage() {
         key={actor.id}
         actor={actor}
         search={{ ...search, month: timesheetId }}
-        onSearchChange={(value) => {
+        onSearchChange={(value, replace = false) => {
+          const { month: _month, userId: _userId, ...next } = value
           void navigate({
             params: { timesheetId: value.month ?? timesheetId },
-            search: { page: value.page },
+            search: next,
+            replace,
           })
         }}
+        renderLink={({ month, userId: _userId, ...linkSearch }) => (
+          <Link
+            to="/timesheets/$timesheetId"
+            params={{ timesheetId: month ?? timesheetId }}
+            search={linkSearch}
+          />
+        )}
       />
     </div>
   )

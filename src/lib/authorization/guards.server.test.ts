@@ -35,8 +35,8 @@ describe('direct server authorization guards', () => {
     expect(mocks.status).toHaveBeenLastCalledWith(401)
     for (const role of [
       'employee',
+      'production_specialist',
       'supervisor',
-      'operations_manager',
       'hr_manager',
     ] as const) {
       mocks.readActor.mockResolvedValue({ ...actor, roles: [role] })
@@ -66,8 +66,8 @@ describe('direct server authorization guards', () => {
     ).rejects.toThrow('ავტორიზაცია')
     for (const role of [
       'employee',
+      'production_specialist',
       'supervisor',
-      'operations_manager',
     ] as const) {
       mocks.readActor.mockResolvedValue({ ...actor, roles: [role] })
       await expect(

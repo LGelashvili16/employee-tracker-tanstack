@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { employeeRoleSchema } from '#/lib/authorization/permissions'
 import { employeeWorkingWeekSchema } from '#/features/scheduling/scheduling.schemas'
 import { dayOffDaysSchema } from '#/features/leave/day-off-allowance.schemas'
 import {
@@ -8,6 +9,8 @@ import {
   setupCodeAlphabet,
   setupCodeLength,
 } from './access.rules'
+
+export { employeeRoleSchema }
 
 export const employeeCodeSchema = z
   .string()
@@ -19,17 +22,6 @@ export const employeeCodeSchema = z
     /^[a-z0-9][a-z0-9._-]*$/,
     'გამოიყენეთ ლათინური ასოები, ციფრები, წერტილი, დეფისი ან ქვედა ტირე.',
   )
-export const employeeRoleSchema = z.enum(
-  [
-    'employee',
-    'production_specialist',
-    'supervisor',
-    'operations_manager',
-    'sales_manager',
-    'hr_manager',
-  ],
-  { error: 'თანამშრომლის როლი არასწორია.' },
-)
 export const reasonSchema = z
   .string()
   .trim()

@@ -8,10 +8,36 @@ import {
   permissionSchema,
   parsePermissionOverrides,
   permissionOverridesSchema,
+  employeeRoleSchema,
+  roleSchema,
+  roleLabels,
 } from './permissions'
 import type { Actor } from './actor'
 
 describe('role and permission boundaries', () => {
+  it('offers exactly the five employee roles, with administration kept separate', () => {
+    expect(employeeRoleSchema.options.map((role) => roleLabels[role])).toEqual([
+      'თანამშრომელი',
+      'წარმოების სპეციალისტი',
+      'წარმოების უფროსი',
+      'გაყიდვების მენეჯერი',
+      'HR',
+    ])
+    expect(roleSchema.safeParse('admin').success).toBe(true)
+    for (const role of ['admin', 'owner', 'operations_manager'])
+      expect(employeeRoleSchema.safeParse(role).success).toBe(false)
+    for (const role of ['operations_manager']) {
+      expect(roleSchema.safeParse(role).success).toBe(false)
+      expect(parseRoles(`employee,${role}`)).toEqual([])
+    }
+  })
+  it('limits sales managers to job management and its navigation grant', () => {
+    expect(parseRoles('sales_manager')).toEqual(['sales_manager'])
+    for (const permission of permissionSchema.options)
+      expect(hasPermission(['sales_manager'], permission)).toBe(
+        permission === 'manage.access' || permission === 'jobs.manage',
+      )
+  })
   it('grants vacation review to HR, admins, and owners, with explicit denials taking precedence', () => {
     for (const role of ['hr_manager', 'admin', 'owner'] as const)
       expect(hasPermission([role], 'leave.review')).toBe(true)
@@ -19,7 +45,6 @@ describe('role and permission boundaries', () => {
       'employee',
       'production_specialist',
       'supervisor',
-      'operations_manager',
       'sales_manager',
     ] as const)
       expect(hasPermission([role], 'leave.review')).toBe(false)
@@ -140,9 +165,7 @@ describe('role and permission boundaries', () => {
     expect(
       hasPermission(['admin', 'supervisor'], 'timesheets.review.team'),
     ).toBe(true)
-    expect(hasPermission(['operations_manager'], 'employees.manage')).toBe(
-      false,
-    )
+    expect(hasPermission(['supervisor'], 'employees.manage')).toBe(false)
   })
   it('lets HR manage employees without granting platform or role administration', () => {
     expect(

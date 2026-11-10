@@ -14,21 +14,21 @@ export function UserScheduleCard({
 }) {
   const days = week ?? companyWeek
   return (
-    <Card className="rounded-2xl">
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+    <Card className="rounded-2xl py-5 sm:py-6">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 px-5 sm:px-6">
         <CardTitle className="flex items-center gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
             <IconCalendarWeek className="size-5" aria-hidden="true" />
           </span>
-          სამუშაო განრიგი
+          <h2>სამუშაო განრიგი</h2>
         </CardTitle>
-        <Badge variant={week ? 'default' : 'secondary'}>
+        <Badge variant="secondary">
           {week ? 'ინდივიდუალური' : 'კომპანიის განრიგი'}
         </Badge>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-5 sm:px-6">
         {days ? (
-          <WeekStrip days={days} />
+          <WeekStrip days={days} density="comfortable" />
         ) : (
           <p className="text-sm text-muted-foreground">
             კომპანიის სამუშაო განრიგი ჯერ არ არის განსაზღვრული.

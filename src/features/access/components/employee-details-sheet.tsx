@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { IconDeviceFloppy, IconUserEdit } from '@tabler/icons-react'
+import { IconDeviceFloppy } from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -13,14 +13,14 @@ import {
   FieldLabel,
 } from '#/components/ui/field'
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '#/components/ui/dialog'
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '#/components/ui/sheet'
 import { updateEmployeeDetails } from '../access.functions'
 import { employeeDetailsSchema } from '../access.schemas'
 import { EmployeeScheduleField } from './employee-schedule-field'
@@ -34,11 +34,13 @@ const detailFields = [
   { name: 'phone', label: 'ტელეფონის ნომერი', autoComplete: 'off' },
 ] as const
 
-export function EmployeeDetailsDialog({
+export function EmployeeDetailsSheet({
+  open,
   target,
   canConfigureSchedule,
   onClose,
 }: {
+  open: boolean
   target: EmployeeAccountRecord
   /** Editing the working week additionally requires the attendance.configure permission. */
   canConfigureSchedule: boolean
@@ -88,47 +90,58 @@ export function EmployeeDetailsDialog({
   })
 
   return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open && !mutation.isPending) onClose()
+    <Sheet
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen && !form.state.isSubmitting) onClose()
+      }}
+      onOpenChangeComplete={(isOpen) => {
+        if (!isOpen) {
+          form.reset()
+          setError('')
+        }
       }}
     >
-      <DialogContent
-        showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto sm:max-w-lg"
+      <SheetContent
+        side="right"
+        showCloseButton={!mutation.isPending}
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
       >
-        <DialogHeader className="items-center gap-3 pt-2 text-center">
-          <span
-            aria-hidden="true"
-            className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary"
-          >
-            <IconUserEdit className="size-6" />
-          </span>
-          <DialogTitle className="text-lg">მონაცემების რედაქტირება</DialogTitle>
-          <DialogDescription className="text-balance">
-            მომხმარებლის სახელი ({target.code}) და როლი უცვლელია. ელფოსტის
-            შეცვლა ცვლის შესვლის ელფოსტასაც, თუ ანგარიში მას იყენებს.
-          </DialogDescription>
-        </DialogHeader>
+        <SheetHeader className="border-b">
+          <SheetTitle>მონაცემების რედაქტირება</SheetTitle>
+        </SheetHeader>
         <form
           noValidate
+          className="min-h-0 flex-1 overflow-y-auto p-4"
           onSubmit={(event) => {
             event.preventDefault()
             void form.handleSubmit()
           }}
         >
           <FieldGroup className="gap-4">
+            <SheetDescription>
+              მომხმარებლის სახელი ({target.code}) და როლი უცვლელია. ელფოსტის
+              შეცვლა ცვლის შესვლის ელფოსტასაც, თუ ანგარიში მას იყენებს.
+            </SheetDescription>
             {detailFields.map(({ name, label, autoComplete }) => (
               <form.Field key={name} name={name}>
                 {(field) => (
                   <Field data-invalid={!field.state.meta.isValid}>
-                    <FieldLabel htmlFor={`details-${name}`}>{label}</FieldLabel>
+                    <FieldLabel htmlFor={`details-${name}`}>
+                      {label}
+                      {name === 'name' ? (
+                        <span aria-hidden="true" className="text-destructive">
+                          *
+                        </span>
+                      ) : null}
+                    </FieldLabel>
                     <Input
                       id={`details-${name}`}
                       name={name}
                       type={name === 'contactEmail' ? 'email' : 'text'}
                       autoComplete={autoComplete}
+                      required={name === 'name'}
+                      disabled={mutation.isPending}
                       value={field.state.value ?? ''}
                       onBlur={field.handleBlur}
                       onChange={(event) =>
@@ -165,15 +178,15 @@ export function EmployeeDetailsDialog({
                 {error}
               </p>
             ) : null}
-            <DialogFooter>
+            <SheetFooter className="px-0 pb-0 sm:flex-row sm:justify-end">
               <form.Subscribe selector={(state) => state.isSubmitting}>
                 {(pending) => (
                   <>
-                    <DialogClose
+                    <SheetClose
                       render={<Button variant="outline" disabled={pending} />}
                     >
                       გაუქმება
-                    </DialogClose>
+                    </SheetClose>
                     <Button
                       type="submit"
                       disabled={pending}
@@ -191,10 +204,10 @@ export function EmployeeDetailsDialog({
                   </>
                 )}
               </form.Subscribe>
-            </DialogFooter>
+            </SheetFooter>
           </FieldGroup>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }

@@ -31,6 +31,31 @@ type WeekDays = Array<{
 const minutesOfDay = (time: string) =>
   Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5))
 
+/** A shared three-hour scale keeps shifts comparable, including early and late schedules. */
+export function weeklyTimeline(week: WeekDays) {
+  const shifts = week.flatMap((day) => (day.hours ? [day.hours] : []))
+  const start = shifts.length
+    ? Math.floor(
+        Math.min(...shifts.map((hours) => minutesOfDay(hours.start))) / 180,
+      ) * 180
+    : 0
+  const end = shifts.length
+    ? Math.ceil(
+        Math.max(...shifts.map((hours) => minutesOfDay(hours.end))) / 180,
+      ) * 180
+    : 1440
+  return {
+    start,
+    end,
+    ticks: Array.from(
+      { length: (end - start) / 180 + 1 },
+      (_, index) => start + index * 180,
+    ),
+    position: (time: string) =>
+      ((minutesOfDay(time) - start) / (end - start)) * 100,
+  }
+}
+
 export function shiftMinutes(hours: { start: string; end: string }) {
   return minutesOfDay(hours.end) - minutesOfDay(hours.start)
 }

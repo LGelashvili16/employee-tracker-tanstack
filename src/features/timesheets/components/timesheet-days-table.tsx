@@ -17,9 +17,27 @@ import { Badge } from '#/components/ui/badge'
 import { TimesheetSortTitle } from './timesheet-sort-title'
 import {
   formatAttendanceLocalInput,
+  formatAttendanceTime,
   formatWorkedTime,
 } from '#/features/attendance/attendance.rules'
 import type { TimesheetDay, TimesheetSearch } from '../timesheets.types'
+import { formatAttendanceDate } from '#/features/attendance/attendance.presentation'
+import { companyLocalDate } from '#/features/scheduling/scheduling.rules'
+import { cn } from '#/lib/utils'
+
+function TimesheetTime({ value, day }: { value: string; day: TimesheetDay }) {
+  const date = companyLocalDate(new Date(value), day.timezone)
+  return (
+    <div className="flex flex-col gap-1">
+      <time dateTime={value}>{formatAttendanceTime(value, day.timezone)}</time>
+      {date !== day.date ? (
+        <span className="text-xs text-muted-foreground">
+          {formatAttendanceDate(date, true)}
+        </span>
+      ) : null}
+    </div>
+  )
+}
 
 type Row = TimesheetDay & { month: string }
 const features = tableFeatures({})
@@ -27,6 +45,7 @@ const helper = createColumnHelper<typeof features, Row>()
 const makeColumns = (
   search?: TimesheetSearch,
   renderLink?: (search: TimesheetSearch) => ReactElement,
+  compact = false,
 ) =>
   helper.columns([
     helper.accessor('employeeName', {
@@ -51,7 +70,11 @@ const makeColumns = (
       ),
       cell: ({ row }) => (
         <div className="flex flex-col gap-1">
-          <span>{row.original.date}</span>
+          <time dateTime={row.original.date}>
+            {compact
+              ? formatAttendanceDate(row.original.date, true)
+              : row.original.date}
+          </time>
           <span className="text-xs text-muted-foreground">
             {row.original.timezone}
           </span>
@@ -61,20 +84,30 @@ const makeColumns = (
     helper.accessor('firstIn', {
       header: 'პირველი შესვლა',
       cell: ({ row }) =>
-        formatAttendanceLocalInput(
-          row.original.firstIn,
-          row.original.timezone,
-        ).replace('T', ' '),
+        compact ? (
+          <TimesheetTime value={row.original.firstIn} day={row.original} />
+        ) : (
+          formatAttendanceLocalInput(
+            row.original.firstIn,
+            row.original.timezone,
+          ).replace('T', ' ')
+        ),
     }),
     helper.accessor('lastOut', {
       header: 'ბოლო გასვლა',
       cell: ({ row }) =>
-        row.original.lastOut
-          ? formatAttendanceLocalInput(
+        row.original.lastOut ? (
+          compact ? (
+            <TimesheetTime value={row.original.lastOut} day={row.original} />
+          ) : (
+            formatAttendanceLocalInput(
               row.original.lastOut,
               row.original.timezone,
             ).replace('T', ' ')
-          : 'მიმდინარე',
+          )
+        ) : (
+          'მიმდინარე'
+        ),
     }),
     helper.accessor('seconds', {
       header: () => (
@@ -88,7 +121,13 @@ const makeColumns = (
       cell: ({ row }) => formatWorkedTime(row.original.seconds),
     }),
     helper.accessor('approvedOutsideSeconds', {
-      header: 'დამტკიცებული დამატებითი დრო',
+      header: () => (
+        <span className="whitespace-nowrap">
+          დამტკიცებული
+          <br />
+          დამატებითი დრო
+        </span>
+      ),
       cell: ({ row }) => formatWorkedTime(row.original.approvedOutsideSeconds),
     }),
     helper.display({
@@ -97,7 +136,7 @@ const makeColumns = (
       cell: ({ row }) => {
         const day = row.original
         return (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex max-w-64 min-w-40 flex-wrap gap-1">
             {day.open > 0 ? (
               <Badge variant="yellow">მიმდინარე ჩანაწერი</Badge>
             ) : null}
@@ -128,7 +167,7 @@ export function TimesheetDaysTable({
   hideEmployee?: boolean
 }) {
   const columns = useMemo(() => {
-    const result = makeColumns(search, renderLink)
+    const result = makeColumns(search, renderLink, hideEmployee)
     return hideEmployee ? result.slice(1) : result
   }, [search, renderLink, hideEmployee])
   const table = useTable({
@@ -138,19 +177,23 @@ export function TimesheetDaysTable({
     getRowId: (row) => `${row.employeeId}-${row.date}-${row.timezone}`,
   })
   return (
-    <Table className="min-w-[64rem]">
+    <Table className={hideEmployee ? 'min-w-[48rem]' : 'min-w-[64rem]'}>
       <TableHeader className="bg-muted/40">
         {table.getHeaderGroups().map((group) => (
           <TableRow key={group.id}>
             {group.headers.map((header) => (
               <TableHead
                 key={header.id}
-                className={
+                className={cn(
+                  'whitespace-normal',
+                  (header.column.id === 'firstIn' ||
+                    header.column.id === 'lastOut') &&
+                    'min-w-28',
                   header.column.id === 'seconds' ||
-                  header.column.id === 'approvedOutsideSeconds'
+                    header.column.id === 'approvedOutsideSeconds'
                     ? 'h-12 px-4 text-right'
-                    : 'h-12 px-4'
-                }
+                    : 'h-12 px-4',
+                )}
                 aria-sort={
                   search &&
                   (search.sort ?? 'date-desc').startsWith(

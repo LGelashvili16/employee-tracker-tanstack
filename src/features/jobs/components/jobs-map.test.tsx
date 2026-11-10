@@ -1,4 +1,5 @@
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import JobsMap from './jobs-map'
 import type { ReactNode } from 'react'
@@ -44,6 +45,8 @@ it('refocuses deliberate repeat selections and preserves focus across dialog rem
     },
     showPlaces: false,
     onPlacesChange: vi.fn(),
+    showBuildings: false,
+    onBuildingsChange: vi.fn(),
     location: {
       sourceId: 'W:123',
       longitude: 44.8,
@@ -61,4 +64,48 @@ it('refocuses deliberate repeat selections and preserves focus across dialog rem
   view.unmount()
   render(<JobsMap {...props} expanded focusRequest={1} />)
   expect(map.flyTo).toHaveBeenCalledTimes(2)
+})
+
+it('exposes an accessible buildings toggle with the controlled state', async () => {
+  const onBuildingsChange = vi.fn()
+  const props = {
+    pins: [],
+    showEmpty: false,
+    onPick: vi.fn(),
+    onSelect: vi.fn(),
+    camera: { current: null },
+    focused: { current: null },
+    canCreate: false,
+    expanded: false,
+    onExpand: vi.fn(),
+    focusRequest: 0,
+    actor: {
+      id: 'employee',
+      name: 'თანამშრომელი',
+      email: null,
+      emailVerified: false,
+      roles: [],
+    },
+    showPlaces: false,
+    onPlacesChange: vi.fn(),
+    showBuildings: false,
+    onBuildingsChange,
+  }
+  const view = render(<JobsMap {...props} />)
+  const user = userEvent.setup()
+  expect(
+    screen.getByRole('button', { name: 'სამგანზომილებიანი შენობები' }),
+  ).toHaveAttribute('aria-pressed', 'false')
+  await user.click(
+    screen.getByRole('button', { name: 'სამგანზომილებიანი შენობები' }),
+  )
+  expect(onBuildingsChange).toHaveBeenLastCalledWith(true)
+  view.rerender(<JobsMap {...props} showBuildings />)
+  expect(
+    screen.getByRole('button', { name: 'სამგანზომილებიანი შენობები' }),
+  ).toHaveAttribute('aria-pressed', 'true')
+  await user.click(
+    screen.getByRole('button', { name: 'სამგანზომილებიანი შენობები' }),
+  )
+  expect(onBuildingsChange).toHaveBeenLastCalledWith(false)
 })

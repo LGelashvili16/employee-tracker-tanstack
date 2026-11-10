@@ -11,25 +11,27 @@ export function UserAccessCard({
   onAction: (action: AccountAction) => void
 }) {
   return (
-    <Card className="rounded-2xl">
-      <CardHeader>
-        <CardTitle>ანგარიშის მართვა</CardTitle>
+    <Card className="rounded-2xl py-5 sm:py-6">
+      <CardHeader className="px-5 sm:px-6">
+        <CardTitle>
+          <h2>ანგარიშის მართვა</h2>
+        </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-5 sm:px-6">
         {actions.length ? (
           <ul className="flex flex-col divide-y">
             {actions.map((action) => {
               const content = accountActionContent[action]
-              const Icon = content.confirmIcon
+              const Icon = content.icon
               return (
                 <li
                   key={action}
-                  className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col items-start gap-3 py-5 first:pt-0 last:pb-0"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{content.label}</p>
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      {content.description}
+                      {content.summary}
                     </p>
                   </div>
                   <Button

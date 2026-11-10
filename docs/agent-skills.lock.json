@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewedOn": "2026-11-03",
+  "reviewedOn": "2026-11-10",
   "installer": "Codex skill-installer helper with explicit project-local --dest and immutable --ref",
   "treeHashAlgorithm": "SHA-256 of sorted UTF-8 relative-path + NUL + file-SHA-256-hex + LF records, including supplied upstream license notices",
   "skills": [
@@ -260,6 +260,44 @@
       "skillSha256": "c37ce6a7f61d40e2e9a974485f6c2be8f1f7ba10a9a80d741e22cc77699976a1",
       "treeSha256": "8ba45a8ef3c76fd76ef3ab4b5050cc94d5b3a08429b60483ab5d14990b5aedcc",
       "fileCount": 2,
+      "upstreamLicenseNotice": "UPSTREAM-LICENSE.txt"
+    },
+    {
+      "name": "ponytail",
+      "repository": "https://github.com/DietrichGebert/ponytail",
+      "commit": "96608e078b2d5ea607c5c3b8b5a54d1c1fba6846",
+      "sourcePath": "skills/ponytail",
+      "sourceUrl": "https://github.com/DietrichGebert/ponytail/tree/96608e078b2d5ea607c5c3b8b5a54d1c1fba6846/skills/ponytail",
+      "localPath": ".agents/skills/ponytail",
+      "skillSha256": "9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509",
+      "treeSha256": "c4446fd216ef9d4417cc450a3395473a55edfa1b12edcf8637b3f2e0aceb21fe",
+      "fileCount": 2,
+      "upstreamLicenseNotice": "UPSTREAM-LICENSE.txt"
+    },
+    {
+      "name": "graphify",
+      "repository": "https://github.com/Graphify-Labs/graphify",
+      "commit": "5eedffa87476a063a05bed96f17275ed63f05c1a",
+      "sourcePath": "graphify/skill-codex.md",
+      "sourceUrl": "https://github.com/Graphify-Labs/graphify/blob/5eedffa87476a063a05bed96f17275ed63f05c1a/graphify/skill-codex.md",
+      "localPath": ".agents/skills/graphify",
+      "skillSha256": "4d630cad0691ed805f80becd4245c2c15a219c8458c87fdaa7cb6c32ffba615f",
+      "treeSha256": "ff988f5bf4b341bc9d90716d9bb18b7289cb690f198246f0fa590b42714d2160",
+      "fileCount": 10,
+      "upstreamLicenseNotice": "UPSTREAM-LICENSE.txt",
+      "referenceSourcePath": "graphify/skills/codex/references",
+      "installationNote": "Codex skill-codex.md copied verbatim as SKILL.md with its Codex references sidecar; both upstream license notices preserved."
+    },
+    {
+      "name": "security-audit",
+      "repository": "https://github.com/cloudflare/security-audit-skill",
+      "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "sourcePath": "skills/security-audit",
+      "sourceUrl": "https://github.com/cloudflare/security-audit-skill/tree/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit",
+      "localPath": ".agents/skills/security-audit",
+      "skillSha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85",
+      "treeSha256": "e97a2a1883859853c0f8f8ddb946a5f21603047c0119c5b9e95e594da76feb54",
+      "fileCount": 21,
       "upstreamLicenseNotice": "UPSTREAM-LICENSE.txt"
     }
   ]

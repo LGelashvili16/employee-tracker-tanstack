@@ -19,7 +19,7 @@ vi.mock('../jobs.functions', () => functions)
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 const actor: Actor = {
   id: 'test-manager',
-  roles: ['sales_manager'],
+  roles: ['supervisor'],
   name: 'მენეჯერი',
   email: null,
   emailVerified: false,

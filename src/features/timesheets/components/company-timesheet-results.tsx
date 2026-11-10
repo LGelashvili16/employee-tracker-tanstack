@@ -11,6 +11,13 @@ import {
 import { Button } from '#/components/ui/button'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Spinner } from '#/components/ui/spinner'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '#/components/ui/empty'
 import { TimesheetDaysTable } from './timesheet-days-table'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { TimesheetResult, TimesheetSearch } from '../timesheets.types'
@@ -100,37 +107,35 @@ export function CompanyTimesheetResults({
               hideEmployee
             />
           ) : (
-            <div
-              role="status"
-              className="flex flex-col items-center gap-3 px-6 py-12 text-center"
-            >
-              <span
-                className="flex size-12 items-center justify-center rounded-xl bg-muted"
-                aria-hidden="true"
-              >
-                <IconClock className="size-5 text-muted-foreground" />
-              </span>
-              <h2 className="text-base font-medium">
-                {(search.page ?? 0) > 0 && result.total > 0
-                  ? 'ამ გვერდზე ჩანაწერები არ არის'
-                  : filtered
-                    ? 'შესაბამისი ჩანაწერები ვერ მოიძებნა'
-                    : 'ამ თვეში ჩანაწერები არ არის'}
-              </h2>
+            <Empty role="status">
+              <EmptyHeader>
+                <EmptyMedia aria-hidden="true">
+                  <IconClock />
+                </EmptyMedia>
+                <EmptyTitle>
+                  {(search.page ?? 0) > 0 && result.total > 0
+                    ? 'ამ გვერდზე ჩანაწერები არ არის'
+                    : filtered
+                      ? 'შესაბამისი ჩანაწერები ვერ მოიძებნა'
+                      : 'ამ თვეში ჩანაწერები არ არის'}
+                </EmptyTitle>
+              </EmptyHeader>
               {filtered || (search.page ?? 0) > 0 ? (
-                <Button
-                  variant="outline"
-                  depth="raised"
-                  nativeButton={false}
-                  role="link"
-                  render={renderLink(reset)}
-                >
-                  {filtered
-                    ? 'ფილტრების გასუფთავება'
-                    : 'პირველ გვერდზე დაბრუნება'}
-                </Button>
+                <EmptyContent>
+                  <Button
+                    variant="outline"
+                    depth="raised"
+                    nativeButton={false}
+                    role="link"
+                    render={renderLink(reset)}
+                  >
+                    {filtered
+                      ? 'ფილტრების გასუფთავება'
+                      : 'პირველ გვერდზე დაბრუნება'}
+                  </Button>
+                </EmptyContent>
               ) : null}
-            </div>
+            </Empty>
           )}
           <div className="border-t bg-muted/15 px-4 py-3">
             {/* Existing timesheet URLs use a zero-based page; the shared pagination displays one-based pages. */}

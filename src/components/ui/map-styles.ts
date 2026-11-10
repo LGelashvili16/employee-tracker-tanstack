@@ -8,6 +8,29 @@ import { APP_NAME } from '#/lib/app'
 
 export const mapStyleUrl = 'https://tiles.openfreemap.org/styles/liberty'
 
+/** Flatten extrusion geometry without losing building footprints or mutating the provider style. */
+export function createMapBuildingsStyle(
+  style: StyleSpecification,
+  showBuildings: boolean,
+): StyleSpecification {
+  if (showBuildings) return style
+  return {
+    ...style,
+    layers: style.layers.map((layer): LayerSpecification =>
+      layer.type === 'fill-extrusion'
+        ? {
+            ...layer,
+            paint: {
+              ...layer.paint,
+              'fill-extrusion-height': 0,
+              'fill-extrusion-base': 0,
+            },
+          }
+        : layer,
+    ),
+  }
+}
+
 /** Keep street/place geography intact while decluttering POI icons and their labels. */
 export function createMapPlacesStyle(
   style: StyleSpecification,
@@ -61,6 +84,7 @@ const dark = {
   path: '#485c70',
   rail: '#63768c',
   border: '#53657a',
+  countryBorder: '#b5c6dc',
   text: '#b8c4d0',
   roadText: '#8497b8',
   waterText: '#3778bd',
@@ -152,6 +176,31 @@ function lineColor(layer: Extract<LayerSpecification, { type: 'line' }>) {
 
 function linePaint(layer: Extract<LayerSpecification, { type: 'line' }>) {
   const paint = { ...layer.paint, 'line-color': lineColor(layer) }
+  if (
+    layer['source-layer'] === 'boundary' &&
+    (layer.id === 'boundary_2' || layer.id === 'boundary_disputed')
+  ) {
+    // Country outlines need their own contrast and must not inherit the daytime low-zoom fade.
+    return {
+      ...paint,
+      'line-color': dark.countryBorder,
+      'line-opacity': 1,
+      'line-blur': 0,
+      'line-width': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        0,
+        1.25,
+        6,
+        1.75,
+        12,
+        2.5,
+        20,
+        4,
+      ] as ExpressionSpecification,
+    }
+  }
   // The daytime style's pale casings provide local streets below zoom 14. Dark casings blend into the land, so draw their cores earlier.
   if (/^(road_minor|tunnel_minor|bridge_street)$/.test(layer.id))
     paint['line-width'] = [

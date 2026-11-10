@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { cn } from '#/lib/utils'
 import {
   createDarkMapStyle,
+  createMapBuildingsStyle,
   createMapPlacesStyle,
   mapStyleUrl,
 } from './map-styles'
@@ -48,6 +49,7 @@ export function Map({
   zoom = 11,
   camera,
   showPlaces = false,
+  showBuildings = true,
 }: {
   children?: ReactNode
   className?: string
@@ -55,11 +57,14 @@ export function Map({
   zoom?: number
   camera?: RefObject<MapCamera | null>
   showPlaces?: boolean
+  showBuildings?: boolean
 }) {
   const container = useRef<HTMLDivElement>(null)
   const initial = useRef({ center, zoom })
   const places = useRef(showPlaces)
   places.current = showPlaces
+  const buildings = useRef(showBuildings)
+  buildings.current = showBuildings
   const sourceStyle = useRef<MapLibre.StyleSpecification | null>(null)
   const [context, setContext] = useState<MapContextValue | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -99,9 +104,12 @@ export function Map({
           style: mapStyleUrl,
           transformStyle: (_previous, next) => {
             sourceStyle.current = next
-            return createMapPlacesStyle(
-              appliedDark ? createDarkMapStyle(next) : next,
-              places.current,
+            return createMapBuildingsStyle(
+              createMapPlacesStyle(
+                appliedDark ? createDarkMapStyle(next) : next,
+                places.current,
+              ),
+              buildings.current,
             )
           },
           renderWorldCopies: false,
@@ -167,7 +175,7 @@ export function Map({
   useEffect(() => {
     if (context && sourceStyle.current)
       context.map.setStyle(sourceStyle.current)
-  }, [context, showPlaces])
+  }, [context, showPlaces, showBuildings])
   return (
     <div
       className={cn(

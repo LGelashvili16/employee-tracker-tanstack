@@ -33,7 +33,7 @@ vi.mock('./jobs.repository.server', () => ({
 }))
 vi.mock('./jobs.policy.server', () => ({
   assertJobManager: (actor: Actor) => {
-    if (!actor.roles.includes('sales_manager')) throw new AuthorizationError()
+    if (!actor.roles.includes('supervisor')) throw new AuthorizationError()
   },
   requireJobActor: (_tx: unknown, actor: Actor | null) => {
     if (!actor) throw new AuthorizationError()
@@ -65,7 +65,7 @@ beforeEach(() => {
 })
 describe('job location lookup', () => {
   it('fills a mapped building number together with its own street and merges languages by source identity', async () => {
-    const manager: Actor = { ...actor, roles: ['sales_manager'] }
+    const manager: Actor = { ...actor, roles: ['supervisor'] }
     const building = {
       ...feature,
       isStreet: false,
@@ -89,7 +89,7 @@ describe('job location lookup', () => {
     ).toBe('უნივერსიტეტის ქუჩა 12, თბილისი')
   })
   it('uses the street from a nearby building without borrowing its number and refuses ambiguous streets', async () => {
-    const manager: Actor = { ...actor, roles: ['sales_manager'] }
+    const manager: Actor = { ...actor, roles: ['supervisor'] }
     const building = {
       ...feature,
       isStreet: false,
@@ -126,7 +126,7 @@ describe('job location lookup', () => {
     )
     await expect(
       suggestCompanyJobAddress(
-        { ...actor, roles: ['sales_manager'] },
+        { ...actor, roles: ['supervisor'] },
         { longitude: 41, latitude: 42 },
       ),
     ).rejects.toThrow('საქართველოს')
@@ -134,7 +134,7 @@ describe('job location lookup', () => {
     expect(mocks.request).not.toHaveBeenCalled()
   })
   it('prefers a Georgian address, falls back to English, and permits missing results', async () => {
-    const manager: Actor = { ...actor, roles: ['sales_manager'] }
+    const manager: Actor = { ...actor, roles: ['supervisor'] }
     const position = { longitude: 44.8, latitude: 41.7 }
     mocks.request
       .mockResolvedValueOnce([feature])

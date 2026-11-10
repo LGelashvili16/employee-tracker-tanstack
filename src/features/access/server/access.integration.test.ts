@@ -168,7 +168,12 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
         .set({ defaultDays: 4, defaultVacationDays: 24 })
     }
   })
-  it.each(['sales_manager', 'production_specialist', 'hr_manager'] as const)(
+  it.each([
+    'supervisor',
+    'sales_manager',
+    'production_specialist',
+    'hr_manager',
+  ] as const)(
     'provisions and stores the %s role through the employee workflow',
     async (role) => {
       const code = `test-${role}`
@@ -186,7 +191,7 @@ describe.runIf(enabled)('employee account lifecycle against PostgreSQL', () => {
   it('lets HR manage employees while protecting role grants, privileged targets, and revoked access', async () => {
     const issued = await service.provisionEmployee(owner, {
       code: 'hr-operator',
-      name: 'პერსონალის მენეჯერი',
+      name: 'HR',
       contactEmail: '',
       role: 'hr_manager',
     })

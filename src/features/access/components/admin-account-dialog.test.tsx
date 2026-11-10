@@ -66,9 +66,7 @@ describe('administrator account controls', () => {
     expect(
       screen.getByRole('checkbox', { name: 'კომპანიის მფლობელი' }),
     ).toHaveAttribute('aria-disabled', 'true')
-    await user.click(
-      screen.getByRole('checkbox', { name: 'პერსონალის მენეჯერი' }),
-    )
+    await user.click(screen.getByRole('checkbox', { name: 'HR' }))
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
     await user.click(
       screen.getByRole('button', { name: 'ინდივიდუალური უფლებები (0)' }),

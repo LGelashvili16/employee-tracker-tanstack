@@ -88,12 +88,30 @@ function renderDetail(
 }
 
 describe('single account page', () => {
+  it('starts the sheet opening transition when editing is requested', async () => {
+    // Hold the first animation frame so the opening state can be observed reliably.
+    const frame = vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1)
+    try {
+      const user = userEvent.setup()
+      renderDetail()
+      await user.click(
+        await screen.findByRole('button', { name: 'რედაქტირება' }),
+      )
+      expect(
+        await screen.findByRole('dialog', { name: 'მონაცემების რედაქტირება' }),
+      ).toHaveAttribute('data-starting-style')
+    } finally {
+      frame.mockRestore()
+    }
+  })
   it('saves employee edits without requesting or submitting a reason', async () => {
     updateEmployeeDetails.mockResolvedValue({ ok: true })
     const user = userEvent.setup()
     renderDetail()
     await user.click(await screen.findByRole('button', { name: 'რედაქტირება' }))
-    await screen.findByRole('dialog')
+    expect(
+      await screen.findByRole('dialog', { name: 'მონაცემების რედაქტირება' }),
+    ).toHaveAttribute('data-slot', 'sheet-content')
     expect(screen.queryByLabelText('ცვლილების მიზეზი')).not.toBeInTheDocument()
     const name = screen.getByRole('textbox', { name: 'სახელი და გვარი' })
     await user.clear(name)
@@ -156,7 +174,14 @@ describe('single account page', () => {
   })
 
   it('checks attendance and timesheet access separately', async () => {
-    renderDetail({}, { ...actor, roles: ['operations_manager'] })
+    renderDetail(
+      {},
+      {
+        ...actor,
+        roles: ['supervisor'],
+        permissionOverrides: { allow: [], deny: ['timesheets.review.team'] },
+      },
+    )
     expect(
       await screen.findByRole('link', { name: 'დასწრების ჩანაწერები' }),
     ).toHaveAttribute('href', '/manage/attendance/employee')

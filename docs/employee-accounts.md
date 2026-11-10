@@ -34,7 +34,7 @@ It is never exposed by an HTTP route or server function.
 
 ## Employee management workflow
 
-Employee creation and account management live under the management sidebar group. The existing `hr_manager` role (პერსონალის მენეჯერი), administrators, and owners can use this workflow. HR may create ordinary employee accounts and manage their profile and access lifecycle. Assigning a management role, including HR, still requires `roles.manage`; administrator/owner creation remains excluded. Company schedule changes require `attendance.configure`, which HR managers now hold. Old admin user routes have been deleted; employee links use the management routes directly. The `$employeeId` route parameter carries the linked auth user ID, preserving existing account links.
+Employee creation and account management live under the management sidebar group. The existing `hr_manager` role (HR), administrators, and owners can use this workflow. HR may create ordinary employee accounts and manage their profile and access lifecycle. Assigning a management role, including HR, still requires `roles.manage`; administrator/owner creation remains excluded. Company schedule changes require `attendance.configure`, which HR managers now hold. Old admin user routes have been deleted; employee links use the management routes directly. The `$employeeId` route parameter carries the linked auth user ID, preserving existing account links.
 
 Open `/manage/employees`. The route and every server function independently require
 `manage.access` and `employees.manage`. Choose an immutable username, full name,
@@ -175,3 +175,5 @@ provision test employees in the development employee roster.
 ## Platform account controls
 
 Employee creation and HR profile management remain under `/manage/employees`. Administrators use `/admin/access` for all login identities, their role memberships and individual permission exceptions, suspension/restoration, and session revocation. This is an access directory, not a duplicate employee profile workflow. Owner accounts and self-access are protected. Apply migration `0016_user_permission_overrides.sql` before deploying these controls. It was applied to the verified local development database; other environments must run their normal reviewed migrations.
+
+Employee role choices use the shared authorization schema: თანამშრომელი, წარმოების სპეციალისტი, წარმოების უფროსი, გაყიდვების მენეჯერი, and HR, in that order. Admin and protected owner roles are excluded from employee creation and remain available only through their existing privileged workflows. The retired operations role is no longer accepted by provisioning or access administration.

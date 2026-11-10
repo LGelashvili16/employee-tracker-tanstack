@@ -43,8 +43,8 @@ const actor = (id: string, roles: Actor['roles'] = ['employee']): Actor => ({
   emailVerified: false,
 })
 const manager = {
-  ...actor('jobs-manager', ['sales_manager']),
-  name: 'გაყიდვების მენეჯერი',
+  ...actor('jobs-manager', ['supervisor']),
+  name: 'წარმოების უფროსი',
 }
 const worker = {
   ...actor('jobs-worker', ['production_specialist']),
@@ -396,7 +396,7 @@ describe.runIf(enabled)('jobs map against isolated PostgreSQL', () => {
       await expect(createPin()).rejects.toThrow('წვდომა')
     } finally {
       await sql().query(
-        "UPDATE \"user\" SET roles = 'sales_manager' WHERE id = 'jobs-manager'",
+        "UPDATE \"user\" SET roles = 'supervisor' WHERE id = 'jobs-manager'",
       )
     }
   })

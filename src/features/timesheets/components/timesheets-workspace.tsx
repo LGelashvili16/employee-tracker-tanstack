@@ -1,33 +1,32 @@
-import { useMemo, useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { useState } from 'react'
+import type { ReactElement } from 'react'
 import {
   QueryClient,
   QueryClientProvider,
   useQuery,
 } from '@tanstack/react-query'
+import { IconInfoCircle, IconRefresh } from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '#/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Spinner } from '#/components/ui/spinner'
-import { formatWorkedTime } from '#/features/attendance/attendance.rules'
 import { getOwnTimesheets } from '../timesheets.functions'
-import { shiftTimesheetMonth } from '../timesheets.rules'
-import { TimesheetDaysTable } from './timesheet-days-table'
+import { CompanyTimesheetFilters } from './company-timesheet-filters'
+import {
+  CompanyTimesheetPeriod,
+  CompanyTimesheetSummary,
+} from './company-timesheet-period'
+import { CompanyTimesheetResults } from './company-timesheet-results'
 import type { TimesheetSearch } from '../timesheets.types'
 import type { Actor } from '#/lib/authorization/actor'
 
 type Props = {
   actor: Actor
   search: TimesheetSearch
-  onSearchChange: (value: TimesheetSearch) => void
+  onSearchChange: (value: TimesheetSearch, replace?: boolean) => void
+  renderLink: (search: TimesheetSearch) => ReactElement
 }
 export function TimesheetsWorkspace(props: Props) {
   const [client] = useState(() => new QueryClient())
@@ -38,180 +37,104 @@ export function TimesheetsWorkspace(props: Props) {
   )
 }
 
-function TimesheetsOverview({ actor, search, onSearchChange }: Props) {
-  const page = search.page ?? 0
+function TimesheetsOverview({
+  actor,
+  search,
+  onSearchChange,
+  renderLink,
+}: Props) {
   const query = useQuery({
-    queryKey: ['timesheets', actor.id, search.month, search.userId, page],
-    queryFn: () =>
-      getOwnTimesheets({
-        data: { month: search.month, page, userId: search.userId },
-      }),
+    queryKey: ['timesheets', actor.id, search],
+    queryFn: async () => {
+      const response = await getOwnTimesheets({
+        data: { ...search, page: search.page ?? 0 },
+      })
+      if (!response.ok) throw new Error('სამუშაო საათები ვერ ჩაიტვირთა.')
+      return response.value
+    },
     retry: false,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
   })
-  const result = query.data?.ok ? query.data.value : null
+  const result = query.data
   const month = result?.month ?? search.month
-  const rows = useMemo(
-    () =>
-      result?.rows.map((row) => ({
-        ...row,
-        month: result.month,
-      })) ?? [],
-    [result],
-  )
-  const changeMonth = (change: number) => {
-    if (!month) return
-    onSearchChange({
-      ...search,
-      month: shiftTimesheetMonth(month, change),
-      page: 0,
-    })
+  async function refresh() {
+    const response = await query.refetch()
+    if (response.isError)
+      toast.error('სამუშაო საათები ვერ განახლდა. სცადეთ ხელახლა.')
+    else toast.success('სამუშაო საათები განახლდა.')
   }
   return (
     <section className="flex min-w-0 flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold">ჩემი სამუშაო საათები</h1>
-          <p className="text-sm text-muted-foreground">
-            საათები ეფუძნება დასწრების ჩანაწერებს. მიმდინარე ჩანაწერების დრო
-            წინასწარია.
-          </p>
-          {search.userId ? (
-            <p className="text-sm">
-              თანამშრომელი:{' '}
-              {result?.rows[0]?.employeeName ?? 'არჩეული ანგარიში'}
-            </p>
-          ) : null}
+      {result && !query.isError ? (
+        <CompanyTimesheetSummary totals={result.totals} />
+      ) : query.isPending ? (
+        <div
+          aria-hidden="true"
+          className="grid grid-cols-2 gap-4 xl:grid-cols-4"
+        >
+          {[0, 1, 2, 3].map((cell) => (
+            <Skeleton
+              key={cell}
+              className="h-24 rounded-xl motion-reduce:animate-none"
+            />
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            aria-label="წინა თვე"
-            disabled={!month || month <= '2000-01' || query.isFetching}
-            onClick={() => changeMonth(-1)}
-          >
-            წინა თვე
-          </Button>
-          <span className="min-w-20 text-center font-medium" aria-live="polite">
-            {month ? (
-              <Link
-                className="underline underline-offset-4"
-                to="/timesheets/$timesheetId"
-                params={{ timesheetId: month }}
-              >
-                {month}
-              </Link>
-            ) : (
-              (month ?? 'თვე')
-            )}
-          </span>
-          <Button
-            variant="outline"
-            aria-label="შემდეგი თვე"
-            disabled={!month || month >= '2100-12' || query.isFetching}
-            onClick={() => changeMonth(1)}
-          >
-            შემდეგი თვე
-          </Button>
-        </div>
-      </div>
-      {query.isPending ? (
-        <div role="status" aria-busy="true">
-          <span className="sr-only">სამუშაო საათები იტვირთება</span>
-          <Skeleton
-            aria-hidden="true"
-            className="h-72 w-full motion-reduce:animate-none"
-          />
-        </div>
-      ) : query.isError || !result ? (
-        <Alert variant="destructive">
+      ) : null}
+      {result && !query.isError && result.totals.open > 0 ? (
+        <Alert variant="info">
+          <IconInfoCircle aria-hidden="true" />
           <AlertDescription>
-            სამუშაო საათები ვერ ჩაიტვირთა. გადაამოწმეთ წვდომა და სცადეთ ხელახლა.
+            პერიოდში არის {result.totals.open} მიმდინარე ჩანაწერი. საბოლოო დრო
+            გასვლის შემდეგ დაზუსტდება.
           </AlertDescription>
         </Alert>
-      ) : (
-        <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              ['აღრიცხული დრო', formatWorkedTime(result.totals.seconds)],
-              ['დღის ჩანაწერები', String(result.totals.days)],
-              [
-                'დამტკიცებული დამატებითი დრო',
-                formatWorkedTime(result.totals.approvedOutsideSeconds),
-              ],
-              ['განხილვის მოლოდინში', String(result.totals.pending)],
-            ].map(([label, value]) => (
-              <Card key={label}>
-                <CardHeader>
-                  <CardDescription>{label}</CardDescription>
-                  <CardTitle>{value}</CardTitle>
-                </CardHeader>
-              </Card>
-            ))}
+      ) : null}
+      <Card className="min-w-0 gap-0 overflow-hidden py-0">
+        <CardHeader className="gap-4 border-b p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>
+              <h2>დღიური აღრიცხვა</h2>
+            </CardTitle>
+            <Button
+              variant="outline"
+              depth="raised"
+              disabled={query.isFetching}
+              aria-busy={query.isFetching}
+              onClick={() => void refresh()}
+            >
+              <span className="flex size-4 items-center justify-center">
+                {query.isFetching ? (
+                  <Spinner aria-hidden="true" />
+                ) : (
+                  <IconRefresh aria-hidden="true" />
+                )}
+              </span>
+              განახლება
+            </Button>
           </div>
-          {result.totals.open > 0 ? (
-            <Alert>
-              <AlertDescription>
-                პერიოდში არის {result.totals.open} მიმდინარე ჩანაწერი. საბოლოო
-                დრო გასვლის შემდეგ დაზუსტდება.
-              </AlertDescription>
-            </Alert>
-          ) : null}
-          <Card>
-            <CardHeader>
-              <CardTitle>დღიური აღრიცხვა</CardTitle>
-              <CardDescription>
-                დღე ეკუთვნის შესვლის თარიღს. დრო ნაჩვენებია ჩანაწერის დროის
-                სარტყელში.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {rows.length ? (
-                <TimesheetDaysTable rows={rows} />
-              ) : (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  ამ პერიოდში ხელმისაწვდომი ჩანაწერები არ მოიძებნა.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Button
-          variant="outline"
-          disabled={query.isFetching}
-          aria-busy={query.isFetching}
-          onClick={async () => {
-            const refreshed = await query.refetch()
-            if (refreshed.data?.ok && !refreshed.isError)
-              toast.success('სამუშაო საათები განახლდა.')
-            else toast.error('სამუშაო საათები ვერ განახლდა. სცადეთ ხელახლა.')
-          }}
-        >
-          {query.isFetching ? <Spinner aria-hidden="true" /> : null}განახლება
-        </Button>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            disabled={page === 0 || query.isFetching}
-            onClick={() => onSearchChange({ ...search, month, page: page - 1 })}
-          >
-            წინა
-          </Button>
-          <span className="text-sm" aria-live="polite">
-            გვერდი {page + 1}
-          </span>
-          <Button
-            variant="outline"
-            disabled={!result?.hasMore || query.isFetching || page >= 10000}
-            onClick={() => onSearchChange({ ...search, month, page: page + 1 })}
-          >
-            შემდეგი
-          </Button>
-        </div>
-      </div>
+          <CompanyTimesheetFilters
+            hideSearch
+            search={search}
+            onChange={onSearchChange}
+            period={
+              <CompanyTimesheetPeriod
+                month={month}
+                search={search}
+                onChange={onSearchChange}
+              />
+            }
+          />
+        </CardHeader>
+        <CardContent className="p-0">
+          <CompanyTimesheetResults
+            query={query}
+            search={search}
+            onRetry={() => void refresh()}
+            renderLink={renderLink}
+          />
+        </CardContent>
+      </Card>
     </section>
   )
 }

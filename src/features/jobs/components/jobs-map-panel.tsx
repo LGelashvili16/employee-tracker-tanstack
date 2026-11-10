@@ -68,6 +68,7 @@ export function JobsMapPanel({
 }) {
   const [expanded, setExpanded] = useState(false)
   const [showPlaces, setShowPlaces] = useState(false)
+  const [showBuildings, setShowBuildings] = useState(false)
   const camera = useRef<MapCamera | null>(null)
   const focused = useRef<string | null>(null)
   const inline = useRef<HTMLDivElement>(null)
@@ -101,6 +102,8 @@ export function JobsMapPanel({
               actor={actor}
               showPlaces={showPlaces}
               onPlacesChange={setShowPlaces}
+              showBuildings={showBuildings}
+              onBuildingsChange={setShowBuildings}
               pins={pins}
               selected={
                 selected && hasJobCoordinates(selected) ? selected : undefined

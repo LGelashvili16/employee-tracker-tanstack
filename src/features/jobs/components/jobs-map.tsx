@@ -5,9 +5,11 @@ import {
   IconMaximize,
   IconMinimize,
   IconBuildingStore,
+  IconBuildingSkyscraper,
 } from '@tabler/icons-react'
 import { Map, MapControls, MapMarker, useMap } from '#/components/ui/map'
 import { Button } from '#/components/ui/button'
+import { cn } from '#/lib/utils'
 import { JobsMapMenu, MapContextLocation } from './jobs-map-menu'
 import { JobMarker as JobMapMarker } from './job-marker'
 import type { Actor } from '#/lib/authorization/actor'
@@ -149,6 +151,8 @@ export default function JobsMap({
   actor,
   showPlaces,
   onPlacesChange,
+  showBuildings,
+  onBuildingsChange,
 }: {
   pins: Array<JobMarker>
   selected?: JobMarker
@@ -166,11 +170,13 @@ export default function JobsMap({
   actor: Actor
   showPlaces: boolean
   onPlacesChange: (show: boolean) => void
+  showBuildings: boolean
+  onBuildingsChange: (show: boolean) => void
 }) {
   const [position, setPosition] = useState<JobMapPosition | null>(null)
   const [restoreCamera] = useState(() => Boolean(camera.current))
   const content = (
-    <Map camera={camera} showPlaces={showPlaces}>
+    <Map camera={camera} showPlaces={showPlaces} showBuildings={showBuildings}>
       <MapFocus
         pins={pins}
         selected={selected}
@@ -194,6 +200,25 @@ export default function JobsMap({
         onClick={() => onPlacesChange(!showPlaces)}
       >
         <IconBuildingStore aria-hidden="true" />
+      </Button>
+      <Button
+        variant={showBuildings ? 'default' : 'outline'}
+        depth="raised"
+        size="icon-lg"
+        className={cn(
+          'absolute top-40 right-4 z-10',
+          !showBuildings && 'bg-background',
+        )}
+        aria-label="სამგანზომილებიანი შენობები"
+        aria-pressed={showBuildings}
+        title={
+          showBuildings
+            ? 'სამგანზომილებიანი შენობების გამორთვა'
+            : 'სამგანზომილებიანი შენობების ჩართვა'
+        }
+        onClick={() => onBuildingsChange(!showBuildings)}
+      >
+        <IconBuildingSkyscraper aria-hidden="true" />
       </Button>
       <Button
         data-map-expand

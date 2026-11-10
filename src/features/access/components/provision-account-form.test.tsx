@@ -31,6 +31,32 @@ beforeEach(() => {
 })
 
 describe('administrative account provisioning', () => {
+  it('offers the five employee roles in order without privileged or retired roles', async () => {
+    const user = userEvent.setup()
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ProvisionAccountForm onCode={vi.fn()} canAssignRoles />
+      </QueryClientProvider>,
+    )
+    await user.click(screen.getByRole('combobox'))
+    expect(
+      (await screen.findAllByRole('option')).map(
+        (option) => option.textContent,
+      ),
+    ).toEqual([
+      'თანამშრომელი',
+      'წარმოების სპეციალისტი',
+      'წარმოების უფროსი',
+      'გაყიდვების მენეჯერი',
+      'HR',
+    ])
+    await user.click(
+      screen.getByRole('option', { name: 'გაყიდვების მენეჯერი' }),
+    )
+    expect(screen.getByRole('combobox')).toHaveTextContent(
+      'გაყიდვების მენეჯერი',
+    )
+  })
   it('keeps restricted provisioning on the employee role without requesting schedule settings', async () => {
     const user = userEvent.setup()
     create.mockResolvedValue({ ok: false, message: 'საცდელი პასუხი.' })

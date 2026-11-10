@@ -2,21 +2,19 @@ import { EmployeeDayOffBalanceCard } from '#/features/leave/components/day-off-a
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { IconArrowLeft, IconPencil } from '@tabler/icons-react'
+import { IconArrowLeft } from '@tabler/icons-react'
 import { Alert, AlertDescription } from '#/components/ui/alert'
-import { Avatar, AvatarFallback } from '#/components/ui/avatar'
-import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Skeleton } from '#/components/ui/skeleton'
 import { hasPermission } from '#/lib/authorization/permissions'
 import { getEmployeeAccount } from '../access.functions'
 import { availableAccountActions, canManageAccount } from '../access.actions'
-import { accountInitials, accountStatus } from '../access.presentation'
 import { AccountActionDialog } from './account-action-dialog'
 import { AccountCodeDialog } from './account-code-dialog'
-import { EmployeeDetailsDialog } from './employee-details-dialog'
+import { EmployeeDetailsSheet } from './employee-details-sheet'
 import { UserAccessCard } from './user-access-card'
 import { UserProfileCard } from './user-profile-card'
+import { UserProfileHeader } from './user-profile-header'
 import { UserScheduleCard } from './user-schedule-card'
 import { UserWorkRecordsCard } from './user-work-records-card'
 import type { Actor } from '#/lib/authorization/actor'
@@ -59,11 +57,19 @@ export function UserDetail({
 
   if (query.isPending)
     return (
-      <div role="status" aria-busy="true" aria-label="ანგარიში იტვირთება">
+      <div
+        className="w-full"
+        role="status"
+        aria-busy="true"
+        aria-label="ანგარიში იტვირთება"
+      >
         <div aria-hidden="true" className="flex flex-col gap-4">
           <Skeleton className="h-9 w-48" />
-          <Skeleton className="h-24 w-full rounded-2xl" />
-          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-44 w-full rounded-2xl" />
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+            <Skeleton className="h-96 rounded-2xl" />
+            <Skeleton className="h-96 rounded-2xl" />
+          </div>
         </div>
       </div>
     )
@@ -84,56 +90,42 @@ export function UserDetail({
     )
 
   const { record, companyWeek } = detail
-  const status = accountStatus(record)
   const manageable = canManageAccount(record, actor)
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <BackLink />
-      <header className="flex flex-wrap items-center gap-4">
-        <Avatar size="lg" aria-hidden="true">
-          <AvatarFallback>{accountInitials(record.name)}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="break-words text-2xl font-semibold tracking-tight">
-              {record.name}
-            </h1>
-            <Badge variant={status.variant}>{status.label}</Badge>
-          </div>
-          <p className="mt-1 font-mono text-sm text-muted-foreground">
-            {record.code}
-          </p>
-        </div>
-        {manageable ? (
-          <Button variant="outline" onClick={() => setEditing(true)}>
-            <IconPencil data-icon="inline-start" aria-hidden="true" />
-            რედაქტირება
-          </Button>
-        ) : null}
-      </header>
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        <UserProfileCard record={record} />
-        <UserAccessCard
-          actions={manageable ? availableAccountActions(record) : []}
-          onAction={setAction}
-        />
-      </div>
-      {hasPermission(actor, 'employees.manage') ? (
-        <EmployeeDayOffBalanceCard
-          actorId={actor.id}
-          userId={record.userId}
-          canEdit={
-            actor.id !== record.userId &&
-            hasPermission(actor, 'employees.manage')
-          }
-        />
-      ) : null}
-      <UserScheduleCard week={record.workingWeek} companyWeek={companyWeek} />
-      <UserWorkRecordsCard
-        roles={actor.roles}
-        permissionOverrides={actor.permissionOverrides}
-        userId={record.userId}
+      <UserProfileHeader
+        record={record}
+        canEdit={manageable}
+        onEdit={() => setEditing(true)}
       />
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <UserProfileCard record={record} />
+          <UserScheduleCard
+            week={record.workingWeek}
+            companyWeek={companyWeek}
+          />
+          <UserWorkRecordsCard
+            roles={actor.roles}
+            permissionOverrides={actor.permissionOverrides}
+            userId={record.userId}
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-6">
+          {hasPermission(actor, 'employees.manage') ? (
+            <EmployeeDayOffBalanceCard
+              actorId={actor.id}
+              userId={record.userId}
+              canEdit={actor.id !== record.userId}
+            />
+          ) : null}
+          <UserAccessCard
+            actions={manageable ? availableAccountActions(record) : []}
+            onAction={setAction}
+          />
+        </div>
+      </div>
       {action ? (
         <AccountActionDialog
           target={record}
@@ -142,13 +134,13 @@ export function UserDetail({
           onCode={setIssuedCode}
         />
       ) : null}
-      {editing ? (
-        <EmployeeDetailsDialog
-          target={record}
-          canConfigureSchedule={hasPermission(actor, 'attendance.configure')}
-          onClose={() => setEditing(false)}
-        />
-      ) : null}
+      {/* Keep the sheet root mounted so Base UI can run its opening and closing transitions. */}
+      <EmployeeDetailsSheet
+        open={editing}
+        target={record}
+        canConfigureSchedule={hasPermission(actor, 'attendance.configure')}
+        onClose={() => setEditing(false)}
+      />
       {issuedCode ? (
         <AccountCodeDialog
           value={issuedCode}

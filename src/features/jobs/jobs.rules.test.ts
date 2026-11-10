@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { allowedJobTransitions, canManageJobs } from './jobs.rules'
-import {
-  hasPermission,
-  permissionSchema,
-} from '#/lib/authorization/permissions'
+import { hasPermission } from '#/lib/authorization/permissions'
 import type { Actor } from '#/lib/authorization/actor'
 
 const employee: Actor = {
@@ -13,13 +10,12 @@ const employee: Actor = {
   emailVerified: false,
   roles: ['employee'],
 }
-const manager: Actor = { ...employee, id: 'manager', roles: ['sales_manager'] }
+const manager: Actor = { ...employee, id: 'manager', roles: ['supervisor'] }
 describe('shared map work policy', () => {
-  it('gives the sales manager only job management and its navigation grant', () => {
-    for (const permission of permissionSchema.options)
-      expect(hasPermission(manager.roles, permission)).toBe(
-        ['manage.access', 'jobs.manage'].includes(permission),
-      )
+  it('lets the production lead manage jobs without granting platform access or job claiming', () => {
+    expect(hasPermission(manager.roles, 'manage.access')).toBe(true)
+    expect(hasPermission(manager.roles, 'admin.access')).toBe(false)
+    expect(hasPermission(manager.roles, 'jobs.claim')).toBe(false)
     expect(canManageJobs(manager)).toBe(true)
     expect(canManageJobs({ ...employee, roles: ['admin'] })).toBe(false)
   })
@@ -44,20 +40,12 @@ describe('shared map work policy', () => {
           { status: 'pending', assigneeId: null },
         ),
       ).toEqual([])
-    for (const roles of [
-      ['sales_manager'],
-      ['supervisor'],
-      ['operations_manager'],
-    ] as const)
-      expect(
-        allowedJobTransitions(
-          { ...employee, roles: [...roles] },
-          { status: 'pending', assigneeId: null },
-        ),
-      ).toEqual(['rejected'])
+    expect(
+      allowedJobTransitions(manager, { status: 'pending', assigneeId: null }),
+    ).toEqual(['rejected'])
     expect(
       allowedJobTransitions(
-        { ...manager, roles: ['sales_manager', 'production_specialist'] },
+        { ...manager, roles: ['supervisor', 'production_specialist'] },
         { status: 'pending', assigneeId: null },
       ),
     ).toEqual(['en_route', 'rejected'])

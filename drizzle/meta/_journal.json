@@ -183,6 +183,13 @@
       "when": 1794234886367,
       "tag": "0025_sick_leave_and_leave_naming",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794235000000,
+      "tag": "0026_consolidate_employee_roles",
+      "breakpoints": true
     }
   ]
 }

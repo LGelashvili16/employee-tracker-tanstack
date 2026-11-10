@@ -7,9 +7,29 @@ import {
   isoWeekday,
   sameWorkingWeek,
   shiftMinutes,
+  weeklyTimeline,
 } from './scheduling.rules'
 
 describe('week durations', () => {
+  it('uses one scale for comparable shifts and preserves minute precision', () => {
+    const scale = weeklyTimeline([
+      { weekday: 1, hours: { start: '09:15', end: '17:30' } },
+      { weekday: 2, hours: { start: '10:00', end: '19:00' } },
+    ])
+    expect(scale.ticks).toEqual([540, 720, 900, 1080, 1260])
+    expect(scale.position('09:15')).toBeCloseTo(2.0833)
+    expect(scale.position('19:00')).toBeCloseTo(83.3333)
+  })
+  it('includes early and late shifts without clipping or invalid empty scales', () => {
+    const scale = weeklyTimeline([
+      { weekday: 1, hours: { start: '00:00', end: '00:15' } },
+      { weekday: 2, hours: { start: '23:30', end: '23:59' } },
+    ])
+    expect(scale.start).toBe(0)
+    expect(scale.end).toBe(1440)
+    expect(scale.position('23:59')).toBeLessThan(100)
+    expect(weeklyTimeline([{ weekday: 1, hours: null }]).ticks).toHaveLength(9)
+  })
   it('formats shift lengths and finds the weekday of a date', () => {
     expect(shiftMinutes({ start: '09:00', end: '17:30' })).toBe(510)
     expect(formatDuration(510)).toBe('8 სთ 30 წთ')

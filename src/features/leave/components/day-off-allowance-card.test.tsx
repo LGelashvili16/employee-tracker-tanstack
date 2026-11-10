@@ -88,9 +88,7 @@ it('edits an employee balance and surfaces a stale-balance error without closing
       <EmployeeDayOffBalanceCard actorId="hr" userId="employee" canEdit />
     </QueryClientProvider>,
   )
-  await user.click(
-    await screen.findByRole('button', { name: 'ბალანსის შეცვლა' }),
-  )
+  await user.click(await screen.findByRole('button', { name: 'რედაქტირება' }))
   const remaining = screen.getByRole('spinbutton', { name: 'დარჩენილი დღეები' })
   await user.clear(remaining)
   await user.type(remaining, '3')

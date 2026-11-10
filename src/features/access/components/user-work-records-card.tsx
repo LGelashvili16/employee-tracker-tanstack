@@ -5,13 +5,7 @@ import {
   IconClock,
 } from '@tabler/icons-react'
 import { Button } from '#/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '#/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { hasEveryPermission } from '#/lib/authorization/permissions'
 import type { PermissionOverrides, Role } from '#/lib/authorization/permissions'
 
@@ -44,27 +38,26 @@ export function UserWorkRecordsCard({
   if (!canReadAttendance && !canReviewTimesheets) return null
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>სამუშაო ჩანაწერები</CardTitle>
-        <CardDescription>
-          გახსენით ამ თანამშრომლის დასწრების ჩანაწერები და სამუშაო საათები
-          თქვენი წვდომის ფარგლებში.
-        </CardDescription>
+    <Card className="rounded-2xl py-5 sm:py-6">
+      <CardHeader className="px-5 sm:px-6">
+        <CardTitle>
+          <h2>სამუშაო ჩანაწერები</h2>
+        </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-wrap gap-3">
+      <CardContent className="grid gap-3 px-5 sm:grid-cols-2 sm:px-6">
         {canReadAttendance ? (
           <Button
             variant="outline"
             depth="raised"
             nativeButton={false}
             role="link"
+            className="h-auto min-w-0 justify-start gap-3 px-4 py-4 whitespace-normal"
             render={
               <Link to="/manage/attendance/$userId" params={{ userId }} />
             }
           >
             <IconCalendarClock data-icon="inline-start" aria-hidden="true" />
-            დასწრების ჩანაწერები
+            <span className="flex-1 text-start">დასწრების ჩანაწერები</span>
             <IconArrowUpRight data-icon="inline-end" aria-hidden="true" />
           </Button>
         ) : null}
@@ -74,6 +67,7 @@ export function UserWorkRecordsCard({
             depth="raised"
             nativeButton={false}
             role="link"
+            className="h-auto min-w-0 justify-start gap-3 px-4 py-4 whitespace-normal"
             render={
               <Link
                 to="/manage/attendance/$userId"
@@ -83,7 +77,7 @@ export function UserWorkRecordsCard({
             }
           >
             <IconClock data-icon="inline-start" aria-hidden="true" />
-            სამუშაო საათები
+            <span className="flex-1 text-start">სამუშაო საათები</span>
             <IconArrowUpRight data-icon="inline-end" aria-hidden="true" />
           </Button>
         ) : null}

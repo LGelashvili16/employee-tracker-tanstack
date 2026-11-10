@@ -325,7 +325,7 @@ describe('persisted attendance dashboard', () => {
     expect(screen.queryByText('დღევანდელი თარიღი')).not.toBeInTheDocument()
     rerender(view(true))
     expect(
-      screen.getByRole('heading', { level: 1, name: 'დილა მშვიდობისა, ანა' }),
+      screen.getByRole('heading', { level: 1, name: /^დილა მშვიდობისა, ანა/ }),
     ).toBeVisible()
     expect(screen.getByText('დღევანდელი თარიღი')).toBeVisible()
     expect(screen.getByRole('grid', { name: 'ნოემბერი 2026' })).toBeVisible()
@@ -333,6 +333,26 @@ describe('persisted attendance dashboard', () => {
       screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
     ).toHaveTextContent('00:00:00')
     expect(calls.read).toHaveBeenCalledOnce()
+  })
+  it('keeps attendance focused on the current session and recent records', async () => {
+    calls.read.mockResolvedValue({ ok: true, value: working() })
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    expect(
+      await screen.findByRole('button', { name: 'სამუშაოს დასრულება' }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
+    ).toHaveTextContent('01:00:00')
+    expect(screen.getByText('10:00 - 19:00')).toBeVisible()
+    expect(screen.getByRole('table', { name: 'ბოლო დასწრებები' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'გასვლა' })).toBeVisible()
+    expect(screen.queryByText('ამ კვირაში')).not.toBeInTheDocument()
+    expect(screen.queryByText('დღევანდელი თარიღი')).not.toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })
   it.each([true, false])(
     'hides internal pending-review status on employee screens while running=%s',

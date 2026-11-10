@@ -21,6 +21,7 @@ import {
 import type { AttendanceOverview } from '../attendance.types'
 import {
   attendanceStatus,
+  formatAttendanceDate,
   workDurationStatus,
 } from '../attendance.presentation'
 import { cn } from '#/lib/utils'
@@ -33,10 +34,12 @@ export function AttendanceClock({
   overview,
   actorId,
   compact = false,
+  workLog = false,
 }: {
   overview: AttendanceOverview
   actorId: string
   compact?: boolean
+  workLog?: boolean
 }) {
   const action = useAttendanceActions(actorId, overview)
   const { openModal } = useModal()
@@ -68,22 +71,44 @@ export function AttendanceClock({
     >
       <CardHeader className="flex flex-wrap items-center justify-between gap-3">
         <CardTitle className="flex items-center gap-2">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+          <span
+            className={cn(
+              'flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground',
+              workLog && 'hidden',
+            )}
+          >
             <IconClock className="size-5" aria-hidden="true" />
           </span>
           {oldSession
             ? `${open.workDate} დღის აღრიცხული დრო`
             : 'დღეს ნამუშევარი'}
         </CardTitle>
-        <Badge variant={status.variant}>{status.label}</Badge>
+        <div className="flex flex-wrap items-center gap-3">
+          {workLog ? (
+            <time
+              dateTime={overview.workday.date}
+              className="text-sm text-muted-foreground"
+            >
+              {formatAttendanceDate(overview.workday.date)}
+            </time>
+          ) : null}
+          <Badge variant={status.variant}>{status.label}</Badge>
+        </div>
       </CardHeader>
       <CardContent
-        className={cn('flex flex-1 flex-col', compact ? 'gap-4' : 'gap-6')}
+        className={cn(
+          workLog
+            ? 'grid items-center gap-6 lg:grid-cols-[auto_1fr_auto]'
+            : 'flex flex-1 flex-col',
+          compact ? 'gap-4' : 'gap-6',
+        )}
       >
         <div
           className={cn(
-            '@container/clock relative flex flex-1 flex-col items-center justify-center gap-6 overflow-hidden rounded-xl border border-border/60 bg-muted/30 px-3',
-            compact ? 'min-h-48 py-5 sm:py-6' : 'py-7 sm:py-10',
+            workLog
+              ? 'contents'
+              : '@container/clock relative flex flex-1 flex-col items-center justify-center gap-6 overflow-hidden rounded-xl border border-border/60 bg-muted/30 px-3',
+            !workLog && (compact ? 'min-h-48 py-5 sm:py-6' : 'py-7 sm:py-10'),
           )}
         >
           {compact ? <AttendanceClockPattern /> : null}
@@ -93,10 +118,14 @@ export function AttendanceClock({
             running={open !== null}
             onStart={recordClockStart}
             compact={compact}
+            workLog={workLog}
             showWorkTarget={!overview.approvedLeave}
           />
           <Button
-            className="work-current-button relative h-11 w-full sm:w-auto sm:min-w-52"
+            className={cn(
+              'work-current-button relative h-11 w-full sm:w-auto sm:min-w-52',
+              workLog && 'order-3 lg:justify-self-end',
+            )}
             disabled={
               action.pending ||
               (!open && overview.workday.kind === 'unconfigured')
@@ -165,35 +194,66 @@ export function AttendanceClock({
               {open ? 'სამუშაოს დასრულება' : 'სამუშაოს დაწყება'}
             </span>
           </Button>
-          {overview.workday.kind === 'day_off' ? (
+          {!workLog && overview.workday.kind === 'day_off' ? (
             <Badge variant="secondary" className="relative">
               არასამუშაო დღე
             </Badge>
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-          <span>
-            შესვლა:{' '}
-            {firstIn
-              ? formatAttendanceTime(
-                  firstIn,
-                  open?.timezone ?? overview.workday.timezone,
-                )
-              : 'ჯერ არ დაფიქსირებულა'}
-          </span>
-          {overview.today?.lastOut ? (
-            <span>
-              გასვლა:{' '}
-              {formatAttendanceTime(
-                overview.today.lastOut,
-                overview.today.timezone,
-              )}
-            </span>
+        <div
+          className={cn(
+            'flex flex-wrap gap-4 text-sm text-muted-foreground',
+            workLog && 'order-2 flex-col lg:border-l lg:pl-6',
+          )}
+        >
+          {workLog ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span>დღევანდელი განრიგი</span>
+              <span className="font-medium text-foreground tabular-nums">
+                {overview.approvedLeave
+                  ? 'სამუშაო მიზანი არ არის განსაზღვრული'
+                  : overview.workday.kind === 'scheduled'
+                    ? `${overview.workday.start} - ${overview.workday.end}`
+                    : overview.workday.kind === 'day_off'
+                      ? 'არასამუშაო დღე'
+                      : 'განრიგი არ არის განსაზღვრული'}
+              </span>
+              <span className="text-xs">{overview.workday.timezone}</span>
+            </div>
           ) : null}
-          {activeDay ? <AttendanceDeviationBadges {...activeDay} /> : null}
+          <div
+            className={cn(
+              workLog
+                ? 'flex flex-wrap items-center gap-x-4 gap-y-2'
+                : 'contents',
+            )}
+          >
+            <span>
+              შესვლა:{' '}
+              {firstIn
+                ? formatAttendanceTime(
+                    firstIn,
+                    open?.timezone ?? overview.workday.timezone,
+                  )
+                : 'ჯერ არ დაფიქსირებულა'}
+            </span>
+            {overview.today?.lastOut ? (
+              <span>
+                გასვლა:{' '}
+                {formatAttendanceTime(
+                  overview.today.lastOut,
+                  overview.today.timezone,
+                )}
+              </span>
+            ) : null}
+            {activeDay ? <AttendanceDeviationBadges {...activeDay} /> : null}
+          </div>
         </div>
         {oldSession || needsReview ? (
-          <Alert variant={needsReview ? 'destructive' : 'default'}>
+          <Alert
+            className={cn(workLog && 'order-4 lg:col-span-3')}
+            variant={needsReview ? 'destructive' : 'default'}
+          >
             <AlertDescription>
               {needsReview
                 ? `ჩანაწერი ღიაა სულ მცირე ${open.maxOpenHours} საათი და საჭიროებს ხელმძღვანელის გადამოწმებას. დროის აღრიცხვა გრძელდება.`
@@ -211,12 +271,14 @@ export function ClockTimer({
   running,
   onStart,
   compact = false,
+  workLog = false,
   showWorkTarget = true,
 }: {
   seconds: number
   running: boolean
   onStart?: (startedAt: number) => void
   compact?: boolean
+  workLog?: boolean
   showWorkTarget?: boolean
 }) {
   const total = seconds + useElapsedSeconds(running, undefined, onStart)
@@ -226,6 +288,26 @@ export function ClockTimer({
     Math.floor(total / 60) % 60,
     total % 60,
   ]
+  if (workLog)
+    return (
+      <div
+        role="timer"
+        aria-live="off"
+        aria-label="ნამუშევარი დრო"
+        className="flex flex-col items-start gap-2"
+      >
+        <span className="sr-only">{formatWorkedTime(total)}</span>
+        <span
+          aria-hidden="true"
+          className="text-4xl font-semibold tracking-tight tabular-nums sm:text-5xl"
+        >
+          {values.map((value) => String(value).padStart(2, '0')).join(':')}
+        </span>
+        {showWorkTarget ? (
+          <Badge variant={durationStatus.variant}>{durationStatus.label}</Badge>
+        ) : null}
+      </div>
+    )
   return (
     <div
       className={cn(

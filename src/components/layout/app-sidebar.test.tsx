@@ -226,7 +226,7 @@ describe('workspace navigation', () => {
       screen.queryByRole('link', { name: 'მომხმარებლები' }),
     ).not.toBeInTheDocument()
   })
-  it.each(['supervisor', 'operations_manager', 'hr_manager'] as const)(
+  it.each(['supervisor', 'hr_manager'] as const)(
     'keeps platform configuration out of the %s workspace',
     (role) => {
       renderSidebar(role)
@@ -237,7 +237,7 @@ describe('workspace navigation', () => {
       ).not.toBeInTheDocument()
     },
   )
-  it.each(['owner', 'supervisor', 'operations_manager'] as const)(
+  it.each(['owner', 'supervisor'] as const)(
     'uses one attendance workspace for %s without duplicate management routes',
     (role) => {
       location.pathname = '/manage/attendance/worker'
@@ -291,9 +291,10 @@ describe('workspace navigation', () => {
   )
   it('hides administration and management from employees', () => {
     renderSidebar('employee')
-    expect(
-      screen.getByRole('link', { name: 'არყოფნა' }),
-    ).toHaveAttribute('href', '/leave')
+    expect(screen.getByRole('link', { name: 'არყოფნა' })).toHaveAttribute(
+      'href',
+      '/leave',
+    )
     for (const name of [
       'მთავარი გვერდი',
       'დასწრება',

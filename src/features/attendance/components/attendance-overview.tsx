@@ -12,7 +12,6 @@ import { Skeleton } from '#/components/ui/skeleton'
 import { Spinner } from '#/components/ui/spinner'
 import { attendanceOptions } from '../attendance.queries'
 import { AttendanceClock } from './attendance-clock'
-import { AttendanceDayWidgets } from './attendance-day-widgets'
 import { RecentAttendance } from './recent-attendance'
 import { CurrentDayWidget } from './current-day-widget'
 import { DailyGoalWidget } from './daily-goal-widget'
@@ -80,15 +79,14 @@ function OverviewContent({
         {heading ? <div className="mb-6">{heading}</div> : null}
         <div aria-hidden="true" className="flex flex-col gap-4">
           <div
-            className={cn(
-              'grid gap-4',
-              dashboardLayout ? dashboardGrid : 'xl:grid-cols-3',
-            )}
+            className={cn('grid gap-4', dashboardLayout ? dashboardGrid : '')}
           >
             <Skeleton
               className={cn(
-                'h-96 rounded-2xl xl:h-full',
-                dashboardLayout ? dashboardClock : 'xl:col-span-2',
+                dashboardLayout
+                  ? 'h-96 rounded-2xl xl:h-full'
+                  : 'h-80 rounded-2xl lg:h-44',
+                dashboardLayout ? dashboardClock : '',
               )}
             />
             {dashboardLayout ? (
@@ -102,12 +100,7 @@ function OverviewContent({
                   className={cn('h-64 rounded-2xl', dashboardSummary)}
                 />
               </>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                <Skeleton className="h-56 rounded-2xl" />
-                <Skeleton className="h-60 rounded-2xl" />
-              </div>
-            )}
+            ) : null}
           </div>
           <Skeleton className="h-52 rounded-2xl" />
         </div>
@@ -150,28 +143,19 @@ function OverviewContent({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: reducedMotion ? 0 : 0.2 }}
-        className="flex flex-col gap-4"
+        className={cn('flex flex-col', dashboardLayout ? 'gap-4' : 'gap-6')}
       >
         {heading ? <div className="mb-2">{heading}</div> : null}
         {result.value.approvedLeave ? (
           <ApprovedLeaveNotice leave={result.value.approvedLeave} />
         ) : null}
-        <div
-          className={cn(
-            'grid gap-4',
-            dashboardLayout ? dashboardGrid : 'xl:grid-cols-3',
-          )}
-        >
-          <div
-            className={cn(
-              'min-w-0',
-              dashboardLayout ? dashboardClock : 'xl:col-span-2',
-            )}
-          >
+        <div className={cn('grid gap-4', dashboardLayout ? dashboardGrid : '')}>
+          <div className={cn('min-w-0', dashboardLayout ? dashboardClock : '')}>
             <AttendanceClock
               overview={result.value}
               actorId={actorId}
               compact={dashboardLayout}
+              workLog={!dashboardLayout}
             />
           </div>
           {dashboardLayout ? (
@@ -203,13 +187,9 @@ function OverviewContent({
                 />
               </div>
             </>
-          ) : (
-            <div className="min-w-0">
-              <AttendanceDayWidgets overview={result.value} />
-            </div>
-          )}
+          ) : null}
         </div>
-        <RecentAttendance overview={result.value} />
+        <RecentAttendance overview={result.value} workLog={!dashboardLayout} />
       </motion.div>
     </MotionConfig>
   )

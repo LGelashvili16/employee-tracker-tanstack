@@ -18,7 +18,7 @@ vi.mock('../jobs.functions', () => api)
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 const manager: Actor = {
   id: 'manager',
-  roles: ['sales_manager'],
+  roles: ['supervisor'],
   name: 'მენეჯერი',
   email: null,
   emailVerified: false,
@@ -139,7 +139,7 @@ it('opens the editor from a manager menu without saving automatically', async ()
   )
   expect(api.editJob).not.toHaveBeenCalled()
 })
-it('hides claiming from a sales manager in both the marker menu and details', async () => {
+it('hides claiming from a production lead in both the marker menu and details', async () => {
   const { marker } = setup()
   fireEvent.contextMenu(marker)
   expect(

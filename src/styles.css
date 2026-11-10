@@ -740,3 +740,105 @@ a {
 .dark body::after {
   background: none;
 }
+
+/* A daylight sky gives way to evening; all atmospheric layers stay behind the content. */
+.schedule-daylight-panel {
+  --schedule-day-ink: #16364d;
+  --schedule-night-ink: #f1f5ff;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: var(--schedule-day-ink);
+  background:
+    radial-gradient(
+      circle at 86% 22%,
+      #fffbdc 0 9px,
+      rgb(255 246 192 / 65%) 15px,
+      transparent 52px
+    ),
+    radial-gradient(
+      ellipse at 100% 0%,
+      rgb(255 249 214 / 65%),
+      transparent 58%
+    ),
+    linear-gradient(
+      180deg,
+      #b5e4fa 0%,
+      #8fcbed 40%,
+      #718bb5 52%,
+      #3a4e7b 64%,
+      #0e1d3d 100%
+    );
+}
+
+.schedule-daylight-panel::after {
+  content: '';
+  position: absolute;
+  inset: 58% 0 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 88% 24%,
+      rgb(255 255 255 / 90%) 0 1px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 72% 48%,
+      rgb(216 233 255 / 80%) 0 1px,
+      transparent 1.7px
+    ),
+    radial-gradient(
+      circle at 92% 78%,
+      rgb(255 255 255 / 85%) 0 1.2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 56% 84%,
+      rgb(216 233 255 / 70%) 0 0.8px,
+      transparent 1.7px
+    ),
+    radial-gradient(
+      circle at 80% 94%,
+      rgb(255 255 255 / 65%) 0 0.8px,
+      transparent 1.6px
+    ),
+    radial-gradient(
+      circle at 29% 86%,
+      rgb(255 255 255 / 65%) 0 0.8px,
+      transparent 1.6px
+    ),
+    radial-gradient(circle at 88% 24%, rgb(190 215 255 / 18%), transparent 7px);
+}
+
+.schedule-daylight-panel .schedule-night-copy {
+  color: var(--schedule-night-ink);
+}
+
+.schedule-work-block {
+  background: linear-gradient(
+    180deg,
+    var(--badge-blue) 0%,
+    var(--badge-blue) 35%,
+    #24395c 100%
+  );
+}
+
+.schedule-sky-shift {
+  color: #16364d;
+  background: linear-gradient(
+    180deg,
+    #b5e4fa 0%,
+    #8fcbed 35%,
+    #3a4e7b 70%,
+    #0e1d3d 100%
+  );
+}
+
+.schedule-sky-shift[data-compact='false'] .schedule-work-duration {
+  color: #24435b;
+}
+
+.schedule-work-block .schedule-work-end {
+  color: #f1f5ff;
+}
