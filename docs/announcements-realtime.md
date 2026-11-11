@@ -1,6 +1,6 @@
 # Announcement live updates
 
-Teamwork uses a same-origin, authenticated SSE connection at `/api/events`. Only announcements use this transport today. General notification polling remains unchanged.
+Teamwork uses a same-origin, authenticated SSE connection at `/api/events`. Only announcements use this transport today. General notification polling remains unchanged. See [shared live events](realtime.md) for the centralized coordinator, provider, and feature extension instructions.
 
 Creators do not receive their own publication's unread dot, bell alert, live toast or login modal. Their publications remain visible and read in the directory. Legacy self-delivery rows are excluded from these indicators as well.
 
@@ -21,10 +21,10 @@ Both delivery modes receive live dot updates. Non-modal publications also receiv
 | `src/lib/realtime/realtime.schemas.ts`                                 | Internal identifier-only wake-up contract.                                                                                                                  |
 | `src/lib/realtime/postgres-events.server.ts`                           | Transactional signaling, shared database listener and reconnection.                                                                                         |
 | `src/lib/realtime/event-stream.server.ts`                              | SSE framing, private headers, ordered processing, keepalive, limits and cleanup.                                                                            |
-| `src/hooks/use-realtime-events.ts`                                     | Browser EventSource lifecycle and automatic reconnection.                                                                                                   |
-| `src/routes/api/events.ts`                                             | Thin HTTP route selecting the current stream handler.                                                                                                       |
+| `src/hooks/use-realtime-events.ts`                                     | Feature topic subscription through the shared RealtimeProvider.                                                                                             |
+| `src/routes/api/events.ts`                                             | Thin HTTP route selecting the shared application stream coordinator.                                                                                        |
 | `src/lib/auth/session.server.ts`                                       | Header-based actor reading for long-lived HTTP requests, without session refresh or cookie caching. Ordinary requests keep their previous refresh behavior. |
-| `src/features/announcements/server/announcements-stream.server.ts`     | Same-origin/input checks, trusted session identity, recipient filtering and feature projection.                                                             |
+| `src/features/announcements/server/announcements-stream.server.ts`     | Feature-owned authorized announcement snapshots and live projections.                                                                                       |
 | `src/features/announcements/server/announcements.service.server.ts`    | Publication/acknowledgement signals and authorized minimal stream state.                                                                                    |
 | `src/features/announcements/server/announcements.repository.server.ts` | Recipient unread count and recipient-scoped publication lookup.                                                                                             |
 | `src/features/announcements/announcements-realtime.schemas.ts`         | Browser payload validation.                                                                                                                                 |
@@ -32,7 +32,7 @@ Both delivery modes receive live dot updates. Non-modal publications also receiv
 | `src/components/layout/app-shell.tsx`                                  | One subscription under the existing account-scoped QueryClient provider.                                                                                    |
 | `src/components/layout/app-sidebar.tsx`                                | Boolean unread prop and Georgian accessible dot.                                                                                                            |
 
-The shared transport imports no announcement UI or persistence. Notification streaming can later extend the event contracts and compose its handler into this endpoint/connection. No second browser connection or separate WebSocket server is needed.
+The shared transport imports no announcement UI or persistence. Notification streaming can later extend the topic schema and register its handler in src/server/realtime/events.server.ts, sharing the existing provider connection. No second browser connection or separate WebSocket server is needed.
 
 ## Recovery and performance
 
@@ -50,7 +50,7 @@ No package, table or environment variable is added. Migration `0028_announcement
 ## Tests
 
 - `src/lib/realtime/event-stream.server.test.ts`: framing, caching, reconnect snapshots, revoked sessions, abort/cancel, already-aborted requests and bounded bursts.
-- `src/features/announcements/server/announcements-stream.server.test.ts`: anonymous/cross-origin/client-selected identity rejection and recipient isolation.
+- `src/lib/realtime/events-response.server.test.ts`: anonymous/cross-origin/client-selected identity rejection, recipient isolation, refreshed authorization and handler composition. Feature handler tests cover announcement projections; provider tests cover shared connection and subscription cleanup.
 - `src/features/announcements/hooks/use-announcement-realtime.test.tsx`: dot updates, invalidation, no historical toasts, duplicate suppression, toast duration/position/action, malformed payloads and cleanup.
 - `src/features/announcements/server/announcements.integration.test.ts`: real PostgreSQL commit/rollback delivery, retry deduplication, recipient projections, publisher suppression, employment denial, shared connection count and recovery after terminating only the test listener.
 - Shell/sidebar tests cover integration and the accessible unread indicator.

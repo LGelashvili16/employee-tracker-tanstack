@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { RealtimeProvider } from '#/providers/realtime-provider'
 import { Link, Outlet, useLocation, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import {
@@ -29,9 +30,11 @@ import type { Actor } from '#/lib/authorization/actor'
 
 export function AppShell({ actor }: { actor: Actor }) {
   return (
-    <NotificationsProvider key={actor.id}>
-      <WorkspaceShell actor={actor} />
-    </NotificationsProvider>
+    <RealtimeProvider key={actor.id} actorId={actor.id}>
+      <NotificationsProvider>
+        <WorkspaceShell actor={actor} />
+      </NotificationsProvider>
+    </RealtimeProvider>
   )
 }
 

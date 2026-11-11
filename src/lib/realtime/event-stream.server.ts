@@ -2,7 +2,8 @@ import '@tanstack/react-start/server-only'
 import { subscribeRealtime } from './postgres-events.server'
 import type { RealtimeSignal } from './realtime.schemas'
 
-type Event = { event: string; data: unknown; id?: string }
+export type RealtimeEvent = { event: string; data: unknown; id?: string }
+type Events = RealtimeEvent | Array<RealtimeEvent> | null
 
 /** Owns framing, serialized work, keepalive, slow-client limits, and disconnect cleanup. */
 export function eventStreamResponse(
@@ -10,8 +11,8 @@ export function eventStreamResponse(
   options: {
     authorized: () => Promise<boolean>
     accepts?: (signal: RealtimeSignal) => boolean
-    snapshot: () => Promise<Event>
-    changed: (signal: RealtimeSignal) => Promise<Event | null>
+    snapshot: () => Promise<Events>
+    changed: (signal: RealtimeSignal) => Promise<Events>
   },
 ) {
   const encoder = new TextEncoder()
@@ -45,7 +46,7 @@ export function eventStreamResponse(
           if ((controller.desiredSize ?? 0) <= 0) return stop()
           controller.enqueue(encoder.encode(text))
         }
-        function schedule(read: () => Promise<Event | null>) {
+        function schedule(read: () => Promise<Events>) {
           if (closed) return
           if (++queued > 32) return stop()
           work = work
@@ -56,9 +57,13 @@ export function eventStreamResponse(
                 return stop()
               }
               const value = await read()
-              if (value)
+              for (const event of Array.isArray(value)
+                ? value
+                : value
+                  ? [value]
+                  : [])
                 send(
-                  `${value.id ? `id: ${value.id}\n` : ''}event: ${value.event}\ndata: ${JSON.stringify(value.data)}\n\n`,
+                  `${event.id ? `id: ${event.id}\n` : ''}event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
                 )
             })
             .catch(() => stop())

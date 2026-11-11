@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useAnnouncementRealtime } from './use-announcement-realtime'
+import { RealtimeProvider } from '#/providers/realtime-provider'
 import type { ReactNode } from 'react'
 
 const mocks = vi.hoisted(() => ({ toast: vi.fn(), navigate: vi.fn() }))
@@ -39,7 +40,9 @@ function setup() {
   const client = new QueryClient()
   const invalidate = vi.spyOn(client, 'invalidateQueries')
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    <QueryClientProvider client={client}>
+      <RealtimeProvider actorId="worker">{children}</RealtimeProvider>
+    </QueryClientProvider>
   )
   const hook = renderHook(() => useAnnouncementRealtime('worker'), { wrapper })
   return { ...hook, source: TestEventSource.instances[0], invalidate }

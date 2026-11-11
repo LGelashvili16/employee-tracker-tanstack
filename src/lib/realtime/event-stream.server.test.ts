@@ -27,6 +27,26 @@ const snapshot = () =>
   Promise.resolve({ event: 'announcements', data: { unreadCount: 2 } })
 const decoder = new TextDecoder()
 
+it('frames every composed snapshot on one connection and skips empty projections', async () => {
+  const response = eventStreamResponse(
+    new Request('http://localhost/api/events'),
+    {
+      authorized: async () => true,
+      snapshot: async () => [
+        { event: 'first', data: { count: 1 } },
+        { event: 'second', data: { count: 2 } },
+      ],
+      changed: async () => null,
+    },
+  )
+  const reader = response.body!.getReader()
+  await reader.read()
+  expect(decoder.decode((await reader.read()).value)).toContain('event: first')
+  expect(decoder.decode((await reader.read()).value)).toContain('event: second')
+  await reader.cancel()
+  expect(source.unsubscribe).toHaveBeenCalledOnce()
+})
+
 it('frames snapshots and live signals, disables caching, and releases subscriptions on abort', async () => {
   const abort = new AbortController()
   const response = eventStreamResponse(

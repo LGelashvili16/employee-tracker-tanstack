@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { announcementEventsResponse } from '#/features/announcements/server/announcements-stream.server'
+import { applicationEventsResponse } from '#/server/realtime/events.server'
 
 export const Route = createFileRoute('/api/events')({
   server: {
-    handlers: { GET: ({ request }) => announcementEventsResponse(request) },
+    handlers: { GET: ({ request }) => applicationEventsResponse(request) },
   },
 })

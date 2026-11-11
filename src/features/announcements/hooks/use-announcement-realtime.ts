@@ -13,7 +13,7 @@ export function useAnnouncementRealtime(actorId: string) {
   const [received] = useState(() => new Set<string>())
   const client = useQueryClient()
   const navigate = useNavigate()
-  useRealtimeEvents(actorId, (input) => {
+  useRealtimeEvents('announcements', (input) => {
     const parsed = announcementRealtimeSchema.safeParse(input)
     if (!parsed.success) return
     const { unreadCount: count, published } = parsed.data

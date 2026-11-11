@@ -1,8 +1,11 @@
 import { z } from 'zod'
 
-// Internal wake-up messages contain identifiers only, never announcement content.
+export const realtimeTopicSchema = z.enum(['announcements'])
+export type RealtimeTopic = z.infer<typeof realtimeTopicSchema>
+
+// Internal wake-up messages contain identifiers only, never feature content.
 export const realtimeSignalSchema = z.object({
-  topic: z.literal('announcements'),
+  topic: realtimeTopicSchema,
   subjectId: z.uuid().optional(),
   recipientId: z.string().min(1).max(256).optional(),
 })

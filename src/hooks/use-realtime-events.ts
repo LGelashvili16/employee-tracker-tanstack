@@ -1,22 +1,16 @@
-import { useEffect, useEffectEvent } from 'react'
+import { useContext, useEffect, useEffectEvent } from 'react'
+import { RealtimeContext } from '#/contexts/realtime-context'
+import type { RealtimeTopic } from '#/lib/realtime/realtime.schemas'
 
-/** Mounted once in the application shell. Native EventSource owns reconnection. */
+/** Subscribes without opening a connection. Features validate their own payloads. */
 export function useRealtimeEvents(
-  actorId: string,
+  topic: RealtimeTopic,
   onEvent: (data: unknown) => void,
 ) {
+  const subscribe = useContext(RealtimeContext)
+  if (!subscribe) throw new Error('RealtimeProvider is required')
   const receive = useEffectEvent(onEvent)
   useEffect(() => {
-    if (typeof EventSource === 'undefined') return
-    const source = new EventSource('/api/events')
-    source.addEventListener('announcements', (event: MessageEvent<string>) => {
-      try {
-        receive(JSON.parse(event.data))
-      } catch {
-        /* Ignore malformed frames. */
-      }
-    })
-    source.addEventListener('session-ended', () => source.close())
-    return () => source.close()
-  }, [actorId])
+    return subscribe(topic, (data) => receive(data))
+  }, [subscribe, topic])
 }
