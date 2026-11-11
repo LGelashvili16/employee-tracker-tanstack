@@ -47,11 +47,12 @@ it('renders the employee table without the delivery column', async () => {
     await screen.findByRole('columnheader', { name: 'განცხადება' }),
   ).toBeVisible()
   expect(screen.getByRole('table')).toBeVisible()
+  expect(screen.getByRole('columnheader', { name: 'სტატუსი' })).toBeVisible()
   expect(
     screen.getByRole('heading', { level: 1, name: 'განცხადებები' }),
   ).toBeVisible()
   expect(
-    screen.queryByRole('columnheader', { name: 'ჩვენება' }),
+    screen.queryByRole('columnheader', { name: 'ტიპი' }),
   ).not.toBeInTheDocument()
   expect(
     screen.queryByRole('button', { name: 'ახალი განცხადება' }),
@@ -61,11 +62,14 @@ it('renders the employee table without the delivery column', async () => {
 it('keeps publishing and delivery details in the management table', async () => {
   page(true)
   expect(
-    await screen.findByRole('columnheader', { name: 'ჩვენება' }),
+    await screen.findByRole('columnheader', { name: 'ტიპი' }),
   ).toBeVisible()
   expect(screen.getByText('მოდალი')).toBeVisible()
   expect(screen.getByRole('columnheader', { name: 'ავტორი' })).toBeVisible()
   expect(screen.getByText('ანა მაისურაძე')).toBeVisible()
+  expect(
+    screen.queryByRole('columnheader', { name: 'სტატუსი' }),
+  ).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'ახალი განცხადება' })).toBeVisible()
   expect(screen.queryByRole('article')).not.toBeInTheDocument()
 })

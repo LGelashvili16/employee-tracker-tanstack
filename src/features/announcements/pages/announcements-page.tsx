@@ -145,6 +145,7 @@ export function AnnouncementsPage({
             <AnnouncementsTable
               showDelivery={manage}
               showAuthor={manage}
+              showStatus={!manage}
               items={query.data.items}
               sort={search.sort}
               onSort={changeSort}

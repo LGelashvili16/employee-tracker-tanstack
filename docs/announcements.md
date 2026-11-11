@@ -1,6 +1,6 @@
 # Company announcements
 
-The management announcement table shows the creator's current display name in ავტორი. The list query joins the existing author account and returns the name without exposing contact or authentication fields.
+The management announcement table shows the creator's current display name in ავტორი and omits personal read status. The employee table retains personal read status. The list query joins the existing author account and returns the name without exposing contact or authentication fields.
 
 Creators are excluded from their own publication's delivery recipients. Their publications remain visible in the directory and are shown as read. Existing self-delivery rows are ignored by login-modal, unread-dot and notification inbox queries without deleting announcement history.
 

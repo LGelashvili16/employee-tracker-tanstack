@@ -9,6 +9,7 @@ import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 import { pwaPlugins } from './scripts/pwa.ts'
+import { serverFnDevLookup } from './scripts/server-fn-dev.ts'
 
 const config = defineConfig({
   // Keep Start's optimizer artifacts separate from standalone local previews.
@@ -35,6 +36,7 @@ const config = defineConfig({
       },
     }),
     tailwindcss(),
+    serverFnDevLookup(),
     tanstackStart(),
     viteReact(),
     babel({ presets: [reactCompilerPreset()] }),

@@ -27,6 +27,7 @@ export function AnnouncementsTable({
   onOpen,
   showDelivery = false,
   showAuthor = false,
+  showStatus = true,
 }: {
   items: Array<AnnouncementListItem>
   sort: 'newest' | 'oldest'
@@ -34,6 +35,7 @@ export function AnnouncementsTable({
   onOpen: (id: string) => void
   showDelivery?: boolean
   showAuthor?: boolean
+  showStatus?: boolean
 }) {
   const columns = useMemo(
     () =>
@@ -74,7 +76,7 @@ export function AnnouncementsTable({
         ...(showDelivery
           ? [
               helper.accessor('showOnLogin', {
-                header: 'ჩვენება',
+                header: 'ტიპი',
                 cell: ({ row }) => (
                   <Badge
                     variant={row.original.showOnLogin ? 'blue' : 'secondary'}
@@ -85,16 +87,20 @@ export function AnnouncementsTable({
               }),
             ]
           : []),
-        helper.accessor('readAt', {
-          header: 'სტატუსი',
-          cell: ({ row }) => (
-            <Badge variant={row.original.readAt ? 'secondary' : 'purple'}>
-              {row.original.readAt ? 'წაკითხული' : 'წაუკითხავი'}
-            </Badge>
-          ),
-        }),
+        ...(showStatus
+          ? [
+              helper.accessor('readAt', {
+                header: 'სტატუსი',
+                cell: ({ row }) => (
+                  <Badge variant={row.original.readAt ? 'secondary' : 'purple'}>
+                    {row.original.readAt ? 'წაკითხული' : 'წაუკითხავი'}
+                  </Badge>
+                ),
+              }),
+            ]
+          : []),
       ]),
-    [onOpen, onSort, showDelivery, showAuthor],
+    [onOpen, onSort, showDelivery, showAuthor, showStatus],
   )
   const table = useTable({
     features,

@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 36. Last updated: 2026-11-10.
+Status: required project instructions. Version: 37. Last updated: 2026-11-11.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -105,6 +105,8 @@ Choose feedback by purpose and lifetime. These components complement one another
 | Ordinary navigation, pagination, debounced search, filtering, or background fetching | Appropriate local loading/error state, without routine success toasts.                                             |
 
 ### Announcement reading and delivery
+
+- Omit personal read status from the management announcement table. Keep it on the employee announcement table.
 
 - Personal `/announcements` uses a full-width TanStack Table with Georgian dates, titles, sortable publication date and read status. Omit delivery details from this view. `/manage/announcements` retains its management table and ჩვენება column.
 - Modal publications appear immediately for signed-in employees and after sign-in for others. Show one oldest-first announcement at a time with a progress indicator; new arrivals join after the open item. Closing advances the queue and allows a reminder after a later sign-in. Explicit წავიკითხე acknowledgement stops future modal reminders. Suppress the publication toast for modal announcements, and pause automatic delivery while a manual announcement reader is open.
@@ -309,6 +311,7 @@ When the user changes a shared UI standard, update this file instead of creating
 | 34      | 2026-11-10 | Extend live announcement toasts to 6 seconds while retaining bottom-right placement.                                                                                                                                   |
 | 35      | 2026-11-10 | Use an employee announcement reading feed, preserve the management delivery table, and queue immediate/sign-in modal announcements with next-sign-in reminders after dismissal.                                        |
 | 36      | 2026-11-10 | Restore the employee announcement table while keeping delivery details exclusive to management.                                                                                                                        |
+| 37      | 2026-11-11 | Remove personal read status from the management announcement table while retaining it for employees.                                                                                                                   |
 
 ## Employee creation and day-off allowance
 
