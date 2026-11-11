@@ -27,11 +27,13 @@ function renderSidebar(
   inset = false,
   permissionOverrides?: PermissionOverrides,
   hasUnreadAnnouncements = false,
+  hasUnreadComplaints = false,
 ) {
   return render(
     <SidebarProvider>
       <AppSidebar
         hasUnreadAnnouncements={hasUnreadAnnouncements}
+        hasUnreadComplaints={hasUnreadComplaints}
         inset={inset}
         actor={{
           id: 'test',
@@ -177,9 +179,10 @@ describe('workspace navigation', () => {
   })
   it.each(['owner'] as const)('shows all workspace sections to %s', (role) => {
     renderSidebar(role)
-    expect(
-      screen.getByRole('link', { name: 'არყოფნების მართვა' }),
-    ).toHaveAttribute('href', '/manage/leave')
+    expect(screen.getByRole('link', { name: 'არყოფნები' })).toHaveAttribute(
+      'href',
+      '/manage/leave',
+    )
     expect(screen.getByText('ჩემი სივრცე')).toBeInTheDocument()
     expect(screen.getByText('მართვა')).toBeInTheDocument()
     expect(
@@ -387,4 +390,39 @@ describe('workspace navigation', () => {
       screen.queryByRole('tab', { name: 'დასწრების ისტორია' }),
     ).not.toBeInTheDocument()
   })
+})
+
+it.each(['hr_manager', 'admin'] as const)(
+  'shows the complaint unread dot to %s and on the collapsed management group',
+  (role) => {
+    const { container } = renderSidebar(role, true, undefined, false, true)
+    expect(
+      screen.getByRole('button', { name: /მართვა.*წაუკითხავი საჩივრები/ }),
+    ).toBeInTheDocument()
+    expect(
+      container.querySelector('[data-slot="complaint-group-unread-dot"]'),
+    ).toHaveAttribute('aria-hidden', 'true')
+  },
+)
+it('shows a complaint dot on the management destination without granting employees review access', () => {
+  const { container, unmount } = renderSidebar(
+    'hr_manager',
+    false,
+    undefined,
+    false,
+    true,
+  )
+  expect(
+    screen.getByRole('link', {
+      name: /საჩივრების მართვა.*წაუკითხავი საჩივრები/,
+    }),
+  ).toHaveAttribute('href', '/manage/complaints')
+  expect(
+    container.querySelector('[data-slot="complaint-unread-dot"]'),
+  ).toBeInTheDocument()
+  unmount()
+  renderSidebar('employee', false, undefined, false, true)
+  expect(
+    screen.queryByRole('link', { name: /საჩივრების მართვა/ }),
+  ).not.toBeInTheDocument()
 })

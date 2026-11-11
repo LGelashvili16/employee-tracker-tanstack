@@ -11,6 +11,7 @@ import {
   notExists,
 } from 'drizzle-orm'
 import { db } from '#/db'
+import { signalRealtime } from '#/lib/realtime/postgres-events.server'
 import { announcement, notification } from '#/db/schema'
 
 export async function listForRecipient(
@@ -41,6 +42,7 @@ export async function listForRecipient(
           title: notification.title,
           body: notification.body,
           announcementId: notification.announcementId,
+          complaintId: notification.complaintId,
           createdAt: notification.createdAt,
           seenAt: notification.seenAt,
         })
@@ -59,39 +61,35 @@ export async function listForRecipient(
   )
 }
 
-export async function markSeenForRecipient(
-  recipientId: string,
-  ids: Array<string>,
-) {
-  // Scope the write itself; repeated or foreign IDs neither expose nor modify another inbox.
-  const updated = await db
-    .update(notification)
-    .set({ seenAt: sql`now()` })
-    .where(
-      and(
-        eq(notification.recipientId, recipientId),
-        inArray(notification.id, ids),
-        isNull(notification.seenAt),
-      ),
-    )
-    .returning({ id: notification.id })
-  return { updatedCount: updated.length }
+export function markSeenForRecipient(recipientId: string, ids: Array<string>) {
+  return setSeenForRecipient(recipientId, ids, true)
 }
-
-export async function markUnseenForRecipient(
+export function markUnseenForRecipient(
   recipientId: string,
   ids: Array<string>,
 ) {
-  const updated = await db
-    .update(notification)
-    .set({ seenAt: null })
-    .where(
-      and(
-        eq(notification.recipientId, recipientId),
-        inArray(notification.id, ids),
-        isNotNull(notification.seenAt),
-      ),
-    )
-    .returning({ id: notification.id })
-  return { updatedCount: updated.length }
+  return setSeenForRecipient(recipientId, ids, false)
+}
+async function setSeenForRecipient(
+  recipientId: string,
+  ids: Array<string>,
+  seen: boolean,
+) {
+  return db.transaction(async (tx) => {
+    const updated = await tx
+      .update(notification)
+      .set({ seenAt: seen ? sql`now()` : null })
+      .where(
+        and(
+          eq(notification.recipientId, recipientId),
+          inArray(notification.id, ids),
+          seen ? isNull(notification.seenAt) : isNotNull(notification.seenAt),
+        ),
+      )
+      .returning({ id: notification.id, complaintId: notification.complaintId })
+    // Reading on any device reconciles the recipient's complaint dot after commit.
+    if (updated.some((item) => item.complaintId !== null))
+      await signalRealtime(tx, { topic: 'complaints', recipientId })
+    return { updatedCount: updated.length }
+  })
 }

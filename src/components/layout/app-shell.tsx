@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useComplaintRealtime } from '#/features/complaints/hooks/use-complaint-realtime'
 import { RealtimeProvider } from '#/providers/realtime-provider'
 import { Link, Outlet, useLocation, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
@@ -39,6 +40,7 @@ export function AppShell({ actor }: { actor: Actor }) {
 }
 
 function WorkspaceShell({ actor }: { actor: Actor }) {
+  const { hasUnreadComplaints } = useComplaintRealtime(actor.id)
   const { hasUnreadAnnouncements } = useAnnouncementRealtime(actor.id)
   const router = useRouter()
   const pathname = useLocation({ select: (location) => location.pathname })
@@ -77,6 +79,7 @@ function WorkspaceShell({ actor }: { actor: Actor }) {
         <AppSidebar
           actor={actor}
           hasUnreadAnnouncements={hasUnreadAnnouncements}
+          hasUnreadComplaints={hasUnreadComplaints}
           inset
           footer={
             <WorkspaceUserMenu

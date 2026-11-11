@@ -119,6 +119,7 @@ describe.runIf(enabled)('notification inbox against PostgreSQL', () => {
           title: 'განახლება',
           body: 'პირველი შეტყობინება',
           announcementId: null,
+          complaintId: null,
           createdAt: expect.any(String),
           seenAt: null,
         },

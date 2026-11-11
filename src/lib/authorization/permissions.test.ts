@@ -135,6 +135,7 @@ describe('role and permission boundaries', () => {
   })
   it('grants administrators platform configuration, company reads, and vacation review', () => {
     const platformPermissions = [
+      'complaints.review.all',
       'announcements.manage',
       'manage.access',
       'employees.read',

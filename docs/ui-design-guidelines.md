@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 37. Last updated: 2026-11-11.
+Status: required project instructions. Version: 46. Last updated: 2026-11-11.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -312,6 +312,15 @@ When the user changes a shared UI standard, update this file instead of creating
 | 35      | 2026-11-10 | Use an employee announcement reading feed, preserve the management delivery table, and queue immediate/sign-in modal announcements with next-sign-in reminders after dismissal.                                        |
 | 36      | 2026-11-10 | Restore the employee announcement table while keeping delivery details exclusive to management.                                                                                                                        |
 | 37      | 2026-11-11 | Remove personal read status from the management announcement table while retaining it for employees.                                                                                                                   |
+| 38      | 2026-11-11 | Remove employee control over complaint visibility and recipients; route submissions through the server-owned HR workflow.                                                                                              |
+| 39      | 2026-11-11 | Show complaint live toasts and persistent unread dots in the management navigation, including the collapsed group; include administrators in ordinary review delivery.                                                 |
+| 40      | 2026-11-11 | Exclude closed and resolved complaints from the management unread dot while retaining unread inbox history; reopening restores eligible unread state.                                                                  |
+| 41      | 2026-11-11 | Simplify complaint sheets to status and one shared comment composer, remove assignment UI and redundant metadata, and guarantee Georgian complaint dates.                                                              |
+| 42      | 2026-11-11 | Omit explanatory visibility text from the complaint submission form.                                                                                                                                                   |
+| 43      | 2026-11-11 | Acknowledge notifications atomically with successful review actions for the acting account only; preserve other unread complaints and recipients.                                                                      |
+| 44      | 2026-11-11 | Put the complainant name and shared avatar in the first column of both complaint tables, matching employee table spacing.                                                                                              |
+| 45      | 2026-11-11 | Group complaint detail sheets into a details card and one conversation card containing status controls, comment input and history.                                                                                     |
+| 46      | 2026-11-11 | Open complaint details from the whole table row while preserving title links, text selection and nested control behavior.                                                                                              |
 
 ## Employee creation and day-off allowance
 
@@ -332,3 +341,19 @@ When the user changes a shared UI standard, update this file instead of creating
 
 - Use leave as the umbrella feature. Personal navigation is არყოფნა and management navigation is არყოფნების მართვა. The request type ბიულეტენი means დროებითი შრომისუუნარობა.
 - Sick leave opens with a start date and displays მიმდინარე until an end is recorded. Use a local shadcn dialog to record ბიულეტენის ბოლო დღე. Keep diagnosis optional and unnecessary, retain the shared HR review flow, and show sick-leave-specific dashboard and work-confirmation copy. Preserve day-off and paid-vacation badges without introducing a sick-leave allowance.
+
+## Complaint submission
+
+Employees submit the complaint topic, description and category. Do not expose visibility or recipient selectors to employees. The server routes new complaints to HR, administrators and the owner; supervisors receive access only after explicit assignment. Do not show explanatory visibility text in the submission form.
+
+Complaint live notifications use one generic six-second Sonner toast with a view action and an accessible unread red dot beside the management complaint entry and its collapsed management group. Restore unread state on reconnect without historical toast replay. The management dot counts only unread active complaints. Closing or resolving a complaint removes it from that dot, while unread notification history remains in the bell. Marking active complaint notifications read also clears their contribution; toast dismissal does not mark them read.
+
+Complaint sheets use a consistent medium width, a fixed title header and a padded scrollable body. Keep the original complaint, one status-and-comment review form, and a compact conversation/history. Omit action menus, reviewer assignment controls, redundant visibility/assignee metadata and duplicate comment forms. Employee detail has one comment field. Display complaint timestamps with explicit Georgian month names and company-local 24-hour time; do not rely on browser Georgian ICU support. Show history pagination only when multiple pages are needed.
+
+Successful complaint review actions mark existing notifications for the acting account and that complaint read. Clear that account's management dot when no other active complaint has unread notifications. Preserve other recipients and unread complaints, and show the dot again for new replies.
+
+Personal and management complaint tables put the complainant first, using the existing employee avatar plus full-name composition. Show the profile image when present and Georgian initials otherwise. Match the employee tables for column padding and row density.
+
+Both management and employee complaint detail sheets use two shared shadcn Cards: the first groups title, description, author, date and status/category details; the second groups status controls (when authorized), the comment composer and existing comments/review history. Keep the conversation inside one card rather than separating its form from its entries.
+
+Complaint table rows open the detail sheet when clicked on non-interactive content. Preserve real title links for keyboard access and native new-tab behavior. Ignore modified clicks, text selection and nested interactive controls; retain semantic table rows and use the title link as the keyboard target.

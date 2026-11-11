@@ -1,6 +1,6 @@
 # Announcement live updates
 
-Teamwork uses a same-origin, authenticated SSE connection at `/api/events`. Only announcements use this transport today. General notification polling remains unchanged. See [shared live events](realtime.md) for the centralized coordinator, provider, and feature extension instructions.
+Teamwork uses a same-origin, authenticated SSE connection at `/api/events`. Announcements and complaints share this transport. General notification polling remains unchanged. See [shared live events](realtime.md) for the centralized coordinator, provider, and feature extension instructions.
 
 Creators do not receive their own publication's unread dot, bell alert, live toast or login modal. Their publications remain visible and read in the directory. Legacy self-delivery rows are excluded from these indicators as well.
 

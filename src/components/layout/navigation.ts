@@ -24,6 +24,7 @@ import {
   IconPlugConnected,
   IconFileSearch,
   IconUserShield,
+  IconMessageReport,
 } from '@tabler/icons-react'
 import type { Permission } from '#/lib/authorization/permissions'
 
@@ -86,6 +87,12 @@ export const navigationItems = [
     permission: null,
   },
   {
+    to: '/complaints',
+    icon: IconMessageReport,
+    label: 'საჩივრები',
+    permission: null,
+  },
+  {
     to: '/notifications',
     secondary: true,
     icon: IconBell,
@@ -130,6 +137,12 @@ export const navigationItems = [
     icon: IconSpeakerphone,
     label: 'განცხადებების მართვა',
     permission: 'announcements.manage',
+  },
+  {
+    to: '/manage/complaints',
+    icon: IconMessageReport,
+    label: 'საჩივრების მართვა',
+    permission: ['complaints.review.all', 'complaints.review.assigned'],
   },
   {
     to: '/manage/reports',

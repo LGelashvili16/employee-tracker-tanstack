@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const realtimeTopicSchema = z.enum(['announcements'])
+export const realtimeTopicSchema = z.enum(['announcements', 'complaints'])
 export type RealtimeTopic = z.infer<typeof realtimeTopicSchema>
 
 // Internal wake-up messages contain identifiers only, never feature content.

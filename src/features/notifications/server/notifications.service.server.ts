@@ -15,6 +15,48 @@ type NotificationTransaction = Parameters<
   Parameters<typeof db.transaction>[0]
 >[0]
 
+/** Complaint workflow owns authorization, recipient selection and the transaction. */
+export async function deliverComplaintNotifications(
+  tx: NotificationTransaction,
+  value: {
+    complaintId: string
+    activityId: string
+    recipientIds: Array<string>
+  },
+) {
+  if (!value.recipientIds.length) return
+  await tx
+    .insert(notification)
+    .values(
+      value.recipientIds.map((recipientId) => ({
+        recipientId,
+        complaintId: value.complaintId,
+        complaintActivityId: value.activityId,
+        title: 'საჩივრის განახლება',
+        body: 'საჩივართან დაკავშირებული ახალი ინფორმაცია ხელმისაწვდომია.',
+      })),
+    )
+    .onConflictDoNothing()
+}
+
+/** The complaint workflow owns the transaction and signals the resulting inbox state after commit. */
+export async function acknowledgeComplaintNotifications(
+  tx: NotificationTransaction,
+  actorId: string,
+  complaintId: string,
+) {
+  await tx
+    .update(notification)
+    .set({ seenAt: sql`now()` })
+    .where(
+      and(
+        eq(notification.recipientId, actorId),
+        eq(notification.complaintId, complaintId),
+        isNull(notification.seenAt),
+      ),
+    )
+}
+
 /** Announcement publication owns the transaction; inbox delivery must succeed or roll back with it. */
 export async function deliverAnnouncementNotifications(
   tx: NotificationTransaction,

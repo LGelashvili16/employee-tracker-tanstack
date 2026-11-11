@@ -9,6 +9,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import { announcement } from '../announcements/announcement.schema'
+import { complaint, complaintActivity } from '../complaints/complaint.schema'
 import { createdAt, uuidv7PrimaryKey } from '../_shared/columns'
 import { user } from '../auth/auth.schema'
 
@@ -30,12 +31,25 @@ export const notification = pgTable(
     announcementId: uuid('announcement_id').references(() => announcement.id, {
       onDelete: 'restrict',
     }),
+    /** Complaint destination with generic copy; opening independently rechecks current access. */
+    complaintId: uuid('complaint_id').references(() => complaint.id, {
+      onDelete: 'restrict',
+    }),
+    /** Durable change identity used to deduplicate per-recipient complaint alerts. */
+    complaintActivityId: uuid('complaint_activity_id').references(
+      () => complaintActivity.id,
+      { onDelete: 'restrict' },
+    ),
     /** Delivery instant, used with the identity for stable newest-first ordering. */
     createdAt: createdAt(),
     /** Explicit acknowledgement, cleared when the recipient marks the entry unseen again. */
     seenAt: timestamp('seen_at', { withTimezone: true }),
   },
   (table) => [
+    uniqueIndex('notification_complaint_activity_recipient').on(
+      table.complaintActivityId,
+      table.recipientId,
+    ),
     uniqueIndex('notification_announcement_recipient').on(
       table.announcementId,
       table.recipientId,

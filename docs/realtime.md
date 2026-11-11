@@ -1,6 +1,6 @@
 # Shared live events
 
-Teamwork uses one authenticated, same-origin SSE connection at `/api/events` per open application tab. PostgreSQL records remain authoritative; signals only tell connected clients to reconcile. Announcements are currently the only registered feature. Notifications continue to poll until their workflow is explicitly migrated.
+Teamwork uses one authenticated, same-origin SSE connection at `/api/events` per open application tab. PostgreSQL records remain authoritative; signals only tell connected clients to reconcile. Announcements and complaints are registered features. Complaint changes also invalidate the existing notification inbox; general notification polling remains until that workflow is explicitly migrated.
 
 ## Ownership
 

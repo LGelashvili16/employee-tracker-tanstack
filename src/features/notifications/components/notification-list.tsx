@@ -84,6 +84,15 @@ export function NotificationList({
                   >
                     {item.title}
                   </Link>
+                ) : item.complaintId ? (
+                  <Link
+                    to="/complaints"
+                    search={{ complaintId: item.complaintId }}
+                    onClick={onNavigate}
+                    className="rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    {item.title}
+                  </Link>
                 ) : (
                   item.title
                 )}

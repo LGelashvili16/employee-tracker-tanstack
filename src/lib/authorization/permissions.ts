@@ -12,6 +12,9 @@ export const permissionSchema = z.enum(
     'jobs.manage',
     'jobs.claim',
     'announcements.manage',
+    'complaints.review.all',
+    'complaints.review.assigned',
+    'complaints.read.confidential',
     'employees.read',
     'employees.manage',
     'leave.review',
@@ -91,6 +94,7 @@ export function currentAuthorization(value: {
 }
 
 const administrationPermissions = [
+  'complaints.review.all',
   'announcements.manage',
   'manage.access',
   'employees.read',
@@ -118,6 +122,7 @@ const managementPermissions: Record<
   ReadonlyArray<Permission>
 > = {
   supervisor: [
+    'complaints.review.assigned',
     'manage.access',
     'attendance.read.team',
     'attendance.review.team',
@@ -126,6 +131,8 @@ const managementPermissions: Record<
     'employees.read',
   ],
   hr_manager: [
+    'complaints.review.all',
+    'complaints.read.confidential',
     'announcements.manage',
     'manage.access',
     'attendance.read.all',

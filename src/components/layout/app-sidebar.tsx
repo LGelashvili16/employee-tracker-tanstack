@@ -34,11 +34,13 @@ export function AppSidebar({
   inset = false,
   footer,
   hasUnreadAnnouncements = false,
+  hasUnreadComplaints = false,
 }: {
   actor: Actor
   inset?: boolean
   footer?: ReactNode
   hasUnreadAnnouncements?: boolean
+  hasUnreadComplaints?: boolean
 }) {
   const pathname = useLocation({ select: (location) => location.pathname })
   const { setOpenMobile } = useSidebar()
@@ -137,6 +139,19 @@ export function AppSidebar({
                     >
                       <item.icon aria-hidden="true" />
                       <span>{item.label}</span>
+                      {item.to === '/manage/complaints' &&
+                      hasUnreadComplaints ? (
+                        <>
+                          <span
+                            aria-hidden="true"
+                            data-slot="complaint-unread-dot"
+                            className="ml-auto size-2 shrink-0 rounded-full bg-destructive"
+                          />
+                          <span className="sr-only">
+                            , წაუკითხავი საჩივრები
+                          </span>
+                        </>
+                      ) : null}
                       {item.to === '/announcements' &&
                       hasUnreadAnnouncements ? (
                         <>
@@ -185,6 +200,22 @@ export function AppSidebar({
                           <IconSettings aria-hidden="true" />
                         )}
                         <span>{group.label}</span>
+                        {group.label === 'მართვა' &&
+                        hasUnreadComplaints &&
+                        items.some(
+                          (item) => item.to === '/manage/complaints',
+                        ) ? (
+                          <>
+                            <span
+                              aria-hidden="true"
+                              data-slot="complaint-group-unread-dot"
+                              className="ml-auto size-2 shrink-0 rounded-full bg-destructive"
+                            />
+                            <span className="sr-only">
+                              , წაუკითხავი საჩივრები
+                            </span>
+                          </>
+                        ) : null}
                         <IconChevronRight
                           className="ml-auto transition-transform group-data-[open]/navigation:rotate-90"
                           aria-hidden="true"
