@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { IconCalendarCheck, IconClock } from '@tabler/icons-react'
 import { getRouteApi, Link } from '@tanstack/react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Alert, AlertDescription } from '#/components/ui/alert'
@@ -23,7 +24,11 @@ function EmployeeAttendanceWorkspace() {
   const search = route.useSearch()
   const navigate = route.useNavigate()
   const query = useQuery({
-    ...companyAttendanceUserQuery(actor.id, { date: search.date, userId }),
+    ...companyAttendanceUserQuery(actor.id, {
+      date: search.date,
+      userId,
+      period: 'week',
+    }),
     placeholderData: keepPreviousData,
   })
   const result = query.data
@@ -107,7 +112,7 @@ function EmployeeAttendanceWorkspace() {
                     key={tab.value}
                     value={tab.value}
                     nativeButton={false}
-                    className="h-9 flex-none rounded-lg px-4 motion-reduce:transition-none"
+                    className="h-9 flex-none rounded-lg px-4 motion-reduce:transition-none dark:aria-selected:text-white!"
                     render={
                       <Link
                         to="/manage/attendance/$userId"
@@ -116,6 +121,11 @@ function EmployeeAttendanceWorkspace() {
                       />
                     }
                   >
+                    {tab.value === 'attendance' ? (
+                      <IconCalendarCheck aria-hidden="true" />
+                    ) : (
+                      <IconClock aria-hidden="true" />
+                    )}
                     {tab.label}
                   </TabsTrigger>
                 ))}
@@ -131,6 +141,7 @@ function EmployeeAttendanceWorkspace() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b p-4">
                   <AttendanceDayPicker
+                    weekly
                     date={search.date ?? result.date}
                     today={result.today}
                     onChange={(date) => {
@@ -168,7 +179,7 @@ function EmployeeAttendanceWorkspace() {
                     role="status"
                     className="px-6 py-12 text-center text-sm text-muted-foreground"
                   >
-                    არჩეულ დღეს დასწრების ჩანაწერები არ არის.
+                    არჩეულ კვირაში დასწრების ჩანაწერები არ არის.
                   </p>
                 )}
                 {!query.isPlaceholderData && query.isFetching ? (
@@ -183,9 +194,6 @@ function EmployeeAttendanceWorkspace() {
                     rows.some((row) => row.endedAt === null)
                       ? ' მიმდინარე სესიის დრო წინასწარია.'
                       : ''}
-                  </span>
-                  <span>
-                    კომპანიის დროის სარტყელი: {result.companyTimezone}
                   </span>
                 </div>
               </div>

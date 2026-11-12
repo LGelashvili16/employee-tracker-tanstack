@@ -1,4 +1,6 @@
+import { useBusinessNotificationRefresh } from '#/hooks/use-business-notification-refresh'
 import { useState } from 'react'
+import { useNotificationRealtime } from '#/features/notifications/hooks/use-notification-realtime'
 import { useComplaintRealtime } from '#/features/complaints/hooks/use-complaint-realtime'
 import { RealtimeProvider } from '#/providers/realtime-provider'
 import { Link, Outlet, useLocation, useRouter } from '@tanstack/react-router'
@@ -40,6 +42,8 @@ export function AppShell({ actor }: { actor: Actor }) {
 }
 
 function WorkspaceShell({ actor }: { actor: Actor }) {
+  useNotificationRealtime(actor.id)
+  useBusinessNotificationRefresh(actor.id)
   const { hasUnreadComplaints } = useComplaintRealtime(actor.id)
   const { hasUnreadAnnouncements } = useAnnouncementRealtime(actor.id)
   const router = useRouter()

@@ -1,6 +1,9 @@
 import '@tanstack/react-start/server-only'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
-import { currentAuthorization } from '#/lib/authorization/permissions'
+import {
+  currentAuthorization,
+  hasPermission,
+} from '#/lib/authorization/permissions'
 import { signalRealtime } from '#/lib/realtime/postgres-events.server'
 import {
   acknowledgeComplaintNotifications,
@@ -293,7 +296,9 @@ export async function complaintRealtimeState(actor: Actor, subjectId?: string) {
         ? {
             notification: {
               id: notification.id,
-              review: canReviewComplaints(current),
+              review:
+                hasPermission(current.authorization, 'manage.access') &&
+                canReviewComplaints(current),
             },
           }
         : {}),

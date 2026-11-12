@@ -20,7 +20,7 @@ Services establish current authorization, own transactions, and coordinate repos
 
 Notifications use generic copy without complaint titles, descriptions or employee names. Recipients are chosen from current permissions and assignment, exclude the actor, and are persisted with the change. Opening a notification rechecks complaint access. Existing notification read controls remain independent of complaint status.
 
-The feature registers the complaints topic on the shared SSE coordinator. PostgreSQL publishes an identifier-only signal after commit. Each browser receives only authorized projections and invalidates actor-scoped complaint and bell queries. Reassignment also sends the previous reviewer a recipient-only refresh hint to remove stale list/detail access. Reconnect snapshots reconcile data without historical toast replay. Notification polling remains in place for workflows not yet migrated to SSE. See [shared live events](realtime.md).
+The feature registers the complaints topic on the shared SSE coordinator. PostgreSQL publishes an identifier-only signal after commit. Each browser receives only authorized projections and invalidates actor-scoped complaint and bell queries. Reassignment also sends the previous reviewer a recipient-only refresh hint to remove stale list/detail access. Reconnect snapshots reconcile data without historical toast replay. The general inbox reconciles through its recipient-only SSE topic. See [shared live events](realtime.md).
 
 ## Verification
 

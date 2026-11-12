@@ -5,6 +5,7 @@ import {
   formatAttendanceTime,
   formatWorkedTime,
   startOfWorkWeek,
+  attendanceWeek,
 } from './attendance.rules'
 
 describe('attendance time display and calendar rules', () => {
@@ -31,5 +32,20 @@ describe('attendance time display and calendar rules', () => {
   it('uses ISO Monday weeks across month and year boundaries', () => {
     expect(startOfWorkWeek('2027-01-01')).toBe('2026-12-28')
     expect(startOfWorkWeek('2026-11-08')).toBe('2026-11-02')
+  })
+})
+
+it('returns complete Monday to Sunday weeks across month and year boundaries', () => {
+  expect(attendanceWeek('2026-11-12')).toEqual({
+    start: '2026-11-09',
+    end: '2026-11-15',
+  })
+  expect(attendanceWeek('2026-11-15')).toEqual({
+    start: '2026-11-09',
+    end: '2026-11-15',
+  })
+  expect(attendanceWeek('2027-01-01')).toEqual({
+    start: '2026-12-28',
+    end: '2027-01-03',
   })
 })

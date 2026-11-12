@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import {
   markOwnNotifications,
   markOwnNotificationsAsUnseen,
+  markAllOwnNotifications,
 } from '../notifications.functions'
 import { notificationKeys } from '../notifications.queries'
 
@@ -18,7 +19,11 @@ export function useMarkNotificationsUnseen(actorId: string) {
   return useNotificationSeenState(actorId, false)
 }
 
-function useNotificationSeenState(actorId: string, seen: boolean) {
+export function useMarkAllNotificationsSeen(actorId: string) {
+  return useNotificationSeenState(actorId, true, true)
+}
+
+function useNotificationSeenState(actorId: string, seen: boolean, all = false) {
   const client = useQueryClient()
   const pendingIds = useMutationState({
     filters: {
@@ -36,7 +41,9 @@ function useNotificationSeenState(actorId: string, seen: boolean) {
     mutationKey: [...notificationKeys.own(actorId), 'mark-seen'],
     mutationFn: async (ids: Array<string>) => {
       const action = seen ? markOwnNotifications : markOwnNotificationsAsUnseen
-      const result = await action({ data: { ids } })
+      const result = all
+        ? await markAllOwnNotifications({ data: {} })
+        : await action({ data: { ids } })
       if (!result.ok) throw new Error(result.message)
       return result.value
     },

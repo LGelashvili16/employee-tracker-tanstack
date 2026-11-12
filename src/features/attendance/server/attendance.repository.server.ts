@@ -1,13 +1,60 @@
 import '@tanstack/react-start/server-only'
 import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm'
 import { db } from '#/db'
-import { attendanceSession, employee, user } from '#/db/schema'
+import { attendanceAudit, attendanceSession, employee, user } from '#/db/schema'
 import type { AttendanceDay } from '../attendance.types'
 
 export type AttendanceTransaction = Parameters<
   Parameters<typeof db.transaction>[0]
 >[0]
 export const transactAttendance = db.transaction.bind(db)
+
+/** Project only attendance correction details belonging to this authenticated employee. */
+export async function employeeCorrections(
+  tx: AttendanceTransaction,
+  employeeId: string,
+  page: number,
+) {
+  const rows = await tx
+    .select({
+      id: attendanceAudit.id,
+      actorName: user.name,
+      reason: attendanceAudit.reason,
+      createdAt: attendanceAudit.createdAt,
+      workDate: attendanceSession.workDate,
+      timezone: attendanceSession.timezone,
+      beforeStart: sql<string>`${attendanceAudit.before}->>'startedAt'`,
+      beforeEnd: sql<string | null>`${attendanceAudit.before}->>'endedAt'`,
+      afterStart: sql<string>`${attendanceAudit.after}->>'startedAt'`,
+      afterEnd: sql<string | null>`${attendanceAudit.after}->>'endedAt'`,
+    })
+    .from(attendanceAudit)
+    .innerJoin(
+      attendanceSession,
+      sql`${attendanceSession.id}::text = ${attendanceAudit.targetId}`,
+    )
+    .innerJoin(user, eq(user.id, attendanceAudit.actorId))
+    .where(
+      and(
+        eq(attendanceSession.employeeId, employeeId),
+        eq(attendanceAudit.action, 'attendance.corrected'),
+      ),
+    )
+    .orderBy(desc(attendanceAudit.createdAt), desc(attendanceAudit.id))
+    .limit(21)
+    .offset(page * 20)
+  return {
+    items: rows
+      .slice(0, 20)
+      .map(({ beforeStart, beforeEnd, afterStart, afterEnd, ...row }) => ({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+        before: { startedAt: beforeStart, endedAt: beforeEnd },
+        after: { startedAt: afterStart, endedAt: afterEnd },
+      })),
+    hasMore: rows.length > 20,
+  }
+}
 
 export async function employeeForActor(
   tx: AttendanceTransaction,

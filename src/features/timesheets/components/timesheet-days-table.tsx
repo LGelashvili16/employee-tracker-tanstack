@@ -69,16 +69,11 @@ const makeColumns = (
         />
       ),
       cell: ({ row }) => (
-        <div className="flex flex-col gap-1">
-          <time dateTime={row.original.date}>
-            {compact
-              ? formatAttendanceDate(row.original.date, true)
-              : row.original.date}
-          </time>
-          <span className="text-xs text-muted-foreground">
-            {row.original.timezone}
-          </span>
-        </div>
+        <time dateTime={row.original.date}>
+          {compact
+            ? formatAttendanceDate(row.original.date, true)
+            : row.original.date}
+        </time>
       ),
     }),
     helper.accessor('firstIn', {

@@ -46,11 +46,12 @@ function session(): ReviewSession {
     approvedOutsideSeconds: 0,
     maxOpenHours: 16,
     canReview: true,
+    canCorrect: true,
     isFirstOfDay: true,
     isLastOfDay: true,
   }
 }
-function mount(canReview = true) {
+function mount(canReview = true, canCorrect = canReview) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -61,6 +62,7 @@ function mount(canReview = true) {
           {
             ...session(),
             canReview,
+            canCorrect,
             date: session().workDate,
             serverNow: '2026-11-04T16:00:00.000Z',
           },
@@ -77,6 +79,18 @@ beforeEach(() => {
   })
 })
 describe('manager attendance workflow', () => {
+  it('shows correction controls without approval controls for company correctors', async () => {
+    mount(false, true)
+    expect(screen.getByRole('button', { name: 'შესწორება' })).toBeVisible()
+    expect(
+      screen.queryByRole('button', { name: 'განხილვა' }),
+    ).not.toBeInTheDocument()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'შესწორება' }))
+    expect(
+      screen.getByRole('dialog', { name: 'დროის შესწორება' }),
+    ).toHaveAttribute('data-slot', 'sheet-content')
+  })
   it('shows deviations without actions when the server does not authorize review', () => {
     mount(false)
     expect(screen.getByText('განხილვის მოლოდინში')).toBeVisible()
@@ -170,11 +184,10 @@ describe('manager attendance workflow', () => {
     mount()
     await user.click(await screen.findByRole('button', { name: 'შესწორება' }))
     const dialog = screen.getByRole('dialog')
-    const end = within(dialog).getByLabelText('დასრულება')
-    // user-event does not support entering datetime-local values.
-    fireEvent.change(end, { target: { value: '2026-11-04T09:00' } })
+    const end = within(dialog).getByLabelText(/^დასრულება/)
+    fireEvent.change(end, { target: { value: '09:00' } })
     await user.type(
-      within(dialog).getByLabelText('შესწორების მიზეზი'),
+      within(dialog).getByLabelText(/^შესწორების მიზეზი/),
       'რეალური გასვლის დრო გადამოწმებულია',
     )
     await user.click(
@@ -184,7 +197,7 @@ describe('manager attendance workflow', () => {
       await within(dialog).findByText('დასრულება უნდა იყოს დაწყების შემდეგ.'),
     ).toBeVisible()
     expect(calls.correct).not.toHaveBeenCalled()
-    fireEvent.change(end, { target: { value: '2026-11-04T19:00' } })
+    fireEvent.change(end, { target: { value: '19:00' } })
     await user.click(
       within(dialog).getByRole('button', { name: 'შესწორების შენახვა' }),
     )
@@ -199,5 +212,82 @@ describe('manager attendance workflow', () => {
         },
       }),
     )
+  })
+  it('selects an overnight checkout with the Georgian shadcn calendar and preserves the work date', async () => {
+    const user = userEvent.setup()
+    calls.correct.mockResolvedValue({ ok: true, value: { id: session().id } })
+    mount(false, true)
+    await user.click(screen.getByRole('button', { name: 'შესწორება' }))
+    const sheet = screen.getByRole('dialog', { name: 'დროის შესწორება' })
+    expect(sheet).not.toHaveTextContent('შესწორება აუქმებს წინა დამტკიცებას.')
+    await user.click(
+      within(sheet).getByRole('button', { name: 'დაწყების თარიღი' }),
+    )
+    expect(
+      screen.getByRole('button', { name: 'ხუთშაბათი, 5 ნოემბერი 2026' }),
+    ).toBeDisabled()
+    await user.keyboard('{Escape}')
+    expect(sheet).toBeVisible()
+    await user.click(
+      within(sheet).getByRole('button', { name: 'დასრულების თარიღი' }),
+    )
+    const nextDay = screen.getByRole('button', {
+      name: 'ხუთშაბათი, 5 ნოემბერი 2026',
+    })
+    nextDay.focus()
+    await user.keyboard('{Enter}')
+    fireEvent.change(within(sheet).getByLabelText(/^დასრულება/), {
+      target: { value: '09:00' },
+    })
+    await user.type(
+      within(sheet).getByLabelText(/^შესწორების მიზეზი/),
+      'ღამის ცვლის დასრულება შესწორდა',
+    )
+    await user.click(
+      within(sheet).getByRole('button', { name: 'შესწორების შენახვა' }),
+    )
+    await waitFor(() =>
+      expect(calls.correct).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          start: '2026-11-04T10:05',
+          end: '2026-11-05T09:00',
+        }),
+      }),
+    )
+  })
+  it('keeps the correction sheet open and disables edits while saving', async () => {
+    let complete:
+      ((value: { ok: true; value: { id: string } }) => void) | undefined
+    calls.correct.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve
+        }),
+    )
+    const user = userEvent.setup()
+    mount(false, true)
+    await user.click(screen.getByRole('button', { name: 'შესწორება' }))
+    const sheet = screen.getByRole('dialog', { name: 'დროის შესწორება' })
+    await user.type(
+      within(sheet).getByLabelText(/^შესწორების მიზეზი/),
+      'დასრულება გადამოწმებულია',
+    )
+    const save = within(sheet).getByRole('button', {
+      name: 'შესწორების შენახვა',
+    })
+    await user.click(save)
+    await waitFor(() => expect(save).toHaveAttribute('aria-busy', 'true'))
+    expect(
+      within(sheet).getByRole('button', { name: 'გაუქმება' }),
+    ).toBeDisabled()
+    expect(within(sheet).getByLabelText(/^დასრულება/)).toBeDisabled()
+    expect(
+      within(sheet).queryByRole('button', { name: 'დახურვა' }),
+    ).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(sheet).toBeVisible()
+    await act(async () => complete?.({ ok: true, value: { id: session().id } }))
+    await waitFor(() => expect(sheet).not.toBeInTheDocument())
+    expect(calls.correct).toHaveBeenCalledOnce()
   })
 })

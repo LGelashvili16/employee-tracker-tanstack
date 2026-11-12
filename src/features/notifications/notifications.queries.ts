@@ -18,8 +18,5 @@ export const notificationsQueryOptions = (
       return result.value
     },
     staleTime: 30_000,
-    // Refresh the bell in visible tabs without polling in the background.
-    refetchInterval: 30_000,
-    refetchIntervalInBackground: false,
     retry: false,
   })

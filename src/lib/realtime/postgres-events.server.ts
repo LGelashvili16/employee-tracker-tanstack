@@ -21,6 +21,20 @@ export async function signalRealtime(tx: Transaction, value: RealtimeSignal) {
   await tx.execute(sql`select pg_notify('teamwork_events', ${payload})`)
 }
 
+/** Bulk delivery keeps whole-company publication to one database round trip. */
+export async function signalRealtimeBatch(
+  tx: Transaction,
+  values: Array<RealtimeSignal>,
+) {
+  if (!values.length) return
+  const payloads = values.map((value) =>
+    JSON.stringify(realtimeSignalSchema.parse(value)),
+  )
+  await tx.execute(
+    sql`select pg_notify('teamwork_events', payload) from jsonb_array_elements_text(${JSON.stringify(payloads)}::jsonb) as payload`,
+  )
+}
+
 function connect() {
   if (client || !subscribers.size) return
   const next = new Client({

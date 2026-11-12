@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+import { deliverNotifications } from '#/features/notifications/server/notifications.service.server'
 import '@tanstack/react-start/server-only'
 import { assertPermission } from '#/lib/authorization/access'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
@@ -10,7 +12,11 @@ import {
   saveCompanyScheduleSchema,
   employeeWorkingWeekSchema,
 } from '../scheduling.schemas'
-import { companyLocalDate, earliestScheduleDate } from '../scheduling.rules'
+import {
+  companyLocalDate,
+  earliestScheduleDate,
+  sameWorkingWeek,
+} from '../scheduling.rules'
 import * as repository from './scheduling.repository.server'
 import type { Actor } from '#/lib/authorization/actor'
 import type { OwnSchedule, ScheduleSettings } from '../scheduling.types'
@@ -72,7 +78,33 @@ export async function replaceEmployeeWeek(
 ) {
   await requireScheduleAdministrator(tx, actorId)
   const week = days === null ? null : await parseCustomWeek(days, tx)
-  return repository.replaceEmployeeWeek(tx, employeeId, week, actorId)
+  const context = await repository.employeeNotificationContext(tx, employeeId)
+  const companyWeek = await repository.readCurrentCompanyWeek(tx)
+  const before = context?.week ?? companyWeek
+  const after = week ?? companyWeek
+  const changed = await repository.replaceEmployeeWeek(
+    tx,
+    employeeId,
+    week,
+    actorId,
+  )
+  if (
+    changed &&
+    context &&
+    before &&
+    after &&
+    !sameWorkingWeek(before, after)
+  ) {
+    await deliverNotifications(tx, {
+      eventKey: `schedule:employee:${employeeId}:${randomUUID()}`,
+      recipientIds: [context.userId],
+      actorId,
+      title: 'სამუშაო განრიგი შეიცვალა',
+      body: `თქვენი სამუშაო კვირა განახლდა. მოქმედებს ${(await repository.companyWorkdayAt(new Date(), tx)).date} თარიღიდან.`,
+      destination: { kind: 'schedule' },
+    })
+  }
+  return changed
 }
 
 /** Self-service read: the subject is always the authenticated actor, and only their effective week is returned. */
@@ -207,6 +239,9 @@ export async function saveScheduleVersion(actor: Actor | null, input: unknown) {
         `ახალი განრიგის პირველი შესაძლო თარიღია ${minimum}. განაახლეთ გვერდის მონაცემები.`,
       )
     const schedule = companyScheduleSchema.parse({ ...parsed.data, timezone })
+    const previous = (
+      await repository.hydrateVersions(tx, latest ? [latest] : [])
+    ).at(0)
     await repository.insertVersion(
       tx,
       schedule,
@@ -214,6 +249,17 @@ export async function saveScheduleVersion(actor: Actor | null, input: unknown) {
       // Schedule creation has a fixed audit action; administrators do not enter a free-text reason.
       'კომპანიის სამუშაო განრიგის შენახვა.',
     )
+    if (!previous || !sameWorkingWeek(previous.days, schedule.days)) {
+      for await (const recipientIds of repository.inheritingEmployeePages(tx))
+        await deliverNotifications(tx, {
+          eventKey: `schedule:company:${schedule.effectiveFrom}`,
+          recipientIds,
+          actorId: administrator.id,
+          title: 'კომპანიის სამუშაო განრიგი შეიცვალა',
+          body: `ახალი სამუშაო განრიგი მოქმედებს ${schedule.effectiveFrom} თარიღიდან.`,
+          destination: { kind: 'schedule' },
+        })
+    }
     return { effectiveFrom: schedule.effectiveFrom }
   })
 }

@@ -88,6 +88,11 @@ const columns = helper.columns([
                 : 'განხილვის მოლოდინში'}
           </Badge>
           <AttendanceDeviationBadges
+            corrected={Boolean(
+              (item.originalStartedAt &&
+                item.originalStartedAt !== item.startedAt) ||
+              (item.endedAt && item.originalEndedAt !== item.endedAt),
+            )}
             {...metrics}
             lateSeconds={item.isFirstOfDay ? metrics.lateSeconds : 0}
             earlyStartSeconds={
@@ -119,7 +124,7 @@ const columns = helper.columns([
       const end = formatAttendanceLocalInput(expectedEndAt, timezone)
       const overnight = start.slice(0, 10) !== end.slice(0, 10)
       return (
-        <span className="whitespace-nowrap tabular-nums" title={timezone}>
+        <span className="whitespace-nowrap tabular-nums">
           <time dateTime={expectedStartAt}>{start.slice(11)}</time>
           {' - '}
           <time dateTime={expectedEndAt}>
@@ -138,7 +143,7 @@ const columns = helper.columns([
 export function CompanyAttendanceSessionsTable({ rows }: { rows: Array<Row> }) {
   const visibleColumns = useMemo(
     () =>
-      rows.some((row) => row.canReview)
+      rows.some((row) => row.canReview || row.canCorrect)
         ? columns
         : columns.filter((column) => column.id !== 'actions'),
     [rows],

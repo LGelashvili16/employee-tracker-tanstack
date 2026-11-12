@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 46. Last updated: 2026-11-11.
+Status: required project instructions. Version: 49. Last updated: 2026-11-12.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -35,7 +35,7 @@ Typography, hierarchy, spacing and density, color and contrast, iconography, con
 - Keep readable line height. Allow names, Georgian labels, validation messages, and long user content to wrap deliberately. Do not truncate essential information without an accessible way to obtain it.
 - Visible page headers contain the title and relevant actions, without a routine descriptive paragraph underneath. Do not add generic sentences that restate the page name.
 - When labels, layout, and familiar controls make an interaction intuitive, omit extra instructional text. Add helper copy only to resolve real ambiguity, explain a constraint, or prevent a likely mistake. Preserve accessible names and essential context.
-- Necessary timezone information, permission/scope restrictions, field help, warnings, and empty/error explanations belong beside the affected control, table, or section. Do not remove information needed to make a safe decision in the name of minimalism.
+- Permission/scope restrictions, field help, warnings, and empty/error explanations belong beside the affected control, table, or section. Do not remove information needed to make a safe decision in the name of minimalism.
 - Simple form dialogs, including the job editor, use a title-only header when the fields make the task clear. Omit routine descriptions that repeat the title; retain descriptions needed to understand consequences, permissions, or constraints. Preserve document metadata and relevant field help.
 - Mark mandatory form labels with a visible `*` and expose the requirement through native or ARIA semantics. Hide the decorative asterisk from assistive technology to keep accessible names clear. Optional fields use plain labels without an optional suffix.
 
@@ -226,7 +226,7 @@ Before implementation, identify the user, their immediate task, the decision the
 - Prefer familiar workflows and recognizable controls. Do not invent navigation, gestures, or hidden interactions merely to make a business screen distinctive.
 - Give each context a clear primary action when needed, with subordinate secondary actions. Read-only pages do not need an invented action, chart, or summary card.
 - Use progressive disclosure for genuinely advanced controls. Keep common actions discoverable; do not hide essentials behind hover-only controls, unexplained icons, or unnecessary menus.
-- Show applied filters and provide a clear reset. Make scope, date range, units, and timezone explicit where they change data interpretation. Do not fabricate absences or conclusions from missing data.
+- Show applied filters and provide a clear reset. Make scope, date range and units explicit where they change data interpretation. Do not fabricate absences or conclusions from missing data.
 - Keep list/detail navigation predictable. Back/Forward preserves filters, sorting, and pagination; modal dismissal restores focus to a sensible trigger or successor.
 - Protect user work: retain valid input after errors, prevent duplicate submissions, and keep pending actions understandable. Warn about unsaved work only when it would actually be lost.
 - Use confirmations for consequential, destructive, or product-required actions. Name the target and consequence. Do not confirm every harmless click. Offer undo only when the operation actually supports it.
@@ -331,7 +331,7 @@ When the user changes a shared UI standard, update this file instead of creating
 ## Schedule settings organization
 
 - Group `/manage/schedule` into the rounded tabs განრიგი, დასვენება და შვებულება, and დასწრების წესები below the page title. Show one settings group at a time and preserve unsaved form values while switching tabs. Keep each form save action beside its own content.
-- Keep settings cards concise: use clear labels and at most a short, decision-relevant helper. Avoid introductory paragraphs that repeat the fields. Preserve essential consequences such as annual reset timing, continued attendance tracking, and unavailable reminders. Bound narrow policy forms rather than stretching them across the page.
+- Keep settings cards concise: use clear labels and at most a short, decision-relevant helper. Avoid introductory paragraphs that repeat the fields. Preserve essential consequences such as annual reset timing and continued attendance tracking. Bound narrow policy forms rather than stretching them across the page.
 
 - The personal vacation page shows დასვენების დღეები in a compact blue shadcn Badge and available paid შვებულება in a purple Badge, measured in working days. Omit annual-limit, reset-date, and approval-deduction explanations from this summary.
 
@@ -357,3 +357,27 @@ Personal and management complaint tables put the complainant first, using the ex
 Both management and employee complaint detail sheets use two shared shadcn Cards: the first groups title, description, author, date and status/category details; the second groups status controls (when authorized), the comment composer and existing comments/review history. Keep the conversation inside one card rather than separating its form from its entries.
 
 Complaint table rows open the detail sheet when clicked on non-interactive content. Preserve real title links for keyboard access and native new-tab behavior. Ignore modified clicks, text selection and nested interactive controls; retain semantic table rows and use the title link as the keyboard target.
+
+## Notification acknowledgement
+
+The notification bell toolbar uses ყველა შეტყობინების ნანახად მონიშვნა and marks all of the signed-in account's unread notifications read, including older pages. Its enabled state follows the full unread count. The bell dot remains only while unread notifications exist; row controls continue to mark individual entries.
+
+## Attendance directory navigation
+
+Clicking non-interactive content anywhere in an employee attendance directory row opens /manage/attendance/$userId. Keep semantic table rows and real employee/detail links for keyboard and native new-tab navigation. Ignore modified clicks, text selections and nested interactive controls.
+
+## Weekly employee attendance
+
+The employee detail attendance tab at `/manage/attendance/$userId` defaults to the full current company-local Monday-to-Sunday week. Reuse the shared calendar control with previous week, next week and მიმდინარე კვირა actions. Show the complete date range, one session table ordered by check-in time newest first and weekly totals. Today's latest session appears above earlier sessions; past weeks also use newest-first ordering. Preserve validated date URL state, independent hours-tab filters, authorized review controls and overnight session ownership. Missing days are not fabricated absence records.
+
+## Attendance correction transparency
+
+HR and owners can correct other employees' attendance company-wide through an explicit correction permission. Supervisors retain assignment-based correction scope. Show correction and approval controls independently; company-wide correction rights do not imply approval rights. Never allow self-correction. Employees see a read-only, paginated correction history on their own attendance page, with exact before/after check-in and checkout times including seconds, editor, reason and change timestamp. Preserve every edit, including repeated changes. Use shared Cards and pagination, Georgian labels, and the existing SSE connection to refresh the history.
+
+## Attendance correction sheet
+
+Time corrections open in a right-side shadcn Sheet, full width on mobile and matching the employee sheet width on desktop. Keep a fixed title header and scrollable body. Use one shadcn Card for the employee name, date/time fields, required reason and save/cancel actions; use a second Card for change history. Date fields use the shared Georgian shadcn Calendar with separately labeled time inputs. Keep the check-in date fixed to its retained work date and permit overnight checkout dates. Omit duplicate current/original-time summaries and explanatory paragraphs. Preserve field errors, required markers, keyboard access and pending-save protection. Attendance approval remains a separate action.
+
+## Timezone presentation
+
+Do not display routine timezone names, labels, footnotes or tooltips in the application. Continue using the configured or historically retained timezone for calculations, date selection, validation and formatting. Keep the company schedule's timezone selector as a functional configuration control, without repeating its value elsewhere.

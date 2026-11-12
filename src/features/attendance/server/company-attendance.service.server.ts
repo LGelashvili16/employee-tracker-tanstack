@@ -7,6 +7,7 @@ import {
   companyAttendanceUserSchema,
 } from '../company-attendance.schemas'
 import * as repository from './company-attendance.repository.server'
+import { attendanceWeek } from '../attendance.rules'
 import type { Actor } from '#/lib/authorization/actor'
 import { getCompanyWorkday } from '#/features/scheduling/server/scheduling.service.server'
 
@@ -42,10 +43,13 @@ export async function readCompanyAttendanceUser(
       // Load assignment facts even for company readers so read access never implies mutation rights.
       const now = new Date()
       const workday = await getCompanyWorkday(now, tx)
-      const date = data.date ?? workday.date
+      const selectedDate = data.date ?? workday.date
+      const week = attendanceWeek(selectedDate)
+      const date = data.period === 'week' ? week.start : selectedDate
+      const endDate = data.period === 'week' ? week.end : selectedDate
       const result = await repository.companyAttendanceUser(
         tx,
-        { ...data, date },
+        { ...data, date, endDate },
         access.company ? undefined : access.actor.id,
         access.canReadAttendance,
       )
@@ -62,10 +66,16 @@ export async function readCompanyAttendanceUser(
             )
           : result.subject.assigned)
       const serverNow = now.toISOString()
+      const canCorrect =
+        result.subject.userId !== access.actor.id &&
+        ((access.company &&
+          hasPermission(access.actor, 'attendance.correct.all')) ||
+          canReview)
       return {
         ...result,
         serverNow,
         date,
+        endDate,
         today: workday.date,
         companyTimezone: workday.timezone,
         canReadAttendance: access.canReadAttendance,
@@ -73,6 +83,7 @@ export async function readCompanyAttendanceUser(
         sessions: result.sessions.map((session) => ({
           ...session,
           canReview,
+          canCorrect,
           employeeName: result.subject.name,
           workDate: session.date,
           startedAt: session.startedAt.toISOString(),

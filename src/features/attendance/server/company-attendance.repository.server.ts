@@ -1,5 +1,16 @@
 import '@tanstack/react-start/server-only'
-import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  lte,
+  ilike,
+  or,
+  sql,
+} from 'drizzle-orm'
 import {
   attendanceReviewer,
   attendanceSession,
@@ -95,7 +106,10 @@ export async function companyAttendanceUsers(
 
 export async function companyAttendanceUser(
   tx: AttendanceTransaction,
-  input: z.infer<typeof companyAttendanceUserSchema> & { date: string },
+  input: z.infer<typeof companyAttendanceUserSchema> & {
+    date: string
+    endDate: string
+  },
   reviewerId?: string,
   includeSessions = true,
 ) {
@@ -120,7 +134,7 @@ export async function companyAttendanceUser(
   ).at(0)
   if (!subject) return null
   if (!subject.employeeId || !includeSessions) return { subject, sessions: [] }
-  // A selected work date is the bounded group; retain every session, including overnight ones.
+  // The service bounds the period to one day or week; retain complete work dates and overnight sessions.
   const sessions = await tx
     .select({
       id: attendanceSession.id,
@@ -144,9 +158,17 @@ export async function companyAttendanceUser(
     .where(
       and(
         eq(attendanceSession.employeeId, subject.employeeId),
-        eq(attendanceSession.workDate, input.date),
+        gte(attendanceSession.workDate, input.date),
+        lte(attendanceSession.workDate, input.endDate),
       ),
     )
-    .orderBy(asc(attendanceSession.startedAt), asc(attendanceSession.id))
+    .orderBy(
+      input.period === 'week'
+        ? desc(attendanceSession.startedAt)
+        : asc(attendanceSession.startedAt),
+      input.period === 'week'
+        ? desc(attendanceSession.id)
+        : asc(attendanceSession.id),
+    )
   return { subject, sessions }
 }

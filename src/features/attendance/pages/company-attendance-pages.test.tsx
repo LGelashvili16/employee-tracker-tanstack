@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -32,6 +32,7 @@ vi.mock('../attendance.functions', () => ({
   readCompanyUserAttendance: calls.detail,
 }))
 vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => calls.navigate,
   getRouteApi: (id: string) => ({
     useRouteContext: () => ({
       actor: {
@@ -166,6 +167,35 @@ beforeEach(() => {
   })
 })
 describe('company attendance navigation', () => {
+  it('opens the dynamic employee route from non-link row content', async () => {
+    const user = userEvent.setup()
+    mount('users')
+    await user.click(await screen.findByText('worker-1'))
+    expect(calls.navigate).toHaveBeenCalledExactlyOnceWith({
+      to: '/manage/attendance/$userId',
+      params: { userId: 'worker' },
+    })
+  })
+  it('preserves modified clicks, text selection and the native employee link', async () => {
+    mount('users')
+    const cell = await screen.findByText('worker-1')
+    for (const modifier of ['ctrlKey', 'metaKey', 'altKey', 'shiftKey']) {
+      fireEvent.click(cell, { [modifier]: true })
+    }
+    fireEvent.click(cell, { button: 1 })
+    const selection = vi
+      .spyOn(window, 'getSelection')
+      .mockReturnValue({ toString: () => 'worker' } as Selection)
+    fireEvent.click(cell)
+    selection.mockRestore()
+    const link = screen.getByRole('link', { name: 'ანა' })
+    expect(link).toHaveAttribute('href', '/manage/attendance/worker')
+    link.addEventListener('click', (event) => event.preventDefault(), {
+      once: true,
+    })
+    fireEvent.click(link)
+    expect(calls.navigate).not.toHaveBeenCalled()
+  })
   it.each(['admin', 'supervisor'] as const)(
     'omits the rules shortcut from attendance for %s',
     async (role) => {
@@ -205,7 +235,7 @@ describe('company attendance navigation', () => {
       },
     })
     expect(calls.detail).toHaveBeenCalledWith({
-      data: { userId: 'worker', date: '2026-11-04' },
+      data: { userId: 'worker', date: '2026-11-04', period: 'week' },
     })
     expect(
       screen.queryByRole('textbox', { name: 'თანამშრომლის ძიება' }),
@@ -262,26 +292,30 @@ describe('company attendance navigation', () => {
     ).toBeVisible()
     expect(calls.navigate).not.toHaveBeenCalled()
   })
-  it('shows one work date in a shared table and navigates days through validated URL state', async () => {
+  it('shows a full week in one table and navigates complete weeks through URL state', async () => {
     const user = userEvent.setup()
     mount('detail')
     expect(await screen.findByRole('heading', { name: 'ანა' })).toBeVisible()
     expect(screen.getAllByRole('table')).toHaveLength(1)
     expect(
-      screen.getByRole('button', { name: 'სამუშაო დღის არჩევა' }),
-    ).toHaveTextContent('5 ნოემბერი 2026')
-    expect(screen.getByRole('button', { name: 'შემდეგი დღე' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'დღეს' })).toBeDisabled()
-    expect(calls.detail).toHaveBeenCalledWith({ data: { userId: 'worker' } })
+      screen.getByRole('button', { name: 'სამუშაო კვირის არჩევა' }),
+    ).toHaveTextContent('2 ნოემბერი 2026 - 8 ნოემბერი 2026')
+    expect(screen.getByRole('button', { name: 'შემდეგი კვირა' })).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'მიმდინარე კვირა' }),
+    ).toBeDisabled()
+    expect(calls.detail).toHaveBeenCalledWith({
+      data: { userId: 'worker', period: 'week' },
+    })
     expect(
       screen.queryByRole('link', { name: 'ჯერ ძველი' }),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('navigation', { name: 'გვერდები' }),
     ).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'წინა დღე' }))
+    await user.click(screen.getByRole('button', { name: 'წინა კვირა' }))
     expect(calls.navigate).toHaveBeenCalledWith({
-      search: { date: '2026-11-04' },
+      search: { date: '2026-10-26' },
     })
   })
   it('does not imply absence when the selected day has no sessions', async () => {
@@ -298,11 +332,11 @@ describe('company attendance navigation', () => {
     })
     mount('detail')
     expect(
-      await screen.findByText('არჩეულ დღეს დასწრების ჩანაწერები არ არის.'),
+      await screen.findByText('არჩეულ კვირაში დასწრების ჩანაწერები არ არის.'),
     ).toBeVisible()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'სამუშაო დღის არჩევა' }),
-    ).toHaveTextContent('4 ნოემბერი 2026')
+      screen.getByRole('button', { name: 'სამუშაო კვირის არჩევა' }),
+    ).toHaveTextContent('2 ნოემბერი 2026 - 8 ნოემბერი 2026')
   })
 })

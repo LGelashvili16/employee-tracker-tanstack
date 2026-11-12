@@ -211,6 +211,20 @@
       "when": 1794391502789,
       "tag": "0029_employee_complaints",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794405095204,
+      "tag": "0030_notification_delivery",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794406927548,
+      "tag": "0031_attendance_digest_receipt",
+      "breakpoints": true
     }
   ]
 }

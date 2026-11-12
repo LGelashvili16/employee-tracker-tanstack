@@ -33,6 +33,9 @@ export const companyAttendanceUserSearchSchema =
 export const companyAttendanceUserSchema = attendanceHistorySearchSchema.extend(
   {
     userId: recordIdSchema,
+    period: z
+      .enum(['day', 'week'], { error: 'აირჩიეთ დასაშვები პერიოდი.' })
+      .optional(),
   },
 )
 export const companyAttendanceQuerySchema = z.object({

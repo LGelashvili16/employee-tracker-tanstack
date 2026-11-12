@@ -203,3 +203,7 @@ export const jobSearchSchema = z
 export const jobMapSearchSchema = z.object({ q: jobFilterSchema.shape.q })
 export const jobsPageSize = 12
 export const jobsMapLimit = 300
+
+export const jobsRealtimeSchema = z
+  .object({ recipientId: z.string().min(1).max(256), changed: z.boolean() })
+  .strict()

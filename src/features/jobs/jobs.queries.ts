@@ -28,8 +28,6 @@ export const jobsQueryOptions = (actorId: string, search: JobSearch) =>
       return result.value
     },
     staleTime: 15_000,
-    refetchInterval: 30_000,
-    refetchIntervalInBackground: false,
     retry: false,
   })
 export const jobQueryOptions = (actorId: string, id: string) =>
@@ -41,8 +39,6 @@ export const jobQueryOptions = (actorId: string, id: string) =>
       return result.value
     },
     staleTime: 10_000,
-    refetchInterval: 30_000,
-    refetchIntervalInBackground: false,
     retry: false,
   })
 

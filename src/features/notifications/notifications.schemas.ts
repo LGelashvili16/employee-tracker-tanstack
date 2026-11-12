@@ -1,5 +1,64 @@
 import { z } from 'zod'
 
+export const markAllNotificationsSeenSchema = z.strictObject(
+  {},
+  { error: 'მოთხოვნა არასწორია.' },
+)
+
+const accountId = z.string().min(1).max(256)
+/** Destinations are data, never persisted URLs. Routes independently authorize access. */
+export const notificationDestinationSchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      kind: z.literal('leave'),
+      requestId: z.uuid(),
+      review: z.boolean(),
+    })
+    .strict(),
+  z.object({ kind: z.literal('schedule') }).strict(),
+  z
+    .object({
+      kind: z.literal('attendance'),
+      userId: accountId,
+      workDate: z.iso.date(),
+    })
+    .strict(),
+  z.object({ kind: z.literal('job'), jobId: z.uuid() }).strict(),
+  z.object({ kind: z.literal('jobs') }).strict(),
+])
+export const deliverNotificationsSchema = z
+  .object({
+    eventKey: z.string().trim().min(1).max(256),
+    recipientIds: z.array(accountId).max(10000),
+    actorId: accountId.optional(),
+    title: z.string().trim().min(1).max(160),
+    body: z.string().trim().min(1).max(2000),
+    destination: notificationDestinationSchema.optional(),
+    liveToast: z.boolean().default(true),
+  })
+  .strict()
+export const notificationRealtimeSchema = z
+  .object({
+    recipientId: accountId,
+    changed: z.boolean(),
+    notification: z
+      .object({
+        id: z.uuid(),
+        title: z.string().min(1).max(160),
+        destination: notificationDestinationSchema.nullable(),
+        liveToast: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict()
+export type NotificationDestination = z.infer<
+  typeof notificationDestinationSchema
+>
+export type DeliverNotificationsInput = z.input<
+  typeof deliverNotificationsSchema
+>
+
 export const notificationListSchema = z.object({
   limit: z
     .number({ error: 'რაოდენობა არასწორია.' })

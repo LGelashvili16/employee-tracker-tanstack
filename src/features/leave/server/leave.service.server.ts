@@ -1,3 +1,4 @@
+import { deliverNotifications } from '#/features/notifications/server/notifications.service.server'
 import { getCompanyWorkday } from '#/features/scheduling/server/scheduling.service.server'
 import '@tanstack/react-start/server-only'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
@@ -109,6 +110,14 @@ export async function createLeave(actor: Actor | null, input: unknown) {
       before: null,
       after: facts(saved),
     })
+    await notifyLeave(
+      tx,
+      saved,
+      current.id,
+      'created',
+      'არყოფნის მოთხოვნა მიღებულია',
+      true,
+    )
     return { id: saved.id }
   })
 }
@@ -200,6 +209,19 @@ export async function reviewLeave(actor: Actor | null, input: unknown) {
       before: facts(request),
       after: facts(saved),
     })
+    await notifyLeave(
+      tx,
+      saved,
+      current.id,
+      data.action,
+      {
+        approved: 'არყოფნის მოთხოვნა დამტკიცდა',
+        rejected: 'არყოფნის მოთხოვნა უარყოფილია',
+        modified: 'არყოფნის თარიღები შეიცვალა',
+      }[data.action],
+      false,
+      data.reason,
+    )
     return { id: saved.id }
   })
 }
@@ -237,6 +259,14 @@ export async function cancelLeave(actor: Actor | null, input: unknown) {
       before: facts(request),
       after: facts(saved),
     })
+    await notifyLeave(
+      tx,
+      saved,
+      current.id,
+      'cancelled',
+      'არყოფნის მოთხოვნა გაუქმდა',
+      true,
+    )
     return { id: saved.id }
   })
 }
@@ -282,6 +312,46 @@ export async function closeSickLeave(actor: Actor | null, input: unknown) {
       before: facts(request),
       after: facts(saved),
     })
+    await notifyLeave(
+      tx,
+      saved,
+      current.id,
+      'closed',
+      'არყოფნის დასრულება დაფიქსირდა',
+      saved.requesterId === current.id,
+    )
     return { id: saved.id }
   })
+}
+
+async function notifyLeave(
+  tx: repository.LeaveTransaction,
+  saved: {
+    id: string
+    revision: number
+    requesterId: string
+    startDate: string
+    endDate: string | null
+  },
+  actorId: string,
+  action: string,
+  title: string,
+  review: boolean,
+  reason = '',
+) {
+  const input = {
+    eventKey: `leave:${saved.id}:${saved.revision}:${action}`,
+    actorId,
+    title,
+    body: `${saved.startDate}${saved.endDate ? ` - ${saved.endDate}` : ''}.${reason ? ` ${reason}` : ''}`,
+    destination: { kind: 'leave' as const, requestId: saved.id, review },
+  }
+  if (review) {
+    for await (const recipientIds of repository.notificationReviewerPages(tx))
+      await deliverNotifications(tx, { ...input, recipientIds })
+  } else
+    await deliverNotifications(tx, {
+      ...input,
+      recipientIds: [saved.requesterId],
+    })
 }

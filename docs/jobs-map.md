@@ -73,7 +73,7 @@ The map sidebar presents each result as a compact shadcn Card. Details show one 
 
 Supplied coordinates must be inside Georgia's country polygon. The same territory check runs for context-menu creation, form coordinates, server-function inputs and direct service validation. Jobs may instead omit both coordinates. Existing records remain readable. The map can still be panned freely. See [boundary provenance and accuracy](../src/features/jobs/data/README.md).
 
-Lists show 12 records per page. The map shows up to 300 matching pins with an explicit truncation notice; use filters and the paginated list to reach every record. Selecting a list record adds that pin to the map even if it falls outside the marker limit. The detail panel shows the latest 25 history entries; all older events remain persisted. Pins and selected details refresh every 30 seconds in visible tabs. This is polling, not live push, and arrival/completion are employee declarations rather than GPS verification.
+Lists show 12 records per page. The map shows up to 300 matching pins with an explicit truncation notice; use filters and the paginated list to reach every record. Selecting a list record adds that pin to the map even if it falls outside the marker limit. The detail panel shows the latest 25 history entries; all older events remain persisted. Pins and selected details refresh through the shared authenticated SSE connection after committed job changes and reconcile on reconnect. Arrival and completion remain employee declarations rather than GPS verification.
 
 ## Address search and saved street names
 

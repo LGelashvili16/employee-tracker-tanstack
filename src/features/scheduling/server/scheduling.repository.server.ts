@@ -1,5 +1,5 @@
 import '@tanstack/react-start/server-only'
-import { and, asc, desc, eq, gt, inArray, lte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, isNull, lte, sql } from 'drizzle-orm'
 import { db } from '#/db'
 import {
   companySchedule,
@@ -341,4 +341,46 @@ export async function vacationWorkingDates(
     left join employee_work_schedule assignment on assignment.employee_id = person.id
   `)
   return result.rows
+}
+
+export async function employeeNotificationContext(
+  tx: ScheduleTransaction,
+  employeeId: string,
+) {
+  const person = (
+    await tx
+      .select({ userId: employee.userId })
+      .from(employee)
+      .where(eq(employee.id, employeeId))
+      .for('update')
+  ).at(0)
+  if (!person) return null
+  return { ...person, week: await readEmployeeWeekByUser(tx, person.userId) }
+}
+
+export async function* inheritingEmployeePages(tx: ScheduleTransaction) {
+  let cursor = ''
+  for (;;) {
+    const people = await tx
+      .select({ userId: employee.userId })
+      .from(employee)
+      .innerJoin(user, eq(user.id, employee.userId))
+      .leftJoin(
+        employeeWorkSchedule,
+        eq(employeeWorkSchedule.employeeId, employee.id),
+      )
+      .where(
+        and(
+          gt(employee.userId, cursor),
+          eq(employee.status, 'active'),
+          eq(user.accessState, 'active'),
+          isNull(employeeWorkSchedule.employeeId),
+        ),
+      )
+      .orderBy(asc(employee.userId))
+      .limit(500)
+    if (!people.length) return
+    yield people.map((person) => person.userId)
+    cursor = people[people.length - 1].userId
+  }
 }

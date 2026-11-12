@@ -8,9 +8,11 @@ import {
   checkIn,
   checkOut,
   getAttendanceOverview,
+  readEmployeeCorrections,
 } from './server/attendance.service.server'
 import {
   checkInSchema,
+  attendanceCorrectionsSchema,
   checkOutSchema,
   attendanceAssignmentSchema,
   attendanceCorrectionSchema,
@@ -53,6 +55,12 @@ async function safely<T>(action: () => Promise<T>) {
 export const readMyAttendance = createServerFn({ method: 'GET' })
   .middleware([authenticatedMiddleware])
   .handler(({ context }) => safely(() => getAttendanceOverview(context.actor)))
+export const readMyAttendanceCorrections = createServerFn({ method: 'GET' })
+  .middleware([authenticatedMiddleware])
+  .validator(attendanceCorrectionsSchema)
+  .handler(({ context, data }) =>
+    safely(() => readEmployeeCorrections(context.actor, data)),
+  )
 export const startMyWork = createServerFn({ method: 'POST' })
   .middleware([authenticatedMiddleware])
   .validator(checkInSchema)

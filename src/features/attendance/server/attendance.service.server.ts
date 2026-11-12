@@ -2,7 +2,11 @@ import '@tanstack/react-start/server-only'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
 import { getEmployeeWorkday } from '#/features/scheduling/server/scheduling.service.server'
 import { readApprovedLeaveForAttendance } from '#/features/leave/server/leave.service.server'
-import { checkInSchema, checkOutSchema } from '../attendance.schemas'
+import {
+  checkInSchema,
+  checkOutSchema,
+  attendanceCorrectionsSchema,
+} from '../attendance.schemas'
 import { startOfWorkWeek } from '../attendance.rules'
 import * as repository from './attendance.repository.server'
 import type { Actor } from '#/lib/authorization/actor'
@@ -77,6 +81,16 @@ export async function getAttendanceOverview(
         })),
       },
     }
+  })
+}
+export async function readEmployeeCorrections(
+  actor: Actor | null,
+  input: unknown,
+) {
+  const { page } = attendanceCorrectionsSchema.parse(input)
+  return repository.transactAttendance(async (tx) => {
+    const employeeId = await activeEmployee(tx, actor, false)
+    return repository.employeeCorrections(tx, employeeId, page)
   })
 }
 export async function checkIn(actor: Actor | null, input: unknown) {

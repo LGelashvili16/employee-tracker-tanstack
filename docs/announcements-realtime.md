@@ -1,6 +1,6 @@
 # Announcement live updates
 
-Teamwork uses a same-origin, authenticated SSE connection at `/api/events`. Announcements and complaints share this transport. General notification polling remains unchanged. See [shared live events](realtime.md) for the centralized coordinator, provider, and feature extension instructions.
+Teamwork uses a same-origin, authenticated SSE connection at `/api/events`. Announcements, complaints, notifications and jobs share this transport. The inbox reconciles through recipient-only notifications. See [shared live events](realtime.md) for the centralized coordinator, provider, and feature extension instructions.
 
 Creators do not receive their own publication's unread dot, bell alert, live toast or login modal. Their publications remain visible and read in the directory. Legacy self-delivery rows are excluded from these indicators as well.
 
@@ -32,7 +32,7 @@ Both delivery modes receive live dot updates. Non-modal publications also receiv
 | `src/components/layout/app-shell.tsx`                                  | One subscription under the existing account-scoped QueryClient provider.                                                                                    |
 | `src/components/layout/app-sidebar.tsx`                                | Boolean unread prop and Georgian accessible dot.                                                                                                            |
 
-The shared transport imports no announcement UI or persistence. Notification streaming can later extend the topic schema and register its handler in src/server/realtime/events.server.ts, sharing the existing provider connection. No second browser connection or separate WebSocket server is needed.
+The shared transport imports no announcement UI or persistence. Notification streaming uses the same provider connection. No second browser connection or separate WebSocket server is needed.
 
 ## Recovery and performance
 

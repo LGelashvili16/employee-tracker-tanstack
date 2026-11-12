@@ -31,6 +31,14 @@ export function startOfWorkWeek(date: string) {
   value.setUTCDate(value.getUTCDate() - ((value.getUTCDay() + 6) % 7))
   return value.toISOString().slice(0, 10)
 }
+
+/** Calendar arithmetic only; the caller supplies a company-local work date. */
+export function attendanceWeek(date: string) {
+  const start = startOfWorkWeek(date)
+  const end = new Date(`${start}T12:00:00Z`)
+  end.setUTCDate(end.getUTCDate() + 6)
+  return { start, end: end.toISOString().slice(0, 10) }
+}
 export const DAILY_WORK_TARGET_SECONDS = 8 * 3600
 export const DAILY_BREAK_ALLOWANCE_SECONDS = 3600
 

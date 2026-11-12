@@ -176,6 +176,10 @@ describe('role and permission boundaries', () => {
     expect(hasPermission(['supervisor'], 'employees.manage')).toBe(false)
   })
   it('lets HR manage employees without granting platform or role administration', () => {
+    expect(hasPermission(['hr_manager'], 'attendance.correct.all')).toBe(true)
+    expect(hasPermission(['owner'], 'attendance.correct.all')).toBe(true)
+    expect(hasPermission(['admin'], 'attendance.correct.all')).toBe(false)
+    expect(hasPermission(['supervisor'], 'attendance.correct.all')).toBe(false)
     expect(
       hasEveryPermission(['hr_manager'], ['manage.access', 'employees.manage']),
     ).toBe(true)

@@ -1,3 +1,8 @@
+import {
+  currentAuthorization,
+  hasPermission,
+  roleSchema,
+} from '#/lib/authorization/permissions'
 import '@tanstack/react-start/server-only'
 import {
   and,
@@ -181,6 +186,7 @@ export async function list(
 ) {
   const escaped = input.q?.replace(/[\\%_]/g, '\\$&')
   const where = and(
+    input.requestId ? eq(leaveRequest.id, input.requestId) : undefined,
     requesterId ? eq(leaveRequest.requesterId, requesterId) : undefined,
     input.status && input.status !== 'all'
       ? eq(leaveRequest.status, input.status)
@@ -266,4 +272,44 @@ export async function closeSick(
       )
       .returning()
   ).at(0)
+}
+
+/** Prefilter by current role grants or explicit allows, then apply the authoritative permission parser. */
+export async function* notificationReviewerPages(tx: LeaveTransaction) {
+  const roleCandidates = roleSchema.options.filter((role) =>
+    hasPermission([role], 'leave.review'),
+  )
+  let cursor = ''
+  for (;;) {
+    const accounts = await tx
+      .select({
+        id: user.id,
+        roles: user.roles,
+        permissionOverrides: user.permissionOverrides,
+      })
+      .from(user)
+      .leftJoin(employee, eq(employee.userId, user.id))
+      .where(
+        and(
+          sql`${user.id} > ${cursor}`,
+          eq(user.accessState, 'active'),
+          or(isNull(employee.id), eq(employee.status, 'active')),
+          or(
+            sql`string_to_array(regexp_replace(${user.roles}, '[[:space:]]', '', 'g'), ',') && string_to_array(${roleCandidates.join(',')}, ',')`,
+            sql`${user.permissionOverrides}->'allow' ? 'leave.review'`,
+          ),
+        ),
+      )
+      .orderBy(asc(user.id))
+      .limit(500)
+    if (!accounts.length) return
+    yield accounts
+      .filter(
+        (account) =>
+          hasPermission(currentAuthorization(account), 'leave.review') &&
+          hasPermission(currentAuthorization(account), 'manage.access'),
+      )
+      .map((account) => account.id)
+    cursor = accounts[accounts.length - 1].id
+  }
 }

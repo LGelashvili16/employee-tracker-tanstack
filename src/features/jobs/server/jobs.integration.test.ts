@@ -820,4 +820,106 @@ describe.runIf(enabled)('jobs map against isolated PostgreSQL', () => {
     )
     expect(await repository.reserveLocationRequest('test-provider')).toBeNull()
   })
+  it('notifies only the currently permitted creator and affected assignee, including prior assignee on reopen', async () => {
+    await sql().query('DELETE FROM notification')
+    const { id } = await createPin()
+    expect(
+      (await sql().query('SELECT id FROM notification')).rows,
+    ).toHaveLength(0)
+    await transition(id, 'en_route')
+    expect(
+      (await sql().query('SELECT recipient_id FROM notification')).rows,
+    ).toEqual([{ recipient_id: manager.id }])
+    await transition(id, 'on_site', manager)
+    expect(
+      (await sql().query('SELECT recipient_id FROM notification')).rows.map(
+        (row) => row.recipient_id,
+      ),
+    ).toEqual([manager.id, worker.id])
+    await transition(id, 'pending', manager, 'ხელახლა დაგეგმვა')
+    const notices = (
+      await sql().query('SELECT recipient_id, title FROM notification')
+    ).rows
+    expect(notices.at(-1)).toEqual({
+      recipient_id: worker.id,
+      title: 'სამუშაო თავიდან დაიგეგმა',
+    })
+    await sql().query(
+      `UPDATE "user" SET permission_overrides='{"allow":[],"deny":["jobs.manage"]}' WHERE id=$1`,
+      [manager.id],
+    )
+    try {
+      await transition(id, 'en_route')
+      expect(
+        (await sql().query('SELECT id FROM notification')).rows,
+      ).toHaveLength(3)
+    } finally {
+      await sql().query(
+        `UPDATE "user" SET permission_overrides='{"allow":[],"deny":[]}' WHERE id=$1`,
+        [manager.id],
+      )
+    }
+  })
+  it('does not notify unchanged edits and emits one material edit notice without notifying unrelated managers', async () => {
+    const { id } = await createPin({ longitude: null, latitude: null })
+    await transition(id, 'en_route')
+    await sql().query('DELETE FROM notification')
+    const edit = {
+      ...fields,
+      longitude: null,
+      latitude: null,
+      id,
+      version: (await detail(id)).version,
+    }
+    await service.editCompanyJob(manager, edit)
+    expect(
+      (await sql().query('SELECT id FROM notification')).rows,
+    ).toHaveLength(0)
+    await service.editCompanyJob(manager, {
+      ...edit,
+      version: (await detail(id)).version,
+      notes: 'შეცვლილი ინსტრუქცია',
+    })
+    expect(
+      (await sql().query('SELECT recipient_id, destination FROM notification'))
+        .rows,
+    ).toEqual([
+      { recipient_id: worker.id, destination: { kind: 'job', jobId: id } },
+    ])
+    await expect(
+      service.editCompanyJob(manager, { ...edit, notes: 'სხვა' }),
+    ).rejects.toThrow()
+    expect(
+      (await sql().query('SELECT id FROM notification')).rows,
+    ).toHaveLength(1)
+  })
+  it('rolls back a job claim and its history if notification delivery fails', async () => {
+    const { id } = await createPin()
+    await sql().query(
+      `CREATE FUNCTION fail_job_notification() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test notification failure'; END $$; CREATE TRIGGER fail_job_notification BEFORE INSERT ON notification FOR EACH ROW EXECUTE FUNCTION fail_job_notification()`,
+    )
+    try {
+      await expect(transition(id, 'en_route')).rejects.toThrow()
+    } finally {
+      await sql().query(
+        'DROP TRIGGER fail_job_notification ON notification; DROP FUNCTION fail_job_notification()',
+      )
+    }
+    const record = await detail(id)
+    expect(record.status).toBe('pending')
+    expect(record.history).toHaveLength(1)
+  })
+
+  it('accepts a full-length rejection reason and stores a bounded safe notification preview', async () => {
+    const { id } = await createPin()
+    await transition(id, 'en_route')
+    await sql().query('DELETE FROM notification')
+    await transition(id, 'rejected', worker, 'ა'.repeat(2000))
+    const notice = (
+      await sql().query('SELECT recipient_id, body FROM notification')
+    ).rows[0]
+    expect(notice.recipient_id).toBe(manager.id)
+    expect(notice.body.length).toBe(2000)
+    expect((await detail(id)).status).toBe('rejected')
+  })
 })

@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from '#/components/ui/popover'
 import { attendanceDayFormSchema } from '../company-attendance.schemas'
+import { attendanceWeek } from '../attendance.rules'
 
 const civilDate = (value: string) => new Date(`${value}T12:00:00`)
 
@@ -24,11 +25,17 @@ export function AttendanceDayPicker({
   date,
   today,
   onChange,
+  weekly = false,
 }: {
   date: string
   today: string
   onChange: (date: string) => void
+  weekly?: boolean
 }) {
+  const week = attendanceWeek(date)
+  const currentWeek = attendanceWeek(today)
+  const step = weekly ? 7 : 1
+  const anchor = weekly ? week.start : date
   const id = useId()
   const [open, setOpen] = useState(false)
   const form = useForm({
@@ -43,7 +50,11 @@ export function AttendanceDayPicker({
     form.reset({ date })
   }, [date, form])
   function select(value: string) {
-    form.setFieldValue('date', value)
+    const selected = weekly ? attendanceWeek(value).start : value
+    form.setFieldValue(
+      'date',
+      selected < '2000-01-01' ? '2000-01-01' : selected,
+    )
     void form.handleSubmit()
     setOpen(false)
   }
@@ -61,36 +72,53 @@ export function AttendanceDayPicker({
         variant="outline"
         depth="raised"
         size="icon"
-        aria-label="წინა დღე"
-        disabled={date <= '2000-01-01'}
+        aria-label={weekly ? 'წინა კვირა' : 'წინა დღე'}
+        disabled={anchor <= '2000-01-01'}
         onClick={() =>
-          select(format(addDays(civilDate(date), -1), 'yyyy-MM-dd'))
+          select(format(addDays(civilDate(anchor), -step), 'yyyy-MM-dd'))
         }
       >
         <IconChevronLeft aria-hidden="true" />
       </Button>
       <form.Field name="date">
         {(field) => (
-          <Field data-invalid={!field.state.meta.isValid} className="w-auto">
+          <Field
+            data-invalid={!field.state.meta.isValid}
+            className="w-auto min-w-0 max-w-full"
+          >
             <FieldLabel htmlFor={id} className="sr-only">
               სამუშაო დღე
             </FieldLabel>
             <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger
                 id={id}
-                aria-label="სამუშაო დღის არჩევა"
+                aria-label={
+                  weekly ? 'სამუშაო კვირის არჩევა' : 'სამუშაო დღის არჩევა'
+                }
                 aria-invalid={!field.state.meta.isValid}
                 aria-describedby={`${id}-error`}
                 render={
-                  <Button type="button" variant="outline" depth="raised" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    depth="raised"
+                    className={
+                      weekly
+                        ? 'h-auto min-h-8 max-w-full whitespace-normal'
+                        : undefined
+                    }
+                  />
                 }
               >
                 <IconCalendar data-icon="inline-start" aria-hidden="true" />
-                {format(civilDate(date), 'd MMMM yyyy', { locale: ka })}
+                {weekly
+                  ? `${format(civilDate(week.start), 'd MMMM yyyy', { locale: ka })} - ${format(civilDate(week.end), 'd MMMM yyyy', { locale: ka })}`
+                  : format(civilDate(date), 'd MMMM yyyy', { locale: ka })}
               </PopoverTrigger>
               <PopoverContent align="start" className="w-72 p-0">
                 <Calendar
                   mode="single"
+                  weekStartsOn={1}
                   locale={ka}
                   className="w-full"
                   selected={civilDate(date)}
@@ -132,10 +160,10 @@ export function AttendanceDayPicker({
         variant="outline"
         depth="raised"
         size="icon"
-        aria-label="შემდეგი დღე"
-        disabled={date >= today}
+        aria-label={weekly ? 'შემდეგი კვირა' : 'შემდეგი დღე'}
+        disabled={weekly ? week.start >= currentWeek.start : date >= today}
         onClick={() =>
-          select(format(addDays(civilDate(date), 1), 'yyyy-MM-dd'))
+          select(format(addDays(civilDate(anchor), step), 'yyyy-MM-dd'))
         }
       >
         <IconChevronRight aria-hidden="true" />
@@ -144,10 +172,10 @@ export function AttendanceDayPicker({
         type="button"
         variant="outline"
         depth="raised"
-        disabled={date === today}
+        disabled={weekly ? week.start === currentWeek.start : date === today}
         onClick={() => select(today)}
       >
-        დღეს
+        {weekly ? 'მიმდინარე კვირა' : 'დღეს'}
       </Button>
     </form>
   )

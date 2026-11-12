@@ -62,7 +62,7 @@ it('updates the unread dot from snapshots and acknowledges other-device reading 
   expect(invalidate).toHaveBeenCalledWith({
     queryKey: ['announcements', 'worker'],
   })
-  expect(invalidate).toHaveBeenCalledWith({
+  expect(invalidate).not.toHaveBeenCalledWith({
     queryKey: ['notifications', 'worker'],
   })
   act(() => source.send({ unreadCount: 0 }))

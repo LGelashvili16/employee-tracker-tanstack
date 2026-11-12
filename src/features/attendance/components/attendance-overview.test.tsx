@@ -27,6 +27,9 @@ vi.mock('../attendance.functions', () => ({
   finishMyWork: calls.finish,
 }))
 vi.mock('@tanstack/react-start', () => ({ useServerFn: (fn: unknown) => fn }))
+vi.mock('#/hooks/use-business-notification-refresh', () => ({
+  useBusinessNotificationRefresh: vi.fn(),
+}))
 vi.mock('sonner', () => ({
   toast: { success: calls.success, error: calls.error },
 }))

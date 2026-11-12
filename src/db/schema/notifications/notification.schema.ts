@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm'
 import {
   check,
+  boolean,
+  jsonb,
   index,
   pgTable,
   text,
@@ -12,6 +14,7 @@ import { announcement } from '../announcements/announcement.schema'
 import { complaint, complaintActivity } from '../complaints/complaint.schema'
 import { createdAt, uuidv7PrimaryKey } from '../_shared/columns'
 import { user } from '../auth/auth.schema'
+import type { NotificationDestination } from '#/features/notifications/notifications.schemas'
 
 /** Private inbox entries. Trusted business workflows create these for their recipients. */
 export const notification = pgTable(
@@ -27,6 +30,12 @@ export const notification = pgTable(
     title: text('title').notNull(),
     /** Georgian message containing only information appropriate for the recipient. */
     body: text('body').notNull(),
+    /** Stable business event identity, unique per recipient; null for historical delivery. */
+    eventKey: text('event_key'),
+    /** Validated typed destination; arbitrary URLs are never stored. */
+    destination: jsonb('destination').$type<NotificationDestination>(),
+    /** Generic live toast opt-in; legacy feature hooks own their own toasts. */
+    liveToast: boolean('live_toast').notNull().default(false),
     /** Optional company announcement destination; null for other notification workflows. */
     announcementId: uuid('announcement_id').references(() => announcement.id, {
       onDelete: 'restrict',
@@ -46,6 +55,10 @@ export const notification = pgTable(
     seenAt: timestamp('seen_at', { withTimezone: true }),
   },
   (table) => [
+    uniqueIndex('notification_event_recipient').on(
+      table.eventKey,
+      table.recipientId,
+    ),
     uniqueIndex('notification_complaint_activity_recipient').on(
       table.complaintActivityId,
       table.recipientId,

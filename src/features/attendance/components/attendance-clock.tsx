@@ -218,7 +218,6 @@ export function AttendanceClock({
                       ? 'არასამუშაო დღე'
                       : 'განრიგი არ არის განსაზღვრული'}
               </span>
-              <span className="text-xs">{overview.workday.timezone}</span>
             </div>
           ) : null}
           <div

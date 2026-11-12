@@ -4,7 +4,6 @@ import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { buttonVariants } from '#/components/ui/button'
 import { useRealtimeEvents } from '#/hooks/use-realtime-events'
-import { notificationKeys } from '#/features/notifications/notifications.queries'
 import { announcementKeys } from '../announcements.queries'
 import { announcementRealtimeSchema } from '../announcements-realtime.schemas'
 
@@ -19,8 +18,6 @@ export function useAnnouncementRealtime(actorId: string) {
     const { unreadCount: count, published } = parsed.data
     setUnreadCount(count)
     void client.invalidateQueries({ queryKey: announcementKeys.all(actorId) })
-    // Existing bell delivery changes only as a consequence of announcement publication/reading.
-    void client.invalidateQueries({ queryKey: notificationKeys.own(actorId) })
     if (!published || published.showOnLogin || received.has(published.id))
       return
     received.add(published.id)

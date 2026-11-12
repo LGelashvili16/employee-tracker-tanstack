@@ -22,7 +22,6 @@ import {
   IconCalendarWeek,
   IconBell,
   IconCalendarClock,
-  IconInfoCircle,
 } from '@tabler/icons-react'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
@@ -176,13 +175,6 @@ export function ScheduleVersionForm({
                     </CardContent>
                   </Card>
                 </FieldGroup>
-              </div>
-              <div className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
-                <IconInfoCircle
-                  className="mt-1 size-4 shrink-0"
-                  aria-hidden="true"
-                />
-                <p>შეხსენებები ჯერ არ იგზავნება. ინახება მხოლოდ პარამეტრები.</p>
               </div>
               <footer className="flex justify-end">
                 <Button

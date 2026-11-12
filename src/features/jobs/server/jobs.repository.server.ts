@@ -1,3 +1,7 @@
+import {
+  currentAuthorization,
+  hasPermission,
+} from '#/lib/authorization/permissions'
 import '@tanstack/react-start/server-only'
 import {
   and,
@@ -231,4 +235,20 @@ export async function appendJobEvent(
   values: typeof jobEvent.$inferInsert,
 ) {
   await tx.insert(jobEvent).values(values)
+}
+
+/** Only the responsible creator's current job-management grant permits progress notifications. */
+export async function notificationCreator(tx: JobsTransaction, id: string) {
+  const { identity, person } = await currentIdentity(tx, id, false)
+  if (
+    !identity ||
+    identity.state !== 'active' ||
+    (person && person.status !== 'active')
+  )
+    return []
+  const authorization = currentAuthorization(identity)
+  return authorization.roles.length &&
+    hasPermission(authorization, 'jobs.manage')
+    ? [id]
+    : []
 }

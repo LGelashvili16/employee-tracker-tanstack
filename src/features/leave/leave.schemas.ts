@@ -103,6 +103,9 @@ export const cancelLeaveSchema = z.object(
 )
 export const leaveSearchSchema = z.object(
   {
+    requestId: z
+      .uuid({ error: 'მოთხოვნის იდენტიფიკატორი არასწორია.' })
+      .optional(),
     page: z
       .number({ error: 'გვერდი არასწორია.' })
       .int('გვერდი არასწორია.')
@@ -129,7 +132,7 @@ export const leaveSearchSchema = z.object(
 )
 export type LeaveSearch = z.infer<typeof leaveSearchSchema>
 export const leaveFilterSchema = leaveSearchSchema
-  .omit({ page: true })
+  .omit({ page: true, requestId: true })
   .required()
 export type CreateLeaveInput = z.infer<typeof createLeaveSchema>
 export type ReviewLeaveInput = z.infer<typeof reviewLeaveSchema>

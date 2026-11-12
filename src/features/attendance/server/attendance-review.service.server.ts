@@ -1,3 +1,4 @@
+import { deliverNotifications } from '#/features/notifications/server/notifications.service.server'
 import '@tanstack/react-start/server-only'
 import { and, eq, sql } from 'drizzle-orm'
 import { attendanceAudit, attendanceSession, employee, user } from '#/db/schema'
@@ -16,7 +17,10 @@ import type { ReviewSession } from '../attendance.types'
 import { companyLocalDate } from '#/features/scheduling/scheduling.rules'
 import { AttendanceWorkflowError } from './attendance.service.server'
 import { transactAttendance } from './attendance.repository.server'
-import { authorizeAttendance } from './attendance-review.policy.server'
+import {
+  authorizeAttendance,
+  authorizeAttendanceWorkspace,
+} from './attendance-review.policy.server'
 import * as repository from './attendance-review.repository.server'
 
 export async function listAttendanceForReview(
@@ -44,27 +48,41 @@ export async function listAttendanceForReview(
     )
     const items: Array<ReviewSession> = rows
       .slice(0, 50)
-      .map(({ session, employeeName, isFirstOfDay, isLastOfDay }) => ({
-        isFirstOfDay,
-        isLastOfDay,
-        id: session.id,
-        employeeId: session.employeeId,
-        employeeName,
-        workDate: session.workDate,
-        timezone: session.timezone,
-        startedAt: session.startedAt.toISOString(),
-        endedAt: session.endedAt?.toISOString() ?? null,
-        expectedStartAt: session.expectedStartAt.toISOString(),
-        expectedEndAt: session.expectedEndAt.toISOString(),
-        originalStartedAt: session.originalStartedAt?.toISOString() ?? null,
-        originalEndedAt: session.originalEndedAt?.toISOString() ?? null,
-        reviewState: session.reviewState,
-        revision: session.revision,
-        approvedOutsideSeconds: session.approvedOutsideSeconds,
-        maxOpenHours: session.maxOpenHours,
-        canReview:
-          scope === 'team' && hasPermission(current, 'attendance.review.team'),
-      }))
+      .map(
+        ({
+          session,
+          employeeName,
+          subjectUserId,
+          isFirstOfDay,
+          isLastOfDay,
+        }) => ({
+          isFirstOfDay,
+          isLastOfDay,
+          id: session.id,
+          employeeId: session.employeeId,
+          employeeName,
+          workDate: session.workDate,
+          timezone: session.timezone,
+          startedAt: session.startedAt.toISOString(),
+          endedAt: session.endedAt?.toISOString() ?? null,
+          expectedStartAt: session.expectedStartAt.toISOString(),
+          expectedEndAt: session.expectedEndAt.toISOString(),
+          originalStartedAt: session.originalStartedAt?.toISOString() ?? null,
+          originalEndedAt: session.originalEndedAt?.toISOString() ?? null,
+          reviewState: session.reviewState,
+          revision: session.revision,
+          approvedOutsideSeconds: session.approvedOutsideSeconds,
+          maxOpenHours: session.maxOpenHours,
+          canReview:
+            scope === 'team' &&
+            hasPermission(current, 'attendance.review.team'),
+          canCorrect:
+            subjectUserId !== current.id &&
+            (hasPermission(current, 'attendance.correct.all') ||
+              (scope === 'team' &&
+                hasPermission(current, 'attendance.review.team'))),
+        }),
+      )
     return { items, hasMore: rows.length > 50, serverNow: now.toISOString() }
   })
 }
@@ -75,7 +93,11 @@ export async function attendanceReviewHistory(
 ) {
   const { sessionId } = attendanceHistorySchema.parse(input)
   return transactAttendance(async (tx) => {
-    const current = await authorizeAttendance(tx, actor, 'attendance.read.team')
+    const access = await authorizeAttendanceWorkspace(tx, actor)
+    const current = access.actor
+    const companyCorrection =
+      access.company && hasPermission(current, 'attendance.correct.all')
+    if (!companyCorrection) assertPermission(current, 'attendance.read.team')
     const records = await tx
       .select({ id: attendanceSession.id })
       .from(attendanceSession)
@@ -83,7 +105,7 @@ export async function attendanceReviewHistory(
       .where(
         and(
           eq(attendanceSession.id, sessionId),
-          repository.reviewerScope(current.id),
+          companyCorrection ? undefined : repository.reviewerScope(current.id),
           sql`${employee.userId} <> ${current.id}`,
         ),
       )
@@ -186,6 +208,23 @@ export async function reviewAttendance(actor: Actor | null, input: unknown) {
       auditState(record),
       auditState(updated),
     )
+    const recipientId = await repository.notificationSubject(
+      tx,
+      record.employeeId,
+    )
+    if (recipientId)
+      await deliverNotifications(tx, {
+        eventKey: `attendance:${record.id}:${updated.revision}`,
+        recipientIds: [recipientId],
+        actorId: current.id,
+        title: 'დასწრების ჩანაწერი განხილულია',
+        body: `${reviewState === 'approved' ? 'ჩანაწერი დამტკიცდა.' : 'ჩანაწერი უარყოფილია.'} ${data.decision === 'approve' && metrics.outsideSeconds > 0 ? (data.approveOutside ? 'არასამუშაო საათები დამტკიცდა.' : 'არასამუშაო საათები არ დამტკიცდა.') : ''} ${data.reason}`,
+        destination: {
+          kind: 'attendance',
+          userId: recipientId,
+          workDate: record.workDate,
+        },
+      })
     return { id: record.id }
   })
 }
@@ -193,15 +232,17 @@ export async function reviewAttendance(actor: Actor | null, input: unknown) {
 export async function correctAttendance(actor: Actor | null, input: unknown) {
   const data = attendanceCorrectionSchema.parse(input)
   return transactAttendance(async (tx) => {
-    const current = await authorizeAttendance(
-      tx,
-      actor,
-      'attendance.review.team',
-    )
+    const access = await authorizeAttendanceWorkspace(tx, actor)
+    const companyCorrection =
+      access.company && hasPermission(access.actor, 'attendance.correct.all')
+    const current = companyCorrection
+      ? access.actor
+      : await authorizeAttendance(tx, actor, 'attendance.review.team')
     const record = await repository.lockReviewSubject(
       tx,
       current.id,
       data.sessionId,
+      companyCorrection ? 'company' : 'team',
     )
     if (!record) throw new AuthorizationError()
     checkVersion(record, data.revision)
@@ -248,6 +289,11 @@ export async function correctAttendance(actor: Actor | null, input: unknown) {
       ).length
     )
       throw new AttendanceWorkflowError('დროის შუალედი სხვა ჩანაწერს ემთხვევა.')
+    if (
+      start.getTime() === record.startedAt.getTime() &&
+      end.getTime() === record.endedAt?.getTime()
+    )
+      return { id: record.id }
     const updates = await tx
       .update(attendanceSession)
       .set({
@@ -270,6 +316,23 @@ export async function correctAttendance(actor: Actor | null, input: unknown) {
       auditState(record),
       auditState(updated),
     )
+    const recipientId = await repository.notificationSubject(
+      tx,
+      record.employeeId,
+    )
+    if (recipientId)
+      await deliverNotifications(tx, {
+        eventKey: `attendance:${record.id}:${updated.revision}`,
+        recipientIds: [recipientId],
+        actorId: current.id,
+        title: 'დასწრების ჩანაწერი შესწორდა',
+        body: `შესვლა: ${formatAttendanceLocalInput(record.startedAt.toISOString(), record.timezone).replace('T', ' ')} → ${formatAttendanceLocalInput(start.toISOString(), record.timezone).replace('T', ' ')}. გასვლა: ${record.endedAt ? formatAttendanceLocalInput(record.endedAt.toISOString(), record.timezone).replace('T', ' ') : 'არ იყო აღრიცხული'} → ${formatAttendanceLocalInput(end.toISOString(), record.timezone).replace('T', ' ')}. ${data.reason}`,
+        destination: {
+          kind: 'attendance',
+          userId: recipientId,
+          workDate: record.workDate,
+        },
+      })
     return { id: record.id }
   })
 }

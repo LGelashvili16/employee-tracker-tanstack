@@ -16,6 +16,7 @@ import {
   attendanceLimitSchema,
 } from '../attendance.schemas'
 import { AttendanceWorkflowError } from './attendance.service.server'
+import { clearAssignmentReceipts } from './attendance-reminder.repository.server'
 import { transactAttendance } from './attendance.repository.server'
 import { authorizeAttendance } from './attendance-review.policy.server'
 import * as repository from './attendance-review.repository.server'
@@ -159,8 +160,10 @@ export async function assignAttendanceReviewer(
       eq(attendanceReviewer.reviewerId, data.reviewerId),
     )
     const before = await tx.select().from(attendanceReviewer).where(where)
-    if (data.revoke) await tx.delete(attendanceReviewer).where(where)
-    else
+    if (data.revoke) {
+      await tx.delete(attendanceReviewer).where(where)
+      await clearAssignmentReceipts(tx, data.reviewerId, data.employeeId)
+    } else
       await tx
         .insert(attendanceReviewer)
         .values({ employeeId: data.employeeId, reviewerId: data.reviewerId })

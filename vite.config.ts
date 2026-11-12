@@ -8,6 +8,7 @@ import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
+import { attendanceTaskConfig } from './scripts/attendance-task-config.ts'
 import { pwaPlugins } from './scripts/pwa.ts'
 import { serverFnDevLookup } from './scripts/server-fn-dev.ts'
 
@@ -28,6 +29,7 @@ const config = defineConfig({
   plugins: [
     devtools(),
     nitro({
+      ...attendanceTaskConfig,
       rollupConfig: { external: [/^@sentry\//] },
       routeRules: {
         '/service-worker.js': { headers: { 'Cache-Control': 'no-cache' } },

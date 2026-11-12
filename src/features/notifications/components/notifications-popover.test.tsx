@@ -11,11 +11,13 @@ const api = vi.hoisted(() => ({
   read: vi.fn(),
   mark: vi.fn(),
   unseen: vi.fn(),
+  all: vi.fn(),
 }))
 vi.mock('../notifications.functions', () => ({
   getOwnNotifications: api.read,
   markOwnNotifications: api.mark,
   markOwnNotificationsAsUnseen: api.unseen,
+  markAllOwnNotifications: api.all,
 }))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
@@ -67,6 +69,10 @@ beforeEach(() => {
       hasMore: false,
     },
   }))
+  api.all.mockImplementation(async () => {
+    items = items.map((item) => ({ ...item, seenAt: '2026-11-05T09:00:00Z' }))
+    return { ok: true, value: { updatedCount: items.length } }
+  })
   api.mark.mockImplementation(
     async ({ data }: { data: { ids: Array<string> } }) => {
       items = items.map((item) =>
@@ -88,6 +94,43 @@ beforeEach(() => {
 })
 
 describe('notifications popover', () => {
+  it('clears older unread notifications beyond the read preview', async () => {
+    items = Array.from({ length: 7 }, (_, index) => ({
+      ...items[0],
+      id: `notice-${index}`,
+      title: `განახლება ${index}`,
+      seenAt: index < 5 ? '2026-11-05T09:00:00Z' : null,
+    }))
+    api.read.mockImplementation(async () => ({
+      ok: true,
+      value: {
+        items: items.slice(0, 5),
+        unseenCount: items.filter((item) => !item.seenAt).length,
+        hasMore: true,
+      },
+    }))
+    const user = setup()
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'შეტყობინებები, ახალი შეტყობინება',
+      }),
+    )
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'ყველა შეტყობინების ნანახად მონიშვნა',
+      }),
+    )
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole('button', { name: 'შეტყობინებები' })
+          .querySelector('[data-slot="notification-unread-dot"]'),
+      ).toBeNull(),
+    )
+    expect(api.all).toHaveBeenCalledWith({ data: {} })
+    expect(items.every((item) => item.seenAt !== null)).toBe(true)
+  })
+
   it('links announcement alerts to their full content and closes the bell popup', async () => {
     items = [
       {
@@ -219,7 +262,9 @@ describe('notifications popover', () => {
     await user.click(screen.getByRole('button', { name: 'შეტყობინებები' }))
     expect(await screen.findByText('შეტყობინებები ჯერ არ გაქვთ')).toBeVisible()
     expect(
-      screen.getByRole('button', { name: 'ნაჩვენების ნანახად მონიშვნა' }),
+      screen.getByRole('button', {
+        name: 'ყველა შეტყობინების ნანახად მონიშვნა',
+      }),
     ).toBeDisabled()
     await user.click(screen.getByRole('link', { name: 'ყველას ნახვა' }))
     await waitFor(() =>
@@ -246,7 +291,7 @@ describe('notifications popover', () => {
   })
 
   it('keeps unseen status after a failed write', async () => {
-    api.mark.mockResolvedValueOnce({ ok: false, message: 'შეცდომა' })
+    api.all.mockResolvedValueOnce({ ok: false, message: 'შეცდომა' })
     const user = setup()
     await user.click(
       await screen.findByRole('button', {
@@ -255,10 +300,10 @@ describe('notifications popover', () => {
     )
     await user.click(
       await screen.findByRole('button', {
-        name: 'ნაჩვენების ნანახად მონიშვნა',
+        name: 'ყველა შეტყობინების ნანახად მონიშვნა',
       }),
     )
-    await waitFor(() => expect(api.mark).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(api.all).toHaveBeenCalledTimes(1))
     expect(
       screen.getByRole('button', {
         name: 'ნანახად მონიშვნა: განრიგი განახლდა',

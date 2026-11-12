@@ -11,6 +11,7 @@ import { Button } from '#/components/ui/button'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Spinner } from '#/components/ui/spinner'
 import type { NotificationItem } from '../notifications.types'
+import { notificationDestination } from '../notification-destination'
 
 const notificationDate = new Intl.DateTimeFormat('ka-GE', {
   day: '2-digit',
@@ -28,18 +29,21 @@ export function NotificationList({
   onMarkSeen,
   onMarkUnseen,
   onNavigate,
+  actorId = '',
 }: {
   items: Array<NotificationItem>
   pendingIds: Array<string>
   onMarkSeen: (ids: Array<string>) => void
   onMarkUnseen: (ids: Array<string>) => void
   onNavigate?: () => void
+  actorId?: string
 }) {
   return (
     <ul aria-label="შეტყობინებების სია" className="flex flex-col gap-1 p-2">
       {items.map((item) => {
         const unseen = item.seenAt === null
         const pending = pendingIds.includes(item.id)
+        const destination = notificationDestination(item.destination, actorId)
         return (
           <li
             key={item.id}
@@ -75,7 +79,15 @@ export function NotificationList({
                   !unseen && 'text-muted-foreground',
                 )}
               >
-                {item.announcementId ? (
+                {destination ? (
+                  <Link
+                    {...destination}
+                    onClick={onNavigate}
+                    className="rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    {item.title}
+                  </Link>
+                ) : item.announcementId ? (
                   <Link
                     to="/announcements"
                     onClick={onNavigate}
@@ -86,7 +98,11 @@ export function NotificationList({
                   </Link>
                 ) : item.complaintId ? (
                   <Link
-                    to="/complaints"
+                    to={
+                      item.complaintReview
+                        ? '/manage/complaints'
+                        : '/complaints'
+                    }
                     search={{ complaintId: item.complaintId }}
                     onClick={onNavigate}
                     className="rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"

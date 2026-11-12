@@ -4,7 +4,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
-import { Input } from '#/components/ui/input'
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '#/components/ui/card'
 import { Textarea } from '#/components/ui/textarea'
 import {
   Field,
@@ -17,6 +23,7 @@ import { amendAttendance } from '../attendance.functions'
 import { attendanceCorrectionSchema } from '../attendance.schemas'
 import { formatAttendanceLocalInput } from '../attendance.rules'
 import type { ReviewSession } from '../attendance.types'
+import { AttendanceDateTimeField } from './attendance-date-time-field'
 
 export function AttendanceCorrectionForm({
   session,
@@ -74,60 +81,81 @@ export function AttendanceCorrectionForm({
         void form.handleSubmit()
       }}
     >
-      <FieldGroup>
-        <p className="text-sm text-muted-foreground">
-          დროის სარტყელი: {session.timezone}. დაწყება უნდა დარჩეს{' '}
-          {session.workDate} თარიღზე. თავდაპირველი დრო და ცვლილებების ისტორია
-          ინახება. შესწორება აუქმებს წინა დამტკიცებას.
-        </p>
-        {(['start', 'end'] as const).map((name) => (
-          <form.Field key={name} name={name}>
-            {(field) => (
-              <Field data-invalid={!field.state.meta.isValid}>
-                <FieldLabel htmlFor={`${name}-${session.id}`}>
-                  {name === 'start' ? 'დაწყება' : 'დასრულება'}
-                </FieldLabel>
-                <Input
-                  id={`${name}-${session.id}`}
-                  type="datetime-local"
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  onBlur={field.handleBlur}
-                  aria-invalid={!field.state.meta.isValid}
-                />
-                <FieldError errors={field.state.meta.errors} />
-              </Field>
+      <Card>
+        <CardHeader>
+          <CardTitle>{session.employeeName}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            {(['start', 'end'] as const).map((name) => (
+              <form.Field key={name} name={name}>
+                {(field) => (
+                  <AttendanceDateTimeField
+                    id={`${name}-${session.id}`}
+                    label={name === 'start' ? 'დაწყება' : 'დასრულება'}
+                    dateLabel={
+                      name === 'start' ? 'დაწყების თარიღი' : 'დასრულების თარიღი'
+                    }
+                    workDate={session.workDate}
+                    fixedDate={name === 'start'}
+                    disabled={mutation.isPending}
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                    onBlur={field.handleBlur}
+                    invalid={!field.state.meta.isValid}
+                    errors={field.state.meta.errors}
+                  />
+                )}
+              </form.Field>
+            ))}
+            <form.Field name="reason">
+              {(field) => (
+                <Field data-invalid={!field.state.meta.isValid}>
+                  <FieldLabel htmlFor={`correction-reason-${session.id}`}>
+                    შესწორების მიზეზი <span aria-hidden="true">*</span>
+                  </FieldLabel>
+                  <Textarea
+                    id={`correction-reason-${session.id}`}
+                    required
+                    disabled={mutation.isPending}
+                    aria-describedby={`correction-reason-${session.id}-error`}
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={field.handleBlur}
+                    aria-invalid={!field.state.meta.isValid}
+                  />
+                  <FieldError
+                    id={`correction-reason-${session.id}-error`}
+                    errors={field.state.meta.errors}
+                  />
+                </Field>
+              )}
+            </form.Field>
+          </FieldGroup>
+        </CardContent>
+        <CardFooter className="justify-end gap-2 border-t">
+          <form.Subscribe selector={(state) => state.isSubmitting}>
+            {(pending) => (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={close}
+                  disabled={pending}
+                >
+                  გაუქმება
+                </Button>
+                <Button type="submit" disabled={pending} aria-busy={pending}>
+                  {pending ? (
+                    <Spinner className="absolute left-4" aria-hidden="true" />
+                  ) : null}
+                  შესწორების შენახვა
+                </Button>
+              </>
             )}
-          </form.Field>
-        ))}
-        <form.Field name="reason">
-          {(field) => (
-            <Field data-invalid={!field.state.meta.isValid}>
-              <FieldLabel htmlFor={`correction-reason-${session.id}`}>
-                შესწორების მიზეზი
-              </FieldLabel>
-              <Textarea
-                id={`correction-reason-${session.id}`}
-                value={field.state.value}
-                onChange={(event) => field.handleChange(event.target.value)}
-                onBlur={field.handleBlur}
-                aria-invalid={!field.state.meta.isValid}
-              />
-              <FieldError errors={field.state.meta.errors} />
-            </Field>
-          )}
-        </form.Field>
-        <form.Subscribe selector={(state) => state.isSubmitting}>
-          {(pending) => (
-            <Button type="submit" disabled={pending} aria-busy={pending}>
-              {pending ? (
-                <Spinner className="absolute left-4" aria-hidden="true" />
-              ) : null}
-              შესწორების შენახვა
-            </Button>
-          )}
-        </form.Subscribe>
-      </FieldGroup>
+          </form.Subscribe>
+        </CardFooter>
+      </Card>
     </form>
   )
 }

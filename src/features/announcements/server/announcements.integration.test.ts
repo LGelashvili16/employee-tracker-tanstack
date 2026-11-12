@@ -183,6 +183,7 @@ describe.runIf(process.env.RUN_ANNOUNCEMENTS_DB_TESTS === '1')(
       const unsubscribe = subscribeRealtime({
         connected: () => ready(),
         signal: (value) => {
+          if (value.topic !== 'announcements') return
           signals.push(value)
           delivered()
         },
@@ -213,7 +214,11 @@ describe.runIf(process.env.RUN_ANNOUNCEMENTS_DB_TESTS === '1')(
         const stopBarrier = subscribeRealtime({
           connected: () => {},
           signal: (value) => {
-            if (value.recipientId) barrier()
+            if (
+              value.topic === 'announcements' &&
+              value.recipientId === first.id
+            )
+              barrier()
           },
         })
         try {

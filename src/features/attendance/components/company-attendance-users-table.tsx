@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import {
   createColumnHelper,
   tableFeatures,
@@ -36,6 +36,7 @@ export function CompanyAttendanceUsersTable({
   items: Array<CompanyAttendanceAccount>
   search: CompanyAttendanceSearch
 }) {
+  const navigate = useNavigate()
   const sort = (search.sort ?? 'name-asc').replace('code-', 'username-')
   const columns = useMemo(
     () =>
@@ -220,7 +221,30 @@ export function CompanyAttendanceUsersTable({
       </TableHeader>
       <TableBody>
         {table.getRowModel().rows.map((row) => (
-          <TableRow key={row.id}>
+          <TableRow
+            key={row.id}
+            className="cursor-pointer focus-within:bg-muted/50"
+            onClick={(event) => {
+              if (
+                event.defaultPrevented ||
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey ||
+                window.getSelection()?.toString() ||
+                (event.target instanceof Element &&
+                  event.target.closest(
+                    'a, button, input, textarea, select, [role="button"], [role="link"], [contenteditable="true"]',
+                  ))
+              )
+                return
+              void navigate({
+                to: '/manage/attendance/$userId',
+                params: { userId: row.original.userId },
+              })
+            }}
+          >
             {row.getAllCells().map((cell) => (
               <TableCell
                 key={cell.id}

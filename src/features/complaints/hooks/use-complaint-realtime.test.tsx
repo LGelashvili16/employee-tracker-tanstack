@@ -33,7 +33,7 @@ beforeEach(() => {
   vi.stubGlobal('EventSource', TestSource)
 })
 afterEach(() => vi.unstubAllGlobals())
-it('reconciles complaint and inbox caches on live events and reconnect snapshots only after validation', () => {
+it('reconciles complaint caches on live events and reconnect snapshots only after validation', () => {
   const client = new QueryClient()
   const invalidate = vi.spyOn(client, 'invalidateQueries')
   function wrapper({ children }: { children: ReactNode }) {
@@ -50,7 +50,7 @@ it('reconciles complaint and inbox caches on live events and reconnect snapshots
   expect(invalidate).toHaveBeenCalledWith({
     queryKey: ['complaints', 'worker'],
   })
-  expect(invalidate).toHaveBeenCalledWith({
+  expect(invalidate).not.toHaveBeenCalledWith({
     queryKey: ['notifications', 'worker'],
   })
   invalidate.mockClear()
@@ -60,7 +60,7 @@ it('reconciles complaint and inbox caches on live events and reconnect snapshots
       id: '019aac01-0000-7000-8000-000000000001',
     }),
   )
-  expect(invalidate).toHaveBeenCalledTimes(2)
+  expect(invalidate).toHaveBeenCalledTimes(1)
   invalidate.mockClear()
   act(() => TestSource.source.send({ changed: true }, 'announcements'))
   expect(invalidate).not.toHaveBeenCalled()

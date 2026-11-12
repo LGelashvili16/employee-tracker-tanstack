@@ -58,10 +58,65 @@ describe('vacation URL filter behavior', () => {
     await user.click(
       screen.getByRole('combobox', { name: 'მოთხოვნის სტატუსი' }),
     )
-    await user.click(screen.getByRole('option', { name: 'მოლოდინში' }))
+    await user.click(await screen.findByRole('option', { name: 'მოლოდინში' }))
     expect(onChange).toHaveBeenCalledExactlyOnceWith(
       { page: 1, q: '', status: 'pending', sort: 'oldest' },
       false,
     )
+  })
+  it('leaves a notification request filter while preserving applied filters and cancelling a pending draft', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const search = {
+      requestId: '019aac01-0000-7000-8000-000000000001',
+      page: 3,
+      q: 'ანა',
+      status: 'pending' as const,
+      sort: 'oldest' as const,
+    }
+    const view = render(<LeaveSearch search={search} onChange={onChange} />)
+    const input = screen.getByLabelText('მოთხოვნების ძიება')
+    await user.type(input, 'ბ')
+    await user.click(screen.getByRole('button', { name: 'ყველა მოთხოვნა' }))
+    const next = { ...search, requestId: undefined, page: 1 }
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(next, false)
+    expect(input).toHaveValue('ანა')
+    view.rerender(<LeaveSearch search={next} onChange={onChange} />)
+    expect(
+      screen.queryByRole('button', { name: 'ყველა მოთხოვნა' }),
+    ).not.toBeInTheDocument()
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350))
+    })
+    expect(onChange).toHaveBeenCalledTimes(1)
+  })
+  it('cancels pending drafts when Back/Forward changes only the notification request ID', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const search = { q: 'ანა', page: 1 }
+    const view = render(<LeaveSearch search={search} onChange={onChange} />)
+    const input = screen.getByLabelText('მოთხოვნების ძიება')
+    await user.type(input, 'ბ')
+    view.rerender(
+      <LeaveSearch
+        search={{
+          ...search,
+          requestId: '019aac01-0000-7000-8000-000000000001',
+        }}
+        onChange={onChange}
+      />,
+    )
+    await waitFor(() => expect(input).toHaveValue('ანა'))
+    expect(screen.getByRole('button', { name: 'ყველა მოთხოვნა' })).toBeVisible()
+    await user.type(input, 'გ')
+    view.rerender(<LeaveSearch search={search} onChange={onChange} />)
+    await waitFor(() => expect(input).toHaveValue('ანა'))
+    expect(
+      screen.queryByRole('button', { name: 'ყველა მოთხოვნა' }),
+    ).not.toBeInTheDocument()
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350))
+    })
+    expect(onChange).not.toHaveBeenCalled()
   })
 })

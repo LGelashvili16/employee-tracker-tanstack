@@ -14,18 +14,14 @@ import {
   PopoverTrigger,
 } from '#/components/ui/popover'
 import { notificationsQueryOptions } from '../notifications.queries'
-import { useMarkNotificationsSeen } from '../hooks/use-mark-notifications-seen'
+import { useMarkAllNotificationsSeen } from '../hooks/use-mark-notifications-seen'
 import { NotificationsFeed } from './notifications-feed'
 
 export function NotificationsPopover({ actorId }: { actorId: string }) {
   const [open, setOpen] = useState(false)
   const query = useQuery(notificationsQueryOptions(actorId))
-  const markSeen = useMarkNotificationsSeen(actorId)
+  const markSeen = useMarkAllNotificationsSeen(actorId)
   const unseenCount = query.isError ? 0 : (query.data?.unseenCount ?? 0)
-  const unseenIds =
-    query.data?.items
-      .filter((item) => item.seenAt === null)
-      .map((item) => item.id) ?? []
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
@@ -82,15 +78,16 @@ export function NotificationsPopover({ actorId }: { actorId: string }) {
             variant="outline"
             size="icon"
             className="size-11 rounded-xl"
-            aria-label="ნაჩვენების ნანახად მონიშვნა"
-            title="ნაჩვენების ნანახად მონიშვნა"
+            aria-label="ყველა შეტყობინების ნანახად მონიშვნა"
+            title="ყველა შეტყობინების ნანახად მონიშვნა"
             disabled={
-              unseenIds.length === 0 ||
+              unseenCount === 0 ||
+              markSeen.isPending ||
               markSeen.pendingIds.length > 0 ||
               query.isError
             }
             aria-busy={markSeen.isPending}
-            onClick={() => markSeen.mutate(unseenIds)}
+            onClick={() => markSeen.mutate([])}
           >
             {markSeen.isPending ? (
               <Spinner aria-hidden="true" />

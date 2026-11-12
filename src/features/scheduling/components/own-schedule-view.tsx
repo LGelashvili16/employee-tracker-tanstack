@@ -1,10 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import {
-  IconClock,
-  IconMoon,
-  IconSunrise,
-  IconWorld,
-} from '@tabler/icons-react'
+import { IconClock, IconMoon, IconSunrise } from '@tabler/icons-react'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Badge } from '#/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
@@ -18,7 +13,6 @@ import {
 } from '../scheduling.rules'
 import { OwnWeekList } from './own-week-list'
 import { OwnWeekTimeline } from './own-week-timeline'
-import { Separator } from '#/components/ui/separator'
 import { formatAttendanceDate } from '#/features/attendance/attendance.presentation'
 
 export function OwnScheduleView({ actorId }: { actorId: string }) {
@@ -128,11 +122,6 @@ export function OwnScheduleView({ actorId }: { actorId: string }) {
               </dd>
             </div>
           </dl>
-          <Separator />
-          <p className="flex items-center gap-2 text-xs text-muted-foreground">
-            <IconWorld className="size-4 shrink-0" aria-hidden="true" />
-            {schedule.timezone}
-          </p>
         </CardContent>
       </Card>
       <Card className="min-w-0 gap-0 overflow-hidden rounded-2xl py-0">

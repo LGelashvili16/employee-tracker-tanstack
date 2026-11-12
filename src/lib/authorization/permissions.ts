@@ -7,6 +7,7 @@ export const permissionSchema = z.enum(
     'attendance.read.team',
     'attendance.read.all',
     'attendance.review.team',
+    'attendance.correct.all',
     'timesheets.review.team',
     'schedule.manage',
     'jobs.manage',
@@ -131,6 +132,7 @@ const managementPermissions: Record<
     'employees.read',
   ],
   hr_manager: [
+    'attendance.correct.all',
     'complaints.review.all',
     'complaints.read.confidential',
     'announcements.manage',

@@ -13,6 +13,7 @@ import { Spinner } from '#/components/ui/spinner'
 import { attendanceOptions } from '../attendance.queries'
 import { AttendanceClock } from './attendance-clock'
 import { RecentAttendance } from './recent-attendance'
+import { useBusinessNotificationRefresh } from '#/hooks/use-business-notification-refresh'
 import { CurrentDayWidget } from './current-day-widget'
 import { DailyGoalWidget } from './daily-goal-widget'
 import { cn } from '#/lib/utils'
@@ -58,6 +59,7 @@ function OverviewContent({
   greetingName?: string
 }) {
   const query = useQuery(attendanceOptions(actorId))
+  useBusinessNotificationRefresh(actorId)
   const reducedMotion = useReducedMotion()
   const heading =
     greetingName === undefined ? null : (

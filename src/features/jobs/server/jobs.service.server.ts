@@ -1,3 +1,5 @@
+import { deliverNotifications } from '#/features/notifications/server/notifications.service.server'
+import { signalRealtime } from '#/lib/realtime/postgres-events.server'
 import '@tanstack/react-start/server-only'
 import {
   createJobSchema,
@@ -103,13 +105,15 @@ export async function createCompanyJob(actor: Actor | null, input: unknown) {
       createdBy: current.id,
       ...locationFields(location),
     })
-    if (record.inserted)
+    if (record.inserted) {
+      await signalRealtime(tx, { topic: 'jobs', subjectId: record.id })
       await repository.appendJobEvent(tx, {
         jobId: record.id,
         actorId: current.id,
         action: 'created',
         status: 'pending',
       })
+    }
     return {
       id: record.id,
       streetNamesAvailable:
@@ -152,6 +156,21 @@ export async function editCompanyJob(actor: Actor | null, input: unknown) {
     const record = await currentJob(tx, data.id, data.version)
     if (record.status === 'completed' || record.status === 'rejected')
       throw new JobWorkflowError('რედაქტირებამდე სამუშაო თავიდან დაგეგმეთ.')
+    const materialChange =
+      record.address !== data.address ||
+      record.deadline !== data.deadline ||
+      record.notes !== data.notes ||
+      record.longitude !== data.longitude ||
+      record.latitude !== data.latitude
+    const changed =
+      materialChange || record.title !== data.title || record.kind !== data.kind
+    if (!changed && !needsLookup)
+      return {
+        id: record.id,
+        streetNamesAvailable:
+          !hasJobCoordinates(data) ||
+          Boolean(record.streetNameKa && record.streetNameEn),
+      }
     await repository.updateJob(tx, record.id, {
       title: data.title,
       notes: data.notes,
@@ -169,6 +188,16 @@ export async function editCompanyJob(actor: Actor | null, input: unknown) {
       action: 'edited',
       status: record.status,
     })
+    await signalRealtime(tx, { topic: 'jobs', subjectId: record.id })
+    if (materialChange && record.assigneeId)
+      await deliverNotifications(tx, {
+        eventKey: `job:${record.id}:${record.version + 1}:edited`,
+        recipientIds: [record.assigneeId],
+        actorId: current.id,
+        title: 'სამუშაოს დეტალები შეიცვალა',
+        body: 'გადაამოწმეთ სამუშაოს მისამართი, ვადა და ინსტრუქცია.',
+        destination: { kind: 'job', jobId: record.id },
+      })
     return {
       id: record.id,
       streetNamesAvailable:
@@ -215,6 +244,35 @@ export async function transitionCompanyJob(
       status: data.status,
       note: data.note,
     })
+    await signalRealtime(tx, { topic: 'jobs', subjectId: record.id })
+    const recipients = await repository.notificationCreator(
+      tx,
+      record.createdBy,
+    )
+    await deliverNotifications(tx, {
+      eventKey: `job:${record.id}:${record.version + 1}:${data.status}`,
+      recipientIds: [
+        ...recipients,
+        ...[record.assigneeId, assigneeId].filter((id): id is string =>
+          Boolean(id),
+        ),
+      ],
+      actorId: current.id,
+      title: jobStatusNotificationTitles[data.status],
+      body: `${record.title}${data.note ? `. ${data.note}` : ''}`.slice(
+        0,
+        2000,
+      ),
+      destination: { kind: 'job', jobId: record.id },
+    })
     return { id: record.id }
   })
+}
+
+const jobStatusNotificationTitles = {
+  pending: 'სამუშაო თავიდან დაიგეგმა',
+  en_route: 'სამუშაო აღებულია',
+  on_site: 'თანამშრომელი ადგილზე მივიდა',
+  completed: 'სამუშაო დასრულდა',
+  rejected: 'სამუშაო უარყოფილია',
 }

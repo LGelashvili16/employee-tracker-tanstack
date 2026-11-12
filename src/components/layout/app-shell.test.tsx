@@ -4,6 +4,10 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import type { AnchorHTMLAttributes } from 'react'
 import { AppShell } from './app-shell'
 
+vi.mock('#/hooks/use-business-notification-refresh', () => ({
+  useBusinessNotificationRefresh: () => undefined,
+}))
+
 const mocks = vi.hoisted(() => ({
   path: '/manage/schedule',
   signOut: vi.fn(),
@@ -19,6 +23,9 @@ vi.mock('#/features/announcements/hooks/use-announcement-realtime', () => ({
 }))
 vi.mock('#/features/complaints/hooks/use-complaint-realtime', () => ({
   useComplaintRealtime: () => ({ hasUnreadComplaints: false }),
+}))
+vi.mock('#/features/notifications/hooks/use-notification-realtime', () => ({
+  useNotificationRealtime: () => undefined,
 }))
 vi.mock('#/hooks/use-mobile', () => ({ useIsMobile: () => false }))
 vi.mock('#/components/ThemeToggle', () => ({ default: () => null }))

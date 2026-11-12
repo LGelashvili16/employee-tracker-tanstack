@@ -31,6 +31,7 @@ const signature = (search: Search) =>
     search.q ?? '',
     search.status ?? 'all',
     search.sort ?? 'newest',
+    search.requestId ?? '',
   ])
 export function LeaveSearch({
   search,
@@ -170,6 +171,24 @@ export function LeaveSearch({
             </Field>
           )}
         </form.Field>
+        {search.requestId ? (
+          <Button
+            type="button"
+            variant="outline"
+            depth="raised"
+            onClick={() => {
+              pending.current.clear()
+              form.reset({
+                q: search.q ?? '',
+                status: search.status ?? 'all',
+                sort: search.sort ?? 'newest',
+              })
+              onChange({ ...search, requestId: undefined, page: 1 }, false)
+            }}
+          >
+            ყველა მოთხოვნა
+          </Button>
+        ) : null}
         {search.q || (search.status && search.status !== 'all') ? (
           <Button
             type="button"

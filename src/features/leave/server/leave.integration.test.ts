@@ -1023,4 +1023,141 @@ describe.runIf(enabled)('vacation workflow against isolated PostgreSQL', () => {
       (await service.listLeave(hr, { status: 'approved' }, true)).total,
     ).toBe(0)
   })
+  it('delivers leave events to current reviewers, respects overrides and records final modified dates once', async () => {
+    await sql().query(
+      `DELETE FROM notification; UPDATE "user" SET permission_overrides='{"allow":[],"deny":["leave.review"]}' WHERE id='vacation-hr'; UPDATE "user" SET permission_overrides='{"allow":["leave.review"],"deny":[]}' WHERE id='vacation-supervisor'; UPDATE employee SET status='inactive' WHERE user_id='vacation-admin'`,
+    )
+    const { id } = await service.createLeave(actor, input)
+    const notifications = () =>
+      sql().query(
+        'SELECT recipient_id, title, body, destination, event_key FROM notification ORDER BY created_at, id',
+      )
+    expect((await notifications()).rows.map((row) => row.recipient_id)).toEqual(
+      ['vacation-supervisor'],
+    )
+    expect((await notifications()).rows[0].destination).toEqual({
+      kind: 'leave',
+      requestId: id,
+      review: true,
+    })
+    const reviewer = { ...hr, id: 'vacation-supervisor' }
+    const change = {
+      ...decision(id, 'modified'),
+      startDate: '2026-11-10',
+      endDate: '2026-11-10',
+      reason: '',
+    }
+    await service.reviewLeave(reviewer, change)
+    const employeeNotice = (await notifications()).rows.find(
+      (row) => row.recipient_id === actor.id,
+    )
+    expect(employeeNotice).toMatchObject({
+      title: 'არყოფნის თარიღები შეიცვალა',
+      body: '2026-11-10 - 2026-11-10.',
+      destination: { kind: 'leave', requestId: id, review: false },
+    })
+    await expect(service.reviewLeave(reviewer, change)).rejects.toThrow()
+    expect((await notifications()).rows).toHaveLength(2)
+  })
+  it('rolls back leave data and audit when notification insertion fails', async () => {
+    await sql().query(
+      `DELETE FROM notification; CREATE FUNCTION fail_leave_notification() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test notification failure'; END $$; CREATE TRIGGER fail_leave_notification BEFORE INSERT ON notification FOR EACH ROW EXECUTE FUNCTION fail_leave_notification()`,
+    )
+    try {
+      await expect(service.createLeave(actor, input)).rejects.toThrow()
+    } finally {
+      await sql().query(
+        'DROP TRIGGER fail_leave_notification ON notification; DROP FUNCTION fail_leave_notification()',
+      )
+    }
+    expect(
+      (await sql().query('SELECT count(*)::int AS total FROM leave_request'))
+        .rows[0].total,
+    ).toBe(0)
+    expect(
+      (await sql().query('SELECT count(*)::int AS total FROM leave_audit'))
+        .rows[0].total,
+    ).toBe(0)
+    expect(
+      (await sql().query('SELECT count(*)::int AS total FROM notification'))
+        .rows[0].total,
+    ).toBe(0)
+  })
+  it('excludes the requester from reviewer notifications and records cancellation only once', async () => {
+    await sql().query('DELETE FROM notification')
+    const { id } = await service.createLeave(hr, input)
+    expect(
+      (await sql().query('SELECT recipient_id FROM notification')).rows.map(
+        (row) => row.recipient_id,
+      ),
+    ).toEqual(['vacation-admin'])
+    await service.cancelLeave(hr, { id, revision: 0 })
+    await expect(service.cancelLeave(hr, { id, revision: 0 })).rejects.toThrow()
+    expect(
+      (await sql().query('SELECT recipient_id FROM notification')).rows.map(
+        (row) => row.recipient_id,
+      ),
+    ).toEqual(['vacation-admin', 'vacation-admin'])
+  })
+
+  it.each([false, true])(
+    'routes generic sick leave closure notices according to who closed it: reviewer=%s',
+    async (byReviewer) => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-11-12T08:00:00Z'))
+      const { id } = await service.createLeave(actor, {
+        ...input,
+        kind: 'sick_leave',
+        endDate: null,
+        note: 'არ უნდა გავრცელდეს',
+      })
+      await sql().query('DELETE FROM notification')
+      await service.closeSickLeave(byReviewer ? hr : actor, {
+        id,
+        revision: 0,
+        endDate: '2026-11-11',
+      })
+      const notices = (
+        await sql().query(
+          'SELECT recipient_id, body, destination FROM notification ORDER BY recipient_id',
+        )
+      ).rows
+      expect(notices.map((row) => row.recipient_id)).toEqual(
+        byReviewer ? [actor.id] : ['vacation-admin', 'vacation-hr'],
+      )
+      expect(
+        notices.every((row) => row.body === '2026-11-09 - 2026-11-11.'),
+      ).toBe(true)
+      expect(
+        notices.every((row) => row.destination.review === !byReviewer),
+      ).toBe(true)
+    },
+  )
+  it('requires both actionable reviewer grants and excludes explicit management denies', async () => {
+    await sql().query(
+      `DELETE FROM notification; UPDATE "user" SET permission_overrides='{"allow":["leave.review"],"deny":[]}' WHERE id='vacation-other'; UPDATE "user" SET permission_overrides='{"allow":[],"deny":["manage.access"]}' WHERE id='vacation-hr'`,
+    )
+    await service.createLeave(actor, input)
+    expect(
+      (await sql().query('SELECT recipient_id FROM notification')).rows,
+    ).toEqual([{ recipient_id: administrator.id }])
+    await sql().query(
+      `DELETE FROM notification; UPDATE "user" SET permission_overrides='{"allow":["leave.review","manage.access"],"deny":[]}' WHERE id='vacation-other'`,
+    )
+    await service.createLeave(actor, {
+      ...input,
+      startDate: '2026-11-10',
+      endDate: '2026-11-10',
+    })
+    expect(
+      (
+        await sql().query(
+          'SELECT recipient_id FROM notification ORDER BY recipient_id',
+        )
+      ).rows,
+    ).toEqual([
+      { recipient_id: administrator.id },
+      { recipient_id: 'vacation-other' },
+    ])
+  })
 })

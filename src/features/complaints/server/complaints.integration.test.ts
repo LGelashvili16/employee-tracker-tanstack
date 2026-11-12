@@ -182,6 +182,20 @@ describe.runIf(process.env.RUN_COMPLAINTS_DB_TESTS === '1')(
         hasUnreadComplaints: true,
         notification: { id: expect.any(String), review: true },
       })
+      await sql().query(
+        `UPDATE "user" SET permission_overrides='{"allow":[],"deny":["manage.access"]}' WHERE id=$1`,
+        [hr.id],
+      )
+      try {
+        expect(await service.complaintRealtimeState(hr, id)).toMatchObject({
+          notification: { review: false },
+        })
+      } finally {
+        await sql().query(
+          `UPDATE "user" SET permission_overrides='{"allow":[],"deny":[]}' WHERE id=$1`,
+          [hr.id],
+        )
+      }
       expect((await service.complaintDetail(owner, { id })).visibility).toBe(
         'hr_only',
       )
@@ -377,9 +391,11 @@ describe.runIf(process.env.RUN_COMPLAINTS_DB_TESTS === '1')(
             () => reject(new Error('Complaint signal did not arrive')),
             3000,
           )
-          listener.once('notification', (message) => {
+          listener.on('notification', (message) => {
+            const payload = JSON.parse(message.payload ?? '{}')
+            if (payload.topic !== 'complaints') return
             clearTimeout(timer)
-            resolve(JSON.parse(message.payload ?? '{}'))
+            resolve(payload)
           })
         })
         const { id } = await service.createComplaint(employee, input())

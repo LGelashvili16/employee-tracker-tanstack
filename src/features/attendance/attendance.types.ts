@@ -40,6 +40,17 @@ export type ReviewSession = WorkingSession & {
   originalStartedAt: string | null
   originalEndedAt: string | null
   canReview: boolean
+  canCorrect: boolean
+}
+export type AttendanceCorrection = {
+  id: string
+  actorName: string
+  reason: string
+  createdAt: string
+  workDate: string
+  timezone: string
+  before: { startedAt: string; endedAt: string | null }
+  after: { startedAt: string; endedAt: string | null }
 }
 export type AttendanceOverview = {
   serverNow: string

@@ -4,7 +4,6 @@ import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { buttonVariants } from '#/components/ui/button'
 import { useRealtimeEvents } from '#/hooks/use-realtime-events'
-import { notificationKeys } from '#/features/notifications/notifications.queries'
 import { complaintKeys } from '../complaints.queries'
 import { complaintRealtimeSchema } from '../complaints.schemas'
 
@@ -24,7 +23,6 @@ export function useComplaintRealtime(actorId: string) {
     } = parsed.data
     setHasUnreadComplaints(unread)
     void client.invalidateQueries({ queryKey: complaintKeys.all(actorId) })
-    void client.invalidateQueries({ queryKey: notificationKeys.own(actorId) })
     if (!changed || !id || !notification || received.has(notification.id))
       return
     received.add(notification.id)

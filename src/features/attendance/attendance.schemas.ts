@@ -2,10 +2,6 @@ import { z } from 'zod'
 import { recordIdSchema } from '#/lib/route-schemas'
 import { scheduleDateSchema } from '#/features/scheduling/scheduling.schemas'
 
-export const attendanceSearchSchema = z.object({
-  userId: recordIdSchema.optional(),
-})
-
 const identifier = z.uuid({ error: 'ჩანაწერის იდენტიფიკატორი არასწორია.' })
 export const checkInSchema = z.object(
   {
@@ -74,6 +70,13 @@ export const attendanceListSchema = z.object({
   exceptionsOnly: z.boolean({ error: 'ფილტრი არასწორია.' }).default(false),
 })
 export const attendanceHistorySchema = z.object({ sessionId: identifier })
+export const attendanceCorrectionsSchema = attendanceListSchema.pick({
+  page: true,
+})
+export const attendanceSearchSchema = z.object({
+  userId: recordIdSchema.optional(),
+  correctionsPage: attendanceListSchema.shape.page.default(0),
+})
 export const attendanceLimitSchema = z.object({
   maxOpenHours: z
     .number({ error: 'მიუთითეთ საათების რაოდენობა.' })

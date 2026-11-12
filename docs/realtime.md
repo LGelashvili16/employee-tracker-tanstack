@@ -1,6 +1,6 @@
 # Shared live events
 
-Teamwork uses one authenticated, same-origin SSE connection at `/api/events` per open application tab. PostgreSQL records remain authoritative; signals only tell connected clients to reconcile. Announcements and complaints are registered features. Complaint changes also invalidate the existing notification inbox; general notification polling remains until that workflow is explicitly migrated.
+Teamwork uses one authenticated, same-origin SSE connection at `/api/events` per open application tab. PostgreSQL records remain authoritative; signals only tell connected clients to reconcile. Announcements, complaints, notifications and jobs are registered features. Recipient-only notification signals reconcile every active inbox query variant, replacing periodic polling. Reconnect snapshots never replay notification toasts.
 
 ## Ownership
 
@@ -26,3 +26,15 @@ Keep notification events responsible for inbox/bell state and business-feature e
 ## Operational behavior
 
 Native EventSource reconnects with the existing three-second retry hint. Session checks run before queued events and every 25 seconds while idle; revoked sessions close the connection. Each stream retains its bounded queue and buffer. Preserve private uncached responses, unbuffered proxy delivery, and a session-persistent PostgreSQL connection for LISTEN. See [announcement live updates](announcements-realtime.md) for feature behavior and existing database integration coverage.
+
+## Notification delivery
+
+Business services call `deliverNotifications(tx, input)` inside their domain transaction. Supply a stable eventKey, authorized recipient account IDs, actorId, Georgian title/body and an optional typed destination. Delivery deduplicates recipients and event identities, excludes the actor and inactive or suspended accounts, and returns only inserted identities. PostgreSQL publishes the bulk identifier-only signals on commit. The additive notification migration must be deployed before the new application.
+
+Generic deliveries default to live toasts. Legacy complaint and announcement wrappers retain their foreign keys and disable generic toasts because feature hooks own display. Announcements preserve invited recipients. Read and unread acknowledgements signal inbox state without a toast subject. A live handler rechecks recipient ownership and current account state before exposing a minimal title/destination projection. Typed destinations compose allowlisted application routes, whose own policies recheck access. Leave notifications use a validated requestId list filter.
+
+## Jobs and immediate business updates
+
+Jobs broadcast identifier-only wakeups for committed creations, edits and status transitions. Its feature handler independently checks current workspace access and emits only actor-scoped invalidation. Reconnect snapshots reconcile list/detail caches and availability never shows a toast. Jobs list/detail polling is removed. Immediate persisted business notifications and their recipients are listed in [business notifications](notifications.md). An application composition hook refreshes open destination records from validated notification events and reconnect snapshots, while shared transport remains feature-independent.
+
+Timed attendance tasks use the same transactional notification delivery as immediate workflows. Only recipient and notification identifiers reach PostgreSQL listeners. Quiet pending-review digests reconcile the bell without a toast.
