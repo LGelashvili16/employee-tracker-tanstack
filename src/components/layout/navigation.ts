@@ -1,7 +1,6 @@
 import {
   IconLayoutDashboard,
   IconClock,
-  IconClockEdit,
   IconCalendarStats,
   IconCalendarWeek,
   IconCalendarOff,
@@ -45,13 +44,6 @@ export const navigationItems = [
     to: '/attendance',
     icon: IconClock,
     label: 'დასწრება',
-    permission: null,
-  },
-  {
-    to: '/attendance/corrections',
-    secondary: true,
-    icon: IconClockEdit,
-    label: 'დროის შესწორებები',
     permission: null,
   },
   {

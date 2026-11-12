@@ -335,7 +335,6 @@ function SettingsForm({
     defaultValues: {
       ...initial,
       defaultVacationDays: initial.defaultVacationDays ?? 24,
-      reason: '',
     },
     validators: { onSubmit: saveAllowanceSettingFormSchema },
     onSubmit: async ({ value }) => {
@@ -451,28 +450,6 @@ function SettingsForm({
       </form.Field>
       {canEdit ? (
         <>
-          <form.Field name="reason">
-            {(field) => (
-              <Field>
-                <FieldLabel htmlFor="day-off-policy-reason">
-                  ცვლილების მიზეზი
-                </FieldLabel>
-                <Input
-                  id="day-off-policy-reason"
-                  value={
-                    typeof field.state.value === 'number' &&
-                    Number.isNaN(field.state.value)
-                      ? ''
-                      : field.state.value
-                  }
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  aria-invalid={!field.state.meta.isValid}
-                />
-                <FieldError errors={field.state.meta.errors} />
-              </Field>
-            )}
-          </form.Field>
           {error ? (
             <p role="alert" className="text-sm text-destructive">
               {error}

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from '#/components/ui/skeleton'
 import { cn } from '#/lib/utils'
 import { readAttendanceReviewHistory } from '../attendance.functions'
-import { formatAttendanceLocalInput } from '../attendance.rules'
+import { formatAttendanceDateTime } from '../attendance.rules'
 
 const actions: Record<string, string> = {
   'attendance.approved': 'დადასტურება',
@@ -53,11 +53,7 @@ export function AttendanceReviewHistory({
             <li key={item.id} className="flex flex-col gap-1 text-sm">
               <span>
                 {actions[item.action] ?? 'დასწრების ცვლილება'}: {item.actorName}
-                ,{' '}
-                {formatAttendanceLocalInput(item.createdAt, timezone).replace(
-                  'T',
-                  ' ',
-                )}
+                , {formatAttendanceDateTime(item.createdAt, timezone)}
               </span>
               <span className="text-muted-foreground">{item.reason}</span>
             </li>

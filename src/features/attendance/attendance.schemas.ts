@@ -73,6 +73,9 @@ export const attendanceHistorySchema = z.object({ sessionId: identifier })
 export const attendanceCorrectionsSchema = attendanceListSchema.pick({
   page: true,
 })
+export const employeeSessionListSchema = attendanceCorrectionsSchema.extend({
+  date: scheduleDateSchema,
+})
 export const attendanceSearchSchema = z.object({
   userId: recordIdSchema.optional(),
   correctionsPage: attendanceListSchema.shape.page.default(0),

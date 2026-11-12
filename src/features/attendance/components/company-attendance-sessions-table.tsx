@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '#/components/ui/table'
 import {
+  formatAttendanceDateTime,
   formatAttendanceLocalInput,
   formatWorkedTime,
   sessionMetrics,
@@ -30,19 +31,13 @@ const columns = helper.columns([
   helper.accessor('startedAt', {
     header: 'შესვლა',
     cell: ({ row }) =>
-      formatAttendanceLocalInput(
-        row.original.startedAt,
-        row.original.timezone,
-      ).replace('T', ' '),
+      formatAttendanceDateTime(row.original.startedAt, row.original.timezone),
   }),
   helper.accessor('endedAt', {
     header: 'გასვლა',
     cell: ({ row }) =>
       row.original.endedAt
-        ? formatAttendanceLocalInput(
-            row.original.endedAt,
-            row.original.timezone,
-          ).replace('T', ' ')
+        ? formatAttendanceDateTime(row.original.endedAt, row.original.timezone)
         : 'მიმდინარე',
   }),
   helper.display({
@@ -72,21 +67,12 @@ const columns = helper.columns([
       )
       return (
         <div className="flex min-w-48 flex-col gap-2">
-          <Badge
-            variant={
-              row.original.reviewState === 'approved'
-                ? 'green'
-                : row.original.reviewState === 'rejected'
-                  ? 'red'
-                  : 'yellow'
-            }
-          >
-            {row.original.reviewState === 'approved'
-              ? 'დადასტურებული'
-              : row.original.reviewState === 'rejected'
-                ? 'უარყოფილი'
-                : 'განხილვის მოლოდინში'}
-          </Badge>
+          {item.reviewState === 'approved' ||
+          item.reviewState === 'rejected' ? (
+            <Badge variant={item.reviewState === 'approved' ? 'green' : 'red'}>
+              {item.reviewState === 'approved' ? 'დადასტურებული' : 'უარყოფილი'}
+            </Badge>
+          ) : null}
           <AttendanceDeviationBadges
             corrected={Boolean(
               (item.originalStartedAt &&
@@ -128,7 +114,9 @@ const columns = helper.columns([
           <time dateTime={expectedStartAt}>{start.slice(11)}</time>
           {' - '}
           <time dateTime={expectedEndAt}>
-            {overnight ? end.replace('T', ' ') : end.slice(11)}
+            {overnight
+              ? formatAttendanceDateTime(expectedEndAt, timezone)
+              : end.slice(11)}
           </time>
         </span>
       )

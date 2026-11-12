@@ -93,7 +93,9 @@ describe('manager attendance workflow', () => {
   })
   it('shows deviations without actions when the server does not authorize review', () => {
     mount(false)
-    expect(screen.getByText('განხილვის მოლოდინში')).toBeVisible()
+    expect(screen.getByText('04-11-2026 10:05')).toBeVisible()
+    expect(screen.getByText('04-11-2026 19:30')).toBeVisible()
+    expect(screen.queryByText('განხილვის მოლოდინში')).not.toBeInTheDocument()
     expect(screen.getByText('გვიან დაწყება 00:05')).toBeVisible()
     expect(screen.getByText('განრიგს გარეთ 00:30')).toBeVisible()
     expect(

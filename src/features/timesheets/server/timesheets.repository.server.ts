@@ -15,6 +15,7 @@ import {
 import { db } from '#/db'
 import {
   attendanceReviewer,
+  attendanceAudit,
   attendanceSession,
   employee,
   user,
@@ -113,6 +114,10 @@ export async function readPeriod(
       rejected: rejected.as('rejected'),
       open: open.as('open'),
       approvedOutsideSeconds: outside.as('outside_seconds'),
+      corrected:
+        sql<boolean>`bool_or(exists (select 1 from ${attendanceAudit} where ${attendanceAudit.targetId} = ${attendanceSession.id}::text and ${attendanceAudit.action} = 'attendance.corrected'))`.as(
+          'corrected',
+        ),
     })
     .from(attendanceSession)
     .innerJoin(employee, eq(employee.id, attendanceSession.employeeId))

@@ -27,11 +27,13 @@ export function CompanyTimesheetResults({
   search,
   onRetry,
   renderLink,
+  onOpenDay,
 }: {
   query: UseQueryResult<TimesheetResult, Error>
   search: TimesheetSearch
   onRetry: () => void
   renderLink: (search: TimesheetSearch) => ReactElement
+  onOpenDay?: (date: string) => void
 }) {
   const result = query.data
   const month = result?.month ?? search.month
@@ -105,6 +107,7 @@ export function CompanyTimesheetResults({
               search={{ ...search, month }}
               renderLink={renderLink}
               hideEmployee
+              onOpenDay={onOpenDay}
             />
           ) : (
             <Empty role="status">

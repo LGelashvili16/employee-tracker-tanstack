@@ -17,6 +17,9 @@ export function useBusinessNotificationRefresh(actorId: string) {
     const snapshot = !changed
     if (snapshot || kind === 'attendance') {
       void client.invalidateQueries({
+        queryKey: ['my-attendance-sessions', actorId],
+      })
+      void client.invalidateQueries({
         queryKey: ['my-attendance-corrections', actorId],
       })
       void client.invalidateQueries({

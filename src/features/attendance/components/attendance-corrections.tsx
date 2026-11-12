@@ -12,19 +12,11 @@ import {
 } from '#/components/ui/pagination'
 import { readMyAttendanceCorrections } from '../attendance.functions'
 import type { AttendanceCorrection } from '../attendance.types'
+import { formatAttendanceTimestamp } from '../attendance.rules'
 
 function exactTime(value: string | null, timezone: string) {
   if (!value) return 'არ იყო აღრიცხული'
-  return new Intl.DateTimeFormat('ka-GE', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).format(new Date(value))
+  return formatAttendanceTimestamp(value, timezone)
 }
 
 function Correction({ item }: { item: AttendanceCorrection }) {

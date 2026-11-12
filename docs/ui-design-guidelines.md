@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 49. Last updated: 2026-11-12.
+Status: required project instructions. Version: 51. Last updated: 2026-11-12.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -336,6 +336,7 @@ When the user changes a shared UI standard, update this file instead of creating
 - The personal vacation page shows დასვენების დღეები in a compact blue shadcn Badge and available paid შვებულება in a purple Badge, measured in working days. Omit annual-limit, reset-date, and approval-deduction explanations from this summary.
 
 - The allowance settings tab includes the annual paid-vacation default, initially 24 working days and never below 24. January 1 adds each employee annual vacation allowance while preserving unused days. Keep the vacation addition separate from the day-off reset toggle.
+- Do not request a change reason when saving company leave limits. Record the settings change in the audit log with an automatic reason.
 
 ## Sick leave
 
@@ -374,6 +375,8 @@ The employee detail attendance tab at `/manage/attendance/$userId` defaults to t
 
 HR and owners can correct other employees' attendance company-wide through an explicit correction permission. Supervisors retain assignment-based correction scope. Show correction and approval controls independently; company-wide correction rights do not imply approval rights. Never allow self-correction. Employees see a read-only, paginated correction history on their own attendance page, with exact before/after check-in and checkout times including seconds, editor, reason and change timestamp. Preserve every edit, including repeated changes. Use shared Cards and pagination, Georgian labels, and the existing SSE connection to refresh the history.
 
+Do not show a separate correction requests tab while employee-submitted requests are unavailable. Keep correction history on the attendance page.
+
 ## Attendance correction sheet
 
 Time corrections open in a right-side shadcn Sheet, full width on mobile and matching the employee sheet width on desktop. Keep a fixed title header and scrollable body. Use one shadcn Card for the employee name, date/time fields, required reason and save/cancel actions; use a second Card for change history. Date fields use the shared Georgian shadcn Calendar with separately labeled time inputs. Keep the check-in date fixed to its retained work date and permit overnight checkout dates. Omit duplicate current/original-time summaries and explanatory paragraphs. Preserve field errors, required markers, keyboard access and pending-save protection. Attendance approval remains a separate action.
@@ -381,3 +384,9 @@ Time corrections open in a right-side shadcn Sheet, full width on mobile and mat
 ## Timezone presentation
 
 Do not display routine timezone names, labels, footnotes or tooltips in the application. Continue using the configured or historically retained timezone for calculations, date selection, validation and formatting. Keep the company schedule's timezone selector as a functional configuration control, without repeating its value elsewhere.
+
+## Employee session details
+
+Keep personal working-hours rows as daily summaries. Mark days containing attendance corrections and provide a სესიები action opening a right-side, read-only shadcn Sheet. Show every clock-in/out as its own Card with exact current timestamps, seconds and status. Mark corrected sessions individually and show the original value beneath each changed time. Preserve overnight dates and paginate sessions server-side, with the selected day and page in validated URL state. Read only the signed-in employee's sessions. Use the existing SSE connection to refresh open details after corrections; show no timezone labels or edit controls.
+
+Attendance and working-hours lists and session sheets omit waiting-for-review badges. Keep corrected, active, approved, rejected and meaningful deviation indicators. Pending state still governs review actions, filtering and operational totals; do not infer approval from the absence of a badge.

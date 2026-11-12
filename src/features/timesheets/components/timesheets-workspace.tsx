@@ -21,6 +21,8 @@ import {
 import { CompanyTimesheetResults } from './company-timesheet-results'
 import type { TimesheetSearch } from '../timesheets.types'
 import type { Actor } from '#/lib/authorization/actor'
+import { EmployeeSessionSheet } from '#/features/attendance/components/employee-session-sheet'
+import { useBusinessNotificationRefresh } from '#/hooks/use-business-notification-refresh'
 
 type Props = {
   actor: Actor
@@ -43,11 +45,13 @@ function TimesheetsOverview({
   onSearchChange,
   renderLink,
 }: Props) {
+  const { day, sessionPage, ...periodSearch } = search
+  useBusinessNotificationRefresh(actor.id)
   const query = useQuery({
-    queryKey: ['timesheets', actor.id, search],
+    queryKey: ['timesheets', actor.id, periodSearch],
     queryFn: async () => {
       const response = await getOwnTimesheets({
-        data: { ...search, page: search.page ?? 0 },
+        data: { ...periodSearch, page: periodSearch.page ?? 0 },
       })
       if (!response.ok) throw new Error('სამუშაო საათები ვერ ჩაიტვირთა.')
       return response.value
@@ -132,9 +136,28 @@ function TimesheetsOverview({
             search={search}
             onRetry={() => void refresh()}
             renderLink={renderLink}
+            onOpenDay={(date) =>
+              onSearchChange({ ...search, day: date, sessionPage: 0 })
+            }
           />
         </CardContent>
       </Card>
+      <EmployeeSessionSheet
+        key={actor.id}
+        actorId={actor.id}
+        date={day}
+        page={sessionPage ?? 0}
+        onPageChange={(page) =>
+          onSearchChange({ ...search, sessionPage: page })
+        }
+        onClose={() =>
+          onSearchChange({
+            ...search,
+            day: undefined,
+            sessionPage: undefined,
+          })
+        }
+      />
     </section>
   )
 }

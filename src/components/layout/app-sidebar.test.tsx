@@ -353,8 +353,8 @@ describe('workspace navigation', () => {
       'page',
     )
     expect(
-      screen.getByRole('tab', { name: 'დროის შესწორებები' }),
-    ).toHaveAttribute('href', '/attendance/corrections')
+      screen.queryByRole('tab', { name: 'დროის შესწორებები' }),
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole('tab', { name: 'სამუშაო საათები' }),
     ).toHaveAttribute('href', '/timesheets')
@@ -370,7 +370,7 @@ describe('workspace navigation', () => {
     const user = userEvent.setup()
     attendance.focus()
     await user.keyboard('{ArrowRight}')
-    expect(screen.getByRole('tab', { name: 'დროის შესწორებები' })).toHaveFocus()
+    expect(screen.getByRole('tab', { name: 'სამუშაო საათები' })).toHaveFocus()
     expect(attendance).toHaveAttribute('aria-selected', 'true')
   })
   it('uses timesheets for personal attendance history', () => {

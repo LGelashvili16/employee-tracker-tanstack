@@ -12,7 +12,11 @@ import {
   attendanceListSchema,
   attendanceReviewSchema,
 } from '../attendance.schemas'
-import { formatAttendanceLocalInput, sessionMetrics } from '../attendance.rules'
+import {
+  formatAttendanceDateTime,
+  formatAttendanceLocalInput,
+  sessionMetrics,
+} from '../attendance.rules'
 import type { ReviewSession } from '../attendance.types'
 import { companyLocalDate } from '#/features/scheduling/scheduling.rules'
 import { AttendanceWorkflowError } from './attendance.service.server'
@@ -326,7 +330,7 @@ export async function correctAttendance(actor: Actor | null, input: unknown) {
         recipientIds: [recipientId],
         actorId: current.id,
         title: 'დასწრების ჩანაწერი შესწორდა',
-        body: `შესვლა: ${formatAttendanceLocalInput(record.startedAt.toISOString(), record.timezone).replace('T', ' ')} → ${formatAttendanceLocalInput(start.toISOString(), record.timezone).replace('T', ' ')}. გასვლა: ${record.endedAt ? formatAttendanceLocalInput(record.endedAt.toISOString(), record.timezone).replace('T', ' ') : 'არ იყო აღრიცხული'} → ${formatAttendanceLocalInput(end.toISOString(), record.timezone).replace('T', ' ')}. ${data.reason}`,
+        body: `შესვლა: ${formatAttendanceDateTime(record.startedAt.toISOString(), record.timezone)} → ${formatAttendanceDateTime(start.toISOString(), record.timezone)}. გასვლა: ${record.endedAt ? formatAttendanceDateTime(record.endedAt.toISOString(), record.timezone) : 'არ იყო აღრიცხული'} → ${formatAttendanceDateTime(end.toISOString(), record.timezone)}. ${data.reason}`,
         destination: {
           kind: 'attendance',
           userId: recipientId,

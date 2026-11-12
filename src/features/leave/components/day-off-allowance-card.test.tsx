@@ -55,16 +55,8 @@ it('validates policy changes, submits the reset toggle and confirms success', as
     name: 'ბალანსის წლიური განახლება 1 იანვარს',
   })
   expect(reset).toBeChecked()
+  expect(screen.queryByLabelText('ცვლილების მიზეზი')).not.toBeInTheDocument()
   await user.click(reset)
-  await user.click(screen.getByRole('button', { name: 'წესის შენახვა' }))
-  expect(saveSettings).not.toHaveBeenCalled()
-  expect(
-    await screen.findByText('მიუთითეთ მინიმუმ 5 სიმბოლო.'),
-  ).toBeInTheDocument()
-  await user.type(
-    screen.getByRole('textbox', { name: 'ცვლილების მიზეზი' }),
-    'წლიური განახლების გამორთვა',
-  )
   await user.click(screen.getByRole('button', { name: 'წესის შენახვა' }))
   await waitFor(() =>
     expect(saveSettings).toHaveBeenCalledWith({
@@ -75,6 +67,7 @@ it('validates policy changes, submits the reset toggle and confirms success', as
       }),
     }),
   )
+  expect(saveSettings.mock.calls[0][0].data).not.toHaveProperty('reason')
   await waitFor(() => expect(success).toHaveBeenCalledOnce())
 })
 it('edits an employee balance and surfaces a stale-balance error without closing', async () => {

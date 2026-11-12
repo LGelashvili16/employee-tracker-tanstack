@@ -12,7 +12,7 @@ import { AttendanceCorrectionSheet } from './attendance-correction-sheet'
 import { AttendanceReviewHistory } from './attendance-review-history'
 import {
   elapsedSeconds,
-  formatAttendanceLocalInput,
+  formatAttendanceDateTime,
   formatWorkedTime,
 } from '../attendance.rules'
 import type { ReviewSession } from '../attendance.types'
@@ -74,20 +74,14 @@ export function AttendanceReviewDialog({
             <div>
               <dt className="text-muted-foreground">მიმდინარე შესვლა</dt>
               <dd className="tabular-nums">
-                {formatAttendanceLocalInput(
-                  session.startedAt,
-                  session.timezone,
-                ).replace('T', ' ')}
+                {formatAttendanceDateTime(session.startedAt, session.timezone)}
               </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">მიმდინარე გასვლა</dt>
               <dd className="tabular-nums">
                 {session.endedAt
-                  ? formatAttendanceLocalInput(
-                      session.endedAt,
-                      session.timezone,
-                    ).replace('T', ' ')
+                  ? formatAttendanceDateTime(session.endedAt, session.timezone)
                   : 'მიმდინარე'}
               </dd>
             </div>
@@ -105,17 +99,17 @@ export function AttendanceReviewDialog({
           <p className="text-sm text-muted-foreground">
             თავდაპირველი შესვლა:{' '}
             {session.originalStartedAt
-              ? formatAttendanceLocalInput(
+              ? formatAttendanceDateTime(
                   session.originalStartedAt,
                   session.timezone,
-                ).replace('T', ' ')
+                )
               : 'არ არის აღრიცხული'}
             . თავდაპირველი გასვლა:{' '}
             {session.originalEndedAt
-              ? formatAttendanceLocalInput(
+              ? formatAttendanceDateTime(
                   session.originalEndedAt,
                   session.timezone,
-                ).replace('T', ' ')
+                )
               : 'არ არის აღრიცხული'}
             .
           </p>

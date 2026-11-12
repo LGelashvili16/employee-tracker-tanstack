@@ -14,9 +14,11 @@ import {
   TableRow,
 } from '#/components/ui/table'
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
+import { IconChevronRight } from '@tabler/icons-react'
 import { TimesheetSortTitle } from './timesheet-sort-title'
 import {
-  formatAttendanceLocalInput,
+  formatAttendanceDateTime,
   formatAttendanceTime,
   formatWorkedTime,
 } from '#/features/attendance/attendance.rules'
@@ -46,6 +48,7 @@ const makeColumns = (
   search?: TimesheetSearch,
   renderLink?: (search: TimesheetSearch) => ReactElement,
   compact = false,
+  onOpenDay?: (date: string) => void,
 ) =>
   helper.columns([
     helper.accessor('employeeName', {
@@ -82,10 +85,7 @@ const makeColumns = (
         compact ? (
           <TimesheetTime value={row.original.firstIn} day={row.original} />
         ) : (
-          formatAttendanceLocalInput(
-            row.original.firstIn,
-            row.original.timezone,
-          ).replace('T', ' ')
+          formatAttendanceDateTime(row.original.firstIn, row.original.timezone)
         ),
     }),
     helper.accessor('lastOut', {
@@ -95,10 +95,10 @@ const makeColumns = (
           compact ? (
             <TimesheetTime value={row.original.lastOut} day={row.original} />
           ) : (
-            formatAttendanceLocalInput(
+            formatAttendanceDateTime(
               row.original.lastOut,
               row.original.timezone,
-            ).replace('T', ' ')
+            )
           )
         ) : (
           'მიმდინარე'
@@ -132,11 +132,11 @@ const makeColumns = (
         const day = row.original
         return (
           <div className="flex max-w-64 min-w-40 flex-wrap gap-1">
+            {day.corrected ? (
+              <Badge variant="secondary">შესწორებულია</Badge>
+            ) : null}
             {day.open > 0 ? (
               <Badge variant="yellow">მიმდინარე ჩანაწერი</Badge>
-            ) : null}
-            {day.pending > 0 ? (
-              <Badge variant="yellow">განხილვის მოლოდინში: {day.pending}</Badge>
             ) : null}
             {day.rejected > 0 ? (
               <Badge variant="red">უარყოფილი: {day.rejected}</Badge>
@@ -148,6 +148,25 @@ const makeColumns = (
         )
       },
     }),
+    ...(onOpenDay
+      ? [
+          helper.display({
+            id: 'sessions',
+            header: 'სესიები',
+            cell: ({ row }) => (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenDay(row.original.date)}
+                aria-label={`${row.original.date} სესიების ნახვა`}
+              >
+                სესიები
+                <IconChevronRight data-icon="inline-end" aria-hidden="true" />
+              </Button>
+            ),
+          }),
+        ]
+      : []),
   ])
 
 export function TimesheetDaysTable({
@@ -155,16 +174,18 @@ export function TimesheetDaysTable({
   search,
   renderLink,
   hideEmployee = false,
+  onOpenDay,
 }: {
   rows: Array<Row>
   search?: TimesheetSearch
   renderLink?: (search: TimesheetSearch) => ReactElement
   hideEmployee?: boolean
+  onOpenDay?: (date: string) => void
 }) {
   const columns = useMemo(() => {
-    const result = makeColumns(search, renderLink, hideEmployee)
+    const result = makeColumns(search, renderLink, hideEmployee, onOpenDay)
     return hideEmployee ? result.slice(1) : result
-  }, [search, renderLink, hideEmployee])
+  }, [search, renderLink, hideEmployee, onOpenDay])
   const table = useTable({
     features,
     columns,

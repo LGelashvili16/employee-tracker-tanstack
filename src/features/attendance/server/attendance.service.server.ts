@@ -6,6 +6,7 @@ import {
   checkInSchema,
   checkOutSchema,
   attendanceCorrectionsSchema,
+  employeeSessionListSchema,
 } from '../attendance.schemas'
 import { startOfWorkWeek } from '../attendance.rules'
 import * as repository from './attendance.repository.server'
@@ -80,6 +81,33 @@ export async function getAttendanceOverview(
           seconds: day.seconds,
         })),
       },
+    }
+  })
+}
+export async function readEmployeeDaySessions(
+  actor: Actor | null,
+  input: unknown,
+) {
+  const { date, page } = employeeSessionListSchema.parse(input)
+  return repository.transactAttendance(async (tx) => {
+    const employeeId = await activeEmployee(tx, actor, false)
+    const rows = await repository.employeeDaySessions(
+      tx,
+      employeeId,
+      date,
+      page,
+    )
+    return {
+      date,
+      serverNow: new Date().toISOString(),
+      hasMore: rows.length > 20,
+      items: rows.slice(0, 20).map((row) => ({
+        ...row,
+        startedAt: row.startedAt.toISOString(),
+        endedAt: row.endedAt?.toISOString() ?? null,
+        originalStartedAt: row.originalStartedAt?.toISOString() ?? null,
+        originalEndedAt: row.originalEndedAt?.toISOString() ?? null,
+      })),
     }
   })
 }

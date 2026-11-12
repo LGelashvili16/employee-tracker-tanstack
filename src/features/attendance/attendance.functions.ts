@@ -9,10 +9,12 @@ import {
   checkOut,
   getAttendanceOverview,
   readEmployeeCorrections,
+  readEmployeeDaySessions,
 } from './server/attendance.service.server'
 import {
   checkInSchema,
   attendanceCorrectionsSchema,
+  employeeSessionListSchema,
   checkOutSchema,
   attendanceAssignmentSchema,
   attendanceCorrectionSchema,
@@ -60,6 +62,12 @@ export const readMyAttendanceCorrections = createServerFn({ method: 'GET' })
   .validator(attendanceCorrectionsSchema)
   .handler(({ context, data }) =>
     safely(() => readEmployeeCorrections(context.actor, data)),
+  )
+export const readMyAttendanceSessions = createServerFn({ method: 'GET' })
+  .middleware([authenticatedMiddleware])
+  .validator(employeeSessionListSchema)
+  .handler(({ context, data }) =>
+    safely(() => readEmployeeDaySessions(context.actor, data)),
   )
 export const startMyWork = createServerFn({ method: 'POST' })
   .middleware([authenticatedMiddleware])

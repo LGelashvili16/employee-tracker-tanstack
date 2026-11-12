@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   elapsedSeconds,
   formatAttendanceDuration,
+  formatAttendanceDateTime,
   formatAttendanceTime,
   formatWorkedTime,
   startOfWorkWeek,
@@ -28,6 +29,12 @@ describe('attendance time display and calendar rules', () => {
     expect(formatAttendanceTime('2026-11-04T06:00:00Z', 'Asia/Tbilisi')).toBe(
       '10:00',
     )
+    expect(
+      formatAttendanceDateTime('2026-11-12T07:18:00Z', 'Asia/Tbilisi'),
+    ).toBe('12-11-2026 11:18')
+    expect(
+      formatAttendanceDateTime('2026-12-31T22:05:00Z', 'Asia/Tbilisi'),
+    ).toBe('01-01-2027 02:05')
   })
   it('uses ISO Monday weeks across month and year boundaries', () => {
     expect(startOfWorkWeek('2027-01-01')).toBe('2026-12-28')

@@ -1660,6 +1660,98 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
       (await service.readEmployeeCorrections(other, { page: 0 })).items,
     ).toEqual([])
   })
+  it('identifies the corrected session among multiple punches in employee day details and daily hours', async () => {
+    const first = await service.checkIn(actor, request())
+    time('2026-11-04T10:00:00Z')
+    await service.checkOut(actor, { sessionId: first.id, confirmEarly: true })
+    time('2026-11-04T11:00:00Z')
+    const second = await service.checkIn(actor, request(first.id))
+    time('2026-11-04T12:00:00Z')
+    await service.checkOut(actor, { sessionId: second.id, confirmEarly: true })
+    await assign()
+    await review.correctAttendance(manager, {
+      sessionId: first.id,
+      revision: 1,
+      start: '2026-11-04T10:05',
+      end: '2026-11-04T13:00',
+      reason: 'პირველი სესიის გასვლის შესწორება',
+    })
+    const own = await service.readEmployeeDaySessions(actor, {
+      date: '2026-11-04',
+      page: 0,
+    })
+    expect(own.items).toEqual([
+      expect.objectContaining({
+        id: second.id,
+        corrected: false,
+        endedAt: '2026-11-04T12:00:00.000Z',
+        originalEndedAt: '2026-11-04T12:00:00.000Z',
+      }),
+      expect.objectContaining({
+        id: first.id,
+        corrected: true,
+        endedAt: '2026-11-04T09:00:00.000Z',
+        originalEndedAt: '2026-11-04T10:00:00.000Z',
+      }),
+    ])
+    const hours = await timesheets.readTimesheets(
+      actor,
+      { month: '2026-11', page: 0 },
+      'self',
+    )
+    expect(hours.rows[0].corrected).toBe(true)
+    expect(
+      (
+        await service.readEmployeeDaySessions(other, {
+          date: '2026-11-04',
+          page: 0,
+        })
+      ).items,
+    ).toEqual([])
+    expect(
+      (
+        await service.readEmployeeDaySessions(actor, {
+          date: '2026-11-03',
+          page: 0,
+        })
+      ).items,
+    ).toEqual([])
+    expect(
+      (
+        await service.readEmployeeDaySessions(actor, {
+          date: '2026-11-04',
+          page: 1,
+        })
+      ).items,
+    ).toEqual([])
+    await sql()
+      .query(`INSERT INTO attendance_session(employee_id,request_id,work_date,timezone,schedule_effective_from,expected_start_at,expected_end_at,started_at,ended_at)
+      SELECT e.id,uuidv7(),'2026-11-03','Asia/Tbilisi','2026-01-01',timestamptz '2026-11-03 06:00:00+00',timestamptz '2026-11-03 15:00:00+00',timestamptz '2026-11-03 06:00:00+00'+n*interval '2 minutes',timestamptz '2026-11-03 06:01:00+00'+n*interval '2 minutes' FROM employee e CROSS JOIN generate_series(1,21) n WHERE e.user_id='attendance-a'`)
+    const firstPage = await service.readEmployeeDaySessions(actor, {
+      date: '2026-11-03',
+      page: 0,
+    })
+    const lastPage = await service.readEmployeeDaySessions(actor, {
+      date: '2026-11-03',
+      page: 1,
+    })
+    expect(firstPage.items).toHaveLength(20)
+    expect(firstPage.hasMore).toBe(true)
+    expect(lastPage.items).toHaveLength(1)
+    expect(lastPage.hasMore).toBe(false)
+    expect(
+      firstPage.items.some((item) => item.id === lastPage.items[0].id),
+    ).toBe(false)
+    await expect(
+      service.readEmployeeDaySessions(null, { date: '2026-11-04', page: 0 }),
+    ).rejects.toThrow()
+    await expect(
+      service.readEmployeeDaySessions(actor, { date: '2026-11-99', page: 0 }),
+    ).rejects.toThrow()
+    await expect(
+      service.readEmployeeDaySessions(actor, { date: '2026-11-04', page: -1 }),
+    ).rejects.toThrow()
+  })
   it('audits corrections, preserves original punches and invalidates previous approval', async () => {
     const record = await service.checkIn(actor, request())
     time('2026-11-04T17:00:00Z')

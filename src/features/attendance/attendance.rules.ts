@@ -26,6 +26,19 @@ export function formatAttendanceTime(instant: string, timezone: string) {
   }).format(new Date(instant))
 }
 
+export function formatAttendanceTimestamp(instant: string, timezone: string) {
+  return new Intl.DateTimeFormat('ka-GE', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(instant))
+}
+
 export function startOfWorkWeek(date: string) {
   const value = new Date(`${date}T12:00:00Z`)
   value.setUTCDate(value.getUTCDate() - ((value.getUTCDay() + 6) % 7))
@@ -97,4 +110,9 @@ export function formatAttendanceLocalInput(instant: string, timezone: string) {
   }).formatToParts(new Date(instant))
   const get = (type: string) => parts.find((part) => part.type === type)?.value
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
+}
+
+export function formatAttendanceDateTime(instant: string, timezone: string) {
+  const local = formatAttendanceLocalInput(instant, timezone)
+  return `${local.slice(8, 10)}-${local.slice(5, 7)}-${local.slice(0, 4)} ${local.slice(11)}`
 }

@@ -38,7 +38,6 @@ export const saveDayOffSettingSchema = z.object(
     defaultVacationDays: paidVacationDaysSchema.optional(),
     resetYearly: z.boolean({ error: 'აირჩიეთ წლიური განახლების წესი.' }),
     revision,
-    reason: explanation,
   },
   { error: 'დასვენების დღეების წესი არასწორია.' },
 )

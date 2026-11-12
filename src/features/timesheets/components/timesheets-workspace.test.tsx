@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Link } from '@tanstack/react-router'
+import userEvent from '@testing-library/user-event'
 import { TimesheetsWorkspace } from './timesheets-workspace'
 import type { Actor } from '#/lib/authorization/actor'
 import type { AnchorHTMLAttributes } from 'react'
@@ -10,6 +11,12 @@ const api = vi.hoisted(() => ({
 }))
 vi.mock('../timesheets.functions', () => ({
   getOwnTimesheets: api.self,
+}))
+vi.mock('#/features/attendance/attendance.functions', () => ({
+  readMyAttendanceSessions: vi.fn(),
+}))
+vi.mock('#/hooks/use-business-notification-refresh', () => ({
+  useBusinessNotificationRefresh: vi.fn(),
 }))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
@@ -67,6 +74,7 @@ function response() {
           rejected: 0,
           open: 0,
           approvedOutsideSeconds: 0,
+          corrected: false,
         },
       ],
     },
@@ -77,6 +85,31 @@ beforeEach(() => {
   api.self.mockResolvedValue(response())
 })
 describe('timesheet views', () => {
+  it('opens the selected day sessions through validated URL state while retaining filters', async () => {
+    const data = response()
+    data.value.rows[0].corrected = true
+    api.self.mockResolvedValue(data)
+    const onChange = vi.fn()
+    render(
+      <TimesheetsWorkspace
+        actor={actor}
+        search={{ month: '2026-11', status: 'pending' }}
+        onSearchChange={onChange}
+        renderLink={(search) => <Link to="/timesheets" search={search} />}
+      />,
+    )
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByRole('button', { name: '2026-11-05 სესიების ნახვა' }),
+    )
+    expect(screen.getByText('შესწორებულია')).toBeVisible()
+    expect(onChange).toHaveBeenCalledWith({
+      month: '2026-11',
+      status: 'pending',
+      day: '2026-11-05',
+      sessionPage: 0,
+    })
+  })
   it('uses the self-service endpoint for personal timesheets', async () => {
     render(
       <TimesheetsWorkspace

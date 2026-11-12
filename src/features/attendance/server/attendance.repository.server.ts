@@ -9,6 +9,36 @@ export type AttendanceTransaction = Parameters<
 >[0]
 export const transactAttendance = db.transaction.bind(db)
 
+export async function employeeDaySessions(
+  tx: AttendanceTransaction,
+  employeeId: string,
+  date: string,
+  page: number,
+) {
+  return tx
+    .select({
+      id: attendanceSession.id,
+      timezone: attendanceSession.timezone,
+      startedAt: attendanceSession.startedAt,
+      endedAt: attendanceSession.endedAt,
+      originalStartedAt: attendanceSession.originalStartedAt,
+      originalEndedAt: attendanceSession.originalEndedAt,
+      reviewState: attendanceSession.reviewState,
+      // Qualify the correlated ID explicitly: single-table Drizzle projections otherwise unqualify column references.
+      corrected: sql<boolean>`exists (select 1 from ${attendanceAudit} where ${attendanceAudit.targetId} = attendance_session.id::text and ${attendanceAudit.action} = 'attendance.corrected')`,
+    })
+    .from(attendanceSession)
+    .where(
+      and(
+        eq(attendanceSession.employeeId, employeeId),
+        eq(attendanceSession.workDate, date),
+      ),
+    )
+    .orderBy(desc(attendanceSession.startedAt), desc(attendanceSession.id))
+    .limit(21)
+    .offset(page * 20)
+}
+
 /** Project only attendance correction details belonging to this authenticated employee. */
 export async function employeeCorrections(
   tx: AttendanceTransaction,

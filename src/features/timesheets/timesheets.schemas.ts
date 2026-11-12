@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { recordIdSchema } from '#/lib/route-schemas'
+import { scheduleDateSchema } from '#/features/scheduling/scheduling.schemas'
 
 export const timesheetMonthSchema = z
   .string({ error: 'თვე არასწორია.' })
@@ -9,6 +10,13 @@ export const timesheetMonthSchema = z
     'თვე დასაშვებ დიაპაზონს სცდება.',
   )
 export const timesheetSearchSchema = z.object({
+  day: scheduleDateSchema.optional(),
+  sessionPage: z
+    .number({ error: 'გვერდი არასწორია.' })
+    .int('გვერდი არასწორია.')
+    .min(0, 'გვერდი არასწორია.')
+    .max(10000, 'გვერდი არასწორია.')
+    .optional(),
   q: z
     .string({ error: 'ძიება არასწორია.' })
     .trim()

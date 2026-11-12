@@ -682,8 +682,14 @@ describe.runIf(enabled)('vacation workflow against isolated PostgreSQL', () => {
     await allowance.saveDayOffSettings(hr, {
       ...policy,
       defaultDays: 7,
-      reason: 'წესის ცვლილება',
     })
+    expect(
+      (
+        await sql().query(
+          "select reason from day_off_allowance_audit where action = 'configured' order by created_at desc limit 1",
+        )
+      ).rows[0].reason,
+    ).toBe('დასვენებისა და შვებულების ლიმიტების ცვლილება')
     await expect(
       allowance.saveDayOffSettings(hr, { ...policy, reason: 'წესის ცვლილება' }),
     ).rejects.toThrow()

@@ -277,7 +277,7 @@ export async function saveDayOffSettings(actor: Actor | null, input: unknown) {
       actorId: current.id,
       targetUserId: null,
       action: 'configured',
-      reason: data.reason,
+      reason: 'დასვენებისა და შვებულების ლიმიტების ცვლილება',
       before: policy,
       after: saved,
     })
