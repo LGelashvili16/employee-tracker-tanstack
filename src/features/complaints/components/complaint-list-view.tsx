@@ -54,7 +54,7 @@ export function ComplaintListView({
         ) : null}
       </div>
       <Search search={search} onChange={onChange} />
-      <div className="min-w-0 overflow-hidden rounded-xl border">
+      <div className="min-w-0 overflow-hidden rounded-xl border bg-card">
         {query.isPending ? (
           <ComplaintsLoading />
         ) : query.isError ? (
@@ -102,7 +102,7 @@ export function ComplaintListView({
                 ) : null}
               </div>
             )}
-            <div className="border-t p-4">
+            <div className="border-t px-4 py-3">
               <DataPagination
                 page={search.page ?? 1}
                 total={query.data.total}

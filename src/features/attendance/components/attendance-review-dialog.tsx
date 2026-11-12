@@ -15,6 +15,7 @@ import {
   formatAttendanceDateTime,
   formatWorkedTime,
 } from '../attendance.rules'
+import { formatGeorgianDate } from '#/lib/date-format'
 import type { ReviewSession } from '../attendance.types'
 
 export function AttendanceReviewDialog({
@@ -67,7 +68,7 @@ export function AttendanceReviewDialog({
           <DialogHeader>
             <DialogTitle>დასწრების განხილვა</DialogTitle>
             <DialogDescription>
-              {session.employeeName}, {session.workDate}
+              {session.employeeName}, {formatGeorgianDate(session.workDate)}
             </DialogDescription>
           </DialogHeader>
           <dl className="grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm">

@@ -112,7 +112,7 @@ function EmployeeAttendanceWorkspace() {
                     key={tab.value}
                     value={tab.value}
                     nativeButton={false}
-                    className="h-9 flex-none rounded-lg px-4 motion-reduce:transition-none dark:aria-selected:text-white!"
+                    className="h-9 flex-none px-4 motion-reduce:transition-none"
                     render={
                       <Link
                         to="/manage/attendance/$userId"

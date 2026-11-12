@@ -6,6 +6,7 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Spinner } from '#/components/ui/spinner'
 import { toast } from 'sonner'
+import { formatGeorgianDate } from '#/lib/date-format'
 import {
   Field,
   FieldError,
@@ -90,7 +91,7 @@ export function ScheduleVersionForm({
       // Report the confirmed save separately from cache refresh, which can fail independently.
       setSaved(true)
       toast.success('განრიგი შენახულია.', {
-        description: `ძალაში შესვლის თარიღი: ${result.value.effectiveFrom}.`,
+        description: `ძალაში შესვლის თარიღი: ${formatGeorgianDate(result.value.effectiveFrom)}.`,
       })
       await client.invalidateQueries({ queryKey: scheduleSettingsKey(actorId) })
     },

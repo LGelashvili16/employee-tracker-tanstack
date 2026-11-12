@@ -363,6 +363,11 @@ describe('workspace navigation', () => {
     ).not.toBeInTheDocument()
     const attendance = screen.getByRole('tab', { name: 'დასწრება' })
     expect(attendance).toHaveAttribute('aria-selected', 'true')
+    expect(attendance).toHaveAttribute('data-active')
+    expect(attendance).toHaveClass('data-active:text-white')
+    for (const tab of screen.getAllByRole('tab')) {
+      expect(tab.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    }
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('დასწრება')
     expect(screen.getByRole('tabpanel')).toHaveTextContent(
       'დასწრების ჩანაწერები',

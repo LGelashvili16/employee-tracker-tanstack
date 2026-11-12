@@ -243,15 +243,19 @@ body::after {
 }
 
 /* Button links use their variant colors, including on hover. */
-a:not([data-slot='button']) {
+a:not([data-slot='button']):not([data-slot='tabs-trigger']) {
   color: var(--lagoon-deep);
   text-decoration-color: rgba(64, 64, 64, 0.4);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
 
-a:not([data-slot='button']):hover {
+a:not([data-slot='button']):not([data-slot='tabs-trigger']):hover {
   color: var(--primary);
+}
+
+[data-slot='tabs-trigger'][aria-selected='true'] {
+  color: #fff;
 }
 
 code {

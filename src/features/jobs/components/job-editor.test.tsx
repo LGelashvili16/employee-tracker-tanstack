@@ -89,7 +89,7 @@ describe('job forms and conflict recovery', () => {
       screen.getByRole('button', { name: '20 ნოემბერი 2026' }),
     )
     expect(
-      screen.getByRole('button', { name: 'ვადა: 20.11.2026' }),
+      screen.getByRole('button', { name: 'ვადა: 20 ნოემბერი, 2026' }),
     ).toBeInTheDocument()
     expect(functions.createJob).not.toHaveBeenCalled()
     await userEvent.click(
@@ -111,7 +111,7 @@ describe('job forms and conflict recovery', () => {
       />,
     )
     await userEvent.click(
-      screen.getByRole('button', { name: 'ვადა: 20.11.2026' }),
+      screen.getByRole('button', { name: 'ვადა: 20 ნოემბერი, 2026' }),
     )
     await userEvent.click(
       await screen.findByRole('button', { name: 'ვადის გასუფთავება' }),

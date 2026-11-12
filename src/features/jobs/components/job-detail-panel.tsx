@@ -26,10 +26,12 @@ export function JobDetailPanel({
   actor,
   id,
   onClose,
+  inSheet = false,
 }: {
   actor: Actor
   id: string
   onClose: () => void
+  inSheet?: boolean
 }) {
   const query = useQuery(jobQueryOptions(actor.id, id))
   return (
@@ -37,12 +39,14 @@ export function JobDetailPanel({
       aria-label="სამუშაოს დეტალები"
       className="flex h-full min-w-0 flex-col"
     >
-      <div className="border-b p-4">
-        <Button variant="outline" depth="raised" onClick={onClose}>
-          <IconArrowLeft aria-hidden="true" />
-          სამუშაოების სია
-        </Button>
-      </div>
+      {!inSheet ? (
+        <div className="border-b p-4">
+          <Button variant="outline" depth="raised" onClick={onClose}>
+            <IconArrowLeft aria-hidden="true" />
+            სამუშაოების სია
+          </Button>
+        </div>
+      ) : null}
       {query.isPending ? (
         <JobDetailSkeleton />
       ) : query.isError ? (

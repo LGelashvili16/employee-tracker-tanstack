@@ -140,7 +140,7 @@ export function CompanyTimesheetResults({
               ) : null}
             </Empty>
           )}
-          <div className="border-t bg-muted/15 px-4 py-3">
+          <div className="border-t px-4 py-3">
             {/* Existing timesheet URLs use a zero-based page; the shared pagination displays one-based pages. */}
             <DataPagination
               page={(search.page ?? 0) + 1}

@@ -12,16 +12,7 @@ import { Skeleton } from '#/components/ui/skeleton'
 import { Spinner } from '#/components/ui/spinner'
 import type { NotificationItem } from '../notifications.types'
 import { notificationDestination } from '../notification-destination'
-
-const notificationDate = new Intl.DateTimeFormat('ka-GE', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  hourCycle: 'h23',
-  timeZone: 'Asia/Tbilisi',
-})
+import { formatGeorgianDateTime } from '#/lib/date-format'
 
 export function NotificationList({
   items,
@@ -122,7 +113,7 @@ export function NotificationList({
                 className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"
               >
                 <IconClock className="size-3 shrink-0" aria-hidden="true" />
-                {notificationDate.format(new Date(item.createdAt))}
+                {formatGeorgianDateTime(item.createdAt, 'Asia/Tbilisi')}
               </time>
               {!unseen ? <span className="sr-only">ნანახია</span> : null}
             </div>

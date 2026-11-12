@@ -3,6 +3,7 @@ import { deliverNotifications } from '#/features/notifications/server/notificati
 import '@tanstack/react-start/server-only'
 import { assertPermission } from '#/lib/authorization/access'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
+import { formatGeorgianDate } from '#/lib/date-format'
 import {
   hasPermission,
   currentAuthorization,
@@ -100,7 +101,7 @@ export async function replaceEmployeeWeek(
       recipientIds: [context.userId],
       actorId,
       title: 'სამუშაო განრიგი შეიცვალა',
-      body: `თქვენი სამუშაო კვირა განახლდა. მოქმედებს ${(await repository.companyWorkdayAt(new Date(), tx)).date} თარიღიდან.`,
+      body: `თქვენი სამუშაო კვირა განახლდა. მოქმედებს ${formatGeorgianDate((await repository.companyWorkdayAt(new Date(), tx)).date)} თარიღიდან.`,
       destination: { kind: 'schedule' },
     })
   }
@@ -256,7 +257,7 @@ export async function saveScheduleVersion(actor: Actor | null, input: unknown) {
           recipientIds,
           actorId: administrator.id,
           title: 'კომპანიის სამუშაო განრიგი შეიცვალა',
-          body: `ახალი სამუშაო განრიგი მოქმედებს ${schedule.effectiveFrom} თარიღიდან.`,
+          body: `ახალი სამუშაო განრიგი მოქმედებს ${formatGeorgianDate(schedule.effectiveFrom)} თარიღიდან.`,
           destination: { kind: 'schedule' },
         })
     }

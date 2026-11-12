@@ -31,6 +31,11 @@ it.each([true, false])(
   'puts the complainant and avatar first while retaining the complaint link (review=%s)',
   (review) => {
     render(<ComplaintTable items={[item]} review={review} search={{}} />)
+    for (const name of ['პასუხისმგებელი', 'ხილვადობა']) {
+      const column = screen.queryByRole('columnheader', { name })
+      if (review) expect(column).toBeInTheDocument()
+      else expect(column).not.toBeInTheDocument()
+    }
     expect(screen.getAllByRole('columnheader')[0]).toHaveTextContent(
       'თანამშრომელი',
     )

@@ -107,8 +107,8 @@ export async function listJobs(
     .leftJoin(assignee, eq(job.assigneeId, assignee.id))
     .where(where)
     .orderBy(...order)
-    .limit(jobsPageSize)
-    .offset((search.page - 1) * jobsPageSize)
+    .limit(search.view === 'map' ? jobsMapLimit : jobsPageSize)
+    .offset(search.view === 'map' ? 0 : (search.page - 1) * jobsPageSize)
   const markers = await tx
     .select({
       id: job.id,

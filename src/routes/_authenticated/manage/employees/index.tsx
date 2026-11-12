@@ -17,14 +17,5 @@ export const Route = createFileRoute('/_authenticated/manage/employees/')({
 function EmployeeManagementRoute() {
   const { page } = Route.useSearch()
   const { actor } = Route.useRouteContext()
-  const navigate = Route.useNavigate()
-  return (
-    <UsersPage
-      page={page}
-      actor={actor}
-      onPageChange={(nextPage) => {
-        void navigate({ search: { page: nextPage } })
-      }}
-    />
-  )
+  return <UsersPage page={page} actor={actor} />
 }

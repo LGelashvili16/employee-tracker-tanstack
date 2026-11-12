@@ -18,6 +18,7 @@ export const jobsQueryOptions = (actorId: string, search: JobSearch) =>
       search.kind,
       search.scope,
       search.sort,
+      search.view,
       search.page,
       search.from,
       search.to,

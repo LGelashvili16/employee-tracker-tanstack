@@ -117,7 +117,7 @@ function AdminAccountsWorkspace() {
                     : 'ანგარიშები არ არის.'}
                 </p>
               )}
-              <div className="border-t p-4">
+              <div className="border-t px-4 py-3">
                 <DataPagination
                   page={search.page ?? 1}
                   total={data.total}

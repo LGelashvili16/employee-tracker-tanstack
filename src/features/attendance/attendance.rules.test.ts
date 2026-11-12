@@ -31,10 +31,10 @@ describe('attendance time display and calendar rules', () => {
     )
     expect(
       formatAttendanceDateTime('2026-11-12T07:18:00Z', 'Asia/Tbilisi'),
-    ).toBe('12-11-2026 11:18')
+    ).toBe('12 ნოემბერი, 2026, 11:18')
     expect(
       formatAttendanceDateTime('2026-12-31T22:05:00Z', 'Asia/Tbilisi'),
-    ).toBe('01-01-2027 02:05')
+    ).toBe('1 იანვარი, 2027, 02:05')
   })
   it('uses ISO Monday weeks across month and year boundaries', () => {
     expect(startOfWorkWeek('2027-01-01')).toBe('2026-12-28')

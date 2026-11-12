@@ -97,7 +97,7 @@ it('loads the selected job on demand and confirms a worker claim before any writ
   fireEvent.contextMenu(marker, { clientX: 50, clientY: 80 })
   expect(await screen.findByText('უნივერსიტეტის ქუჩა 2')).toBeInTheDocument()
   expect(screen.getByText('მენეჯერი')).toBeInTheDocument()
-  expect(screen.getByText('20.11.2026')).toHaveAttribute(
+  expect(screen.getByText('20 ნოემბერი, 2026')).toHaveAttribute(
     'datetime',
     '2026-11-20',
   )
@@ -168,7 +168,7 @@ it('does not offer edits or progress actions for another worker’s assigned job
     screen.getByRole('menuitem', { name: 'სამუშაოს დეტალები' }),
   ).toBeInTheDocument()
 })
-it('shows a concise address and notes while keeping history available on request', async () => {
+it('shows a concise address, notes and recent history without duplicating the latest change', () => {
   render(
     <JobDetails
       actor={employee}
@@ -191,12 +191,62 @@ it('shows a concise address and notes while keeping history available on request
   expect(screen.getByText(job.notes)).toBeInTheDocument()
   expect(screen.queryByText('University Street')).not.toBeInTheDocument()
   expect(screen.queryByText(/OpenStreetMap/)).not.toBeInTheDocument()
-  expect(screen.getByText('ბოლო ცვლილება')).toBeInTheDocument()
+  expect(screen.queryByText('ბოლო ცვლილება')).not.toBeInTheDocument()
   expect(screen.getByText('ისტორიის ავტორი')).toBeVisible()
-  await userEvent.click(
-    screen.getByRole('button', { name: 'ცვლილებების ისტორია' }),
+  expect(screen.getAllByText('ისტორიის ავტორი')).toHaveLength(1)
+})
+it('shows recent history first and expands the remaining entries', async () => {
+  render(
+    <JobDetails
+      actor={employee}
+      job={{
+        ...job,
+        history: Array.from({ length: 4 }, (_, index) => ({
+          id: String(index),
+          action: 'edited',
+          status: 'pending' as const,
+          note: '',
+          actorName: `ავტორი ${index}`,
+          createdAt: job.createdAt,
+        })),
+      }}
+    />,
   )
-  expect(screen.getAllByText('ისტორიის ავტორი')).toHaveLength(2)
+  expect(screen.getByText('ავტორი 0')).toBeVisible()
+  expect(screen.queryByText('ავტორი 3')).not.toBeInTheDocument()
+  await userEvent.click(
+    screen.getByRole('button', { name: 'ყველა ცვლილების ნახვა' }),
+  )
+  expect(screen.getByText('ავტორი 3')).toBeVisible()
+  expect(
+    screen.getByRole('button', { name: 'ნაკლების ნახვა' }),
+  ).toHaveAttribute('aria-expanded', 'true')
+})
+it('keeps the next step visible and moves secondary actions into a menu', async () => {
+  render(
+    <JobDetails
+      actor={manager}
+      job={{ ...job, status: 'on_site', assigneeId: manager.id }}
+    />,
+  )
+  expect(
+    screen.getByRole('button', { name: 'სამუშაოს დასრულება' }),
+  ).toBeVisible()
+  expect(
+    screen.queryByRole('button', { name: 'სამუშაოს უარყოფა' }),
+  ).not.toBeInTheDocument()
+  await userEvent.click(
+    screen.getByRole('button', { name: 'სამუშაოს მოქმედებები' }),
+  )
+  expect(
+    await screen.findByRole('menuitem', { name: 'რედაქტირება' }),
+  ).toBeVisible()
+  expect(
+    screen.getByRole('menuitem', { name: 'სამუშაოს უარყოფა' }),
+  ).toBeVisible()
+  expect(
+    screen.getByRole('menuitem', { name: 'მარშრუტის გახსნა' }),
+  ).toHaveAttribute('href', expect.stringContaining('google.com/maps'))
 })
 it('opens a marker menu after a one-second hold and suppresses the release click', async () => {
   const { marker, onSelect } = setup()

@@ -841,7 +841,7 @@ describe('persisted attendance dashboard', () => {
     expect(
       screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
     ).toHaveTextContent('25:00:00')
-    expect(screen.getByText('2026-11-04 დღის აღრიცხული დრო')).toBeVisible()
+    expect(screen.getByText('4 ნოემბერი, 2026 დღის აღრიცხული დრო')).toBeVisible()
     await user.click(finish)
     expect(
       within(screen.getByRole('dialog')).getByText(

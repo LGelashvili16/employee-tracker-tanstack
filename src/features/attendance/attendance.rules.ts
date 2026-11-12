@@ -1,3 +1,5 @@
+import { formatGeorgianDateTime } from '#/lib/date-format'
+
 export function elapsedSeconds(start: string, end: string) {
   return Math.max(0, Math.floor((Date.parse(end) - Date.parse(start)) / 1000))
 }
@@ -27,16 +29,7 @@ export function formatAttendanceTime(instant: string, timezone: string) {
 }
 
 export function formatAttendanceTimestamp(instant: string, timezone: string) {
-  return new Intl.DateTimeFormat('ka-GE', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).format(new Date(instant))
+  return formatGeorgianDateTime(instant, timezone, true)
 }
 
 export function startOfWorkWeek(date: string) {
@@ -113,6 +106,5 @@ export function formatAttendanceLocalInput(instant: string, timezone: string) {
 }
 
 export function formatAttendanceDateTime(instant: string, timezone: string) {
-  const local = formatAttendanceLocalInput(instant, timezone)
-  return `${local.slice(8, 10)}-${local.slice(5, 7)}-${local.slice(0, 4)} ${local.slice(11)}`
+  return formatGeorgianDateTime(instant, timezone)
 }

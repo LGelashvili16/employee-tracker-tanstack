@@ -7,6 +7,12 @@ import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert'
 import { Button } from '#/components/ui/button'
 import { Spinner } from '#/components/ui/spinner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '#/components/ui/sheet'
 import { DataPagination } from '#/components/common/data-pagination'
 import { canManageJobs } from '../jobs.rules'
 import { jobQueryOptions, jobsQueryOptions } from '../jobs.queries'
@@ -54,7 +60,7 @@ export function JobsWorkspace({
   const records = query.data
   const empty = (
     <JobsEmpty
-      search={search}
+      search={search.view === 'map' ? { ...search, page: 1 } : search}
       total={records?.total ?? 0}
       canCreate={manager}
       onCreate={openEditor}
@@ -84,6 +90,18 @@ export function JobsWorkspace({
         </span>
       </div>
       {cards}
+      {records && records.total > records.items.length ? (
+        <div className="border-t p-4 text-sm text-muted-foreground">
+          ნაჩვენებია {records.items.length} / {records.total} სამუშაო.{' '}
+          <Link
+            to="/jobs"
+            search={{ ...search, view: 'list', page: 1, pin: undefined }}
+            className="underline underline-offset-4"
+          >
+            ყველა სამუშაოს ნახვა
+          </Link>
+        </div>
+      ) : null}
     </>
   )
   const editorDialog = editor ? (
@@ -149,11 +167,11 @@ export function JobsWorkspace({
           className="w-max gap-1 rounded-xl border p-0.5 group-data-horizontal/tabs:h-auto"
           aria-label="სამუშაოების ხედი"
         >
-          <TabsTrigger value="map" className="h-9 rounded-lg px-4">
+          <TabsTrigger value="map" className="h-9 px-4">
             <IconMap aria-hidden="true" />
             რუკა
           </TabsTrigger>
-          <TabsTrigger value="list" className="h-9 rounded-lg px-4">
+          <TabsTrigger value="list" className="h-9 px-4">
             <IconList aria-hidden="true" />
             სია
           </TabsTrigger>
@@ -192,7 +210,7 @@ export function JobsWorkspace({
                 {records.unmappedTotal} სამუშაოს ზუსტი მდებარეობა არ აქვს
               </AlertTitle>
               <AlertDescription>
-                ეს სამუშაოები ხელმისაწვდომია გვერდით პანელსა და სიაში.
+                ეს სამუშაოები ხელმისაწვდომია სამუშაოების სიაში.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -201,6 +219,7 @@ export function JobsWorkspace({
               actor={actor}
               search={search}
               pins={records?.markers ?? noMarkers}
+              pinsReady={Boolean(records) && !query.isFetching}
               selected={selected.data}
               canCreate={manager}
               location={location}
@@ -222,32 +241,45 @@ export function JobsWorkspace({
             />
           ) : (
             <>
-              <div
-                className={
-                  search.pin
-                    ? 'grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]'
-                    : 'min-w-0'
-                }
-              >
-                <div className="min-w-0">
-                  {query.isPending ? (
-                    <JobDetailSkeleton />
-                  ) : query.isError ? null : records?.items.length ? (
-                    <JobsList items={records.items} search={search} />
-                  ) : (
-                    empty
-                  )}
-                </div>
-                {details ? (
-                  <aside className="max-h-[70dvh] overflow-y-auto rounded-xl border bg-card">
-                    {details}
-                  </aside>
-                ) : null}
+              <div className="min-w-0">
+                {query.isPending ? (
+                  <JobDetailSkeleton />
+                ) : query.isError ? null : records?.items.length ? (
+                  <JobsList items={records.items} search={search} />
+                ) : (
+                  empty
+                )}
               </div>
+              <Sheet
+                open={Boolean(search.pin)}
+                onOpenChange={(open) => {
+                  if (!open) update({ ...search, pin: undefined })
+                }}
+              >
+                <SheetContent
+                  className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
+                  aria-describedby={undefined}
+                >
+                  <SheetHeader className="shrink-0 border-b px-6 py-5">
+                    <SheetTitle>სამუშაოს დეტალები</SheetTitle>
+                  </SheetHeader>
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    {search.pin ? (
+                      <JobDetailPanel
+                        key={search.pin}
+                        actor={actor}
+                        id={search.pin}
+                        inSheet
+                        onClose={() => update({ ...search, pin: undefined })}
+                      />
+                    ) : null}
+                  </div>
+                </SheetContent>
+              </Sheet>
               {editorDialog}
             </>
           )}
-          {records ? (
+          {records && search.view === 'list' ? (
             <div aria-busy={query.isFetching}>
               <DataPagination
                 page={search.page}

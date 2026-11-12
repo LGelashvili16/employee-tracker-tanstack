@@ -42,6 +42,9 @@ describe('work schedule page states', () => {
   it('announces loading and hides decorative skeletons', () => {
     read.mockReturnValue(new Promise(() => {}))
     render(<WorkSchedulePage actorId="admin" />)
+    for (const tab of screen.getAllByRole('tab')) {
+      expect(tab.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    }
     expect(
       screen.getByRole('heading', { name: 'სამუშაო განრიგი' }),
     ).toBeVisible()

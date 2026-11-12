@@ -39,6 +39,7 @@ export function JobsMapPanel({
   actor,
   search,
   pins,
+  pinsReady,
   selected,
   canCreate,
   location,
@@ -54,6 +55,7 @@ export function JobsMapPanel({
   actor: Actor
   search: JobSearch
   pins: Array<JobMarker>
+  pinsReady: boolean
   selected?: JobDetail
   canCreate: boolean
   location: ResolvedLocation | null
@@ -71,6 +73,7 @@ export function JobsMapPanel({
   const [showBuildings, setShowBuildings] = useState(false)
   const camera = useRef<MapCamera | null>(null)
   const focused = useRef<string | null>(null)
+  const initialPin = useRef(search.pin)
   const inline = useRef<HTMLDivElement>(null)
   const model = useJobMapSearch(actor.id, search, onQueryChange)
   const [focusRequest, setFocusRequest] = useState(0)
@@ -105,6 +108,8 @@ export function JobsMapPanel({
               showBuildings={showBuildings}
               onBuildingsChange={setShowBuildings}
               pins={pins}
+              pinsReady={pinsReady}
+              initialPin={initialPin.current}
               selected={
                 selected && hasJobCoordinates(selected) ? selected : undefined
               }

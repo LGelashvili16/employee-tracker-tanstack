@@ -25,6 +25,7 @@ import {
 import type { TimesheetDay, TimesheetSearch } from '../timesheets.types'
 import { formatAttendanceDate } from '#/features/attendance/attendance.presentation'
 import { companyLocalDate } from '#/features/scheduling/scheduling.rules'
+import { formatGeorgianDate } from '#/lib/date-format'
 import { cn } from '#/lib/utils'
 
 function TimesheetTime({ value, day }: { value: string; day: TimesheetDay }) {
@@ -75,7 +76,7 @@ const makeColumns = (
         <time dateTime={row.original.date}>
           {compact
             ? formatAttendanceDate(row.original.date, true)
-            : row.original.date}
+            : formatGeorgianDate(row.original.date)}
         </time>
       ),
     }),
@@ -158,7 +159,7 @@ const makeColumns = (
                 variant="outline"
                 size="sm"
                 onClick={() => onOpenDay(row.original.date)}
-                aria-label={`${row.original.date} სესიების ნახვა`}
+                aria-label={`${formatGeorgianDate(row.original.date)} სესიების ნახვა`}
               >
                 სესიები
                 <IconChevronRight data-icon="inline-end" aria-hidden="true" />

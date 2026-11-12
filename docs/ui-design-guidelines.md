@@ -155,6 +155,7 @@ Use variants from `src/components/ui/badge.tsx`. Map each feature's states to la
 - Data Table is a composition pattern, not a requirement to install a second grid package or invent an import named `DataTable`. Reuse an existing suitable composition; extract shared behavior when repeated needs justify it.
 - Use the installed TanStack Table version and types. Do not paste incompatible v8 or Radix examples into this Base UI project.
 - Keep headers, row padding, borders, hover states, badges, sort indicators, and action placement consistent. Place row actions in a predictable final column; do not make every cell look like a button.
+- Use the same `bg-card` table surface and bordered pagination footer across directory tables. Use the shared numbered pagination with the total and current page.
 - Sortable headers must be recognizable, keyboard accessible, and explicit about direction through `aria-sort` where applicable.
 - Sortable column titles use link styling with sort indicators, without a raised button surface or shadow. Keep the subtle 3D treatment for action buttons rather than table headings.
 - Use Tabler's combined up/down `IconArrowsSort` beside sortable titles. Preserve `aria-sort` for the active direction. Account-access row actions belong in the final column's three-dot menu, with existing authorization and confirmation behavior.
@@ -200,8 +201,10 @@ Do not add route-changing tabs that duplicate destinations already shown as sepa
 The approved appearance is the existing attendance tab strip shown in the user's reference:
 
 - One compact rounded container with a muted surface, subtle border, and small inset around its triggers.
+- Match the inner trigger corners to the outer container, accounting for its border and inset; use the shared tab styles across pages.
 - Consistent trigger height and horizontal padding, muted inactive text, and clear hover/focus states.
 - A raised selected surface with a slight 3D edge/shadow, stronger text, and stable dimensions.
+- Give every tab an appropriate Tabler icon. Selected tab text and icons are fully white, with a contrasting selected surface in both themes.
 - No page-specific underline, separate button row, or alternate palette in place of this pattern. Do not use the primitive's line variant as an alternative page-level style.
 - Preserve keyboard behavior, selected state, accessible names, and route-link semantics. Derive route-backed selection from the route and retain relevant filters deliberately.
 - Let long tab rails scroll inside their own container without clipping focus rings or forcing page overflow.
@@ -347,6 +350,8 @@ When the user changes a shared UI standard, update this file instead of creating
 
 Employees submit the complaint topic, description and category. Do not expose visibility or recipient selectors to employees. The server routes new complaints to HR, administrators and the owner; supervisors receive access only after explicit assignment. Do not show explanatory visibility text in the submission form.
 
+Omit the visibility and assignee columns from the employee complaint table. Retain the underlying access and assignment rules and the management table's review context.
+
 Complaint live notifications use one generic six-second Sonner toast with a view action and an accessible unread red dot beside the management complaint entry and its collapsed management group. Restore unread state on reconnect without historical toast replay. The management dot counts only unread active complaints. Closing or resolving a complaint removes it from that dot, while unread notification history remains in the bell. Marking active complaint notifications read also clears their contribution; toast dismissal does not mark them read.
 
 Complaint sheets use a consistent medium width, a fixed title header and a padded scrollable body. Keep the original complaint, one status-and-comment review form, and a compact conversation/history. Omit action menus, reviewer assignment controls, redundant visibility/assignee metadata and duplicate comment forms. Employee detail has one comment field. Display complaint timestamps with explicit Georgian month names and company-local 24-hour time; do not rely on browser Georgian ICU support. Show history pagination only when multiple pages are needed.
@@ -358,6 +363,10 @@ Personal and management complaint tables put the complainant first, using the ex
 Both management and employee complaint detail sheets use two shared shadcn Cards: the first groups title, description, author, date and status/category details; the second groups status controls (when authorized), the comment composer and existing comments/review history. Keep the conversation inside one card rather than separating its form from its entries.
 
 Complaint table rows open the detail sheet when clicked on non-interactive content. Preserve real title links for keyboard access and native new-tab behavior. Ignore modified clicks, text selection and nested interactive controls; retain semantic table rows and use the title link as the keyboard target.
+
+## Job details
+
+Group job information, nonempty instructions and change history in separate cards in both the map panel and list sheet. Keep the next permitted progress action visible, and place editing, directions and other permitted transitions in an accessible actions menu. Show the latest three history entries by default and let users expand the remaining loaded entries. Do not repeat the latest change in the information card.
 
 ## Notification acknowledgement
 
@@ -384,6 +393,8 @@ Time corrections open in a right-side shadcn Sheet, full width on mobile and mat
 ## Timezone presentation
 
 Do not display routine timezone names, labels, footnotes or tooltips in the application. Continue using the configured or historically retained timezone for calculations, date selection, validation and formatting. Keep the company schedule's timezone selector as a functional configuration control, without repeating its value elsewhere.
+
+Display full dates with Georgian month names, for example 10 ნოემბერი, 2026. Retain times and seconds where relevant, and keep machine-readable date values unchanged.
 
 ## Employee session details
 

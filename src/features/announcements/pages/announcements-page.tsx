@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { IconSpeakerphone } from '@tabler/icons-react'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
-import { Card, CardContent, CardFooter } from '#/components/ui/card'
+import { DataPagination } from '#/components/common/data-pagination'
 import { Skeleton } from '#/components/ui/skeleton'
 import {
   Empty,
@@ -18,13 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#/components/ui/dialog'
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from '#/components/ui/pagination'
 import {
   announcementsQuery,
   announcementDetailQuery,
@@ -93,7 +87,6 @@ export function AnnouncementsPage({
   onSearch: (next: AnnouncementSearch, replace?: boolean) => void
 }) {
   const query = useQuery(announcementsQuery(actorId, search))
-  const pages = Math.max(1, Math.ceil((query.data?.total ?? 0) / 20))
   const changeSort = () =>
     onSearch({
       ...search,
@@ -121,8 +114,8 @@ export function AnnouncementsPage({
           <Badge variant="secondary">სულ {query.data.total}</Badge>
         ) : null}
       </div>
-      <Card className="min-w-0 gap-0 rounded-2xl">
-        <CardContent className="px-0">
+      <div className="min-w-0 overflow-hidden rounded-xl border bg-card">
+        <div aria-busy={query.isFetching}>
           {query.isPending ? (
             <div
               role="status"
@@ -178,51 +171,23 @@ export function AnnouncementsPage({
               ) : null}
             </Empty>
           )}
-        </CardContent>
-        <CardFooter className="flex flex-wrap items-center justify-between gap-3 py-3">
-          <span className="text-sm text-muted-foreground">
-            გვერდი {search.page} / {pages}
-          </span>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  render={
-                    <Button
-                      nativeButton
-                      disabled={search.page <= 1 || query.isFetching}
-                      onClick={() =>
-                        onSearch({
-                          ...search,
-                          page: search.page - 1,
-                          announcementId: undefined,
-                        })
-                      }
-                    />
-                  }
+        </div>
+        {query.data ? (
+          <div className="border-t px-4 py-3">
+            <DataPagination
+              page={search.page}
+              total={query.data.total}
+              pageSize={20}
+              renderLink={(page) => (
+                <Link
+                  to={manage ? '/manage/announcements' : '/announcements'}
+                  search={{ ...search, page, announcementId: undefined }}
                 />
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationNext
-                  render={
-                    <Button
-                      nativeButton
-                      disabled={search.page >= pages || query.isFetching}
-                      onClick={() =>
-                        onSearch({
-                          ...search,
-                          page: search.page + 1,
-                          announcementId: undefined,
-                        })
-                      }
-                    />
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </CardFooter>
-      </Card>
+              )}
+            />
+          </div>
+        ) : null}
+      </div>
       {search.announcementId ? (
         <AnnouncementReader
           key={search.announcementId}

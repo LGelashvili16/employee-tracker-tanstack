@@ -20,7 +20,11 @@ import {
 import type { ReactNode, RefObject } from 'react'
 import type * as MapLibre from 'maplibre-gl'
 
-type MapContextValue = { map: MapLibre.Map; library: typeof MapLibre }
+type MapContextValue = {
+  map: MapLibre.Map
+  library: typeof MapLibre
+  loaded: boolean
+}
 export type MapCamera = {
   center: [number, number]
   zoom: number
@@ -66,7 +70,10 @@ export function Map({
   const buildings = useRef(showBuildings)
   buildings.current = showBuildings
   const sourceStyle = useRef<MapLibre.StyleSpecification | null>(null)
-  const [context, setContext] = useState<MapContextValue | null>(null)
+  const [context, setContext] = useState<Omit<
+    MapContextValue,
+    'loaded'
+  > | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -185,7 +192,9 @@ export function Map({
     >
       <div ref={container} className="h-full w-full" />
       {context ? (
-        <MapContext.Provider value={context}>{children}</MapContext.Provider>
+        <MapContext.Provider value={{ ...context, loaded }}>
+          {children}
+        </MapContext.Provider>
       ) : null}
       {!loaded && !failed ? (
         <div className="absolute inset-0" role="status" aria-busy="true">

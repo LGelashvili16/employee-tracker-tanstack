@@ -10,6 +10,7 @@ import {
 } from '@tabler/icons-react'
 import type { JobKind, JobStatus } from './jobs.types'
 import { jobsTimeZone } from './jobs.dates'
+import { formatGeorgianDateTime } from '#/lib/date-format'
 
 const markerStyle = (
   token:
@@ -88,18 +89,5 @@ export const jobKinds = {
   },
 } as const satisfies Record<JobKind, unknown>
 export function formatJobDate(date: string) {
-  // Some browser ICU builds lack Georgian month names. Numeric parts keep SSR and client copy identical.
-  const parts = new Intl.DateTimeFormat('ka-GE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-    timeZone: jobsTimeZone,
-    numberingSystem: 'latn',
-  }).formatToParts(new Date(date))
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((value) => value.type === type)?.value ?? ''
-  return `${part('day')}.${part('month')}.${part('year')}, ${part('hour')}:${part('minute')}`
+  return formatGeorgianDateTime(date, jobsTimeZone)
 }

@@ -146,7 +146,7 @@ export function CompanyAttendancePage() {
                   ) : null}
                 </div>
               )}
-              <div className="border-t bg-muted/15 px-4 py-3">
+              <div className="border-t px-4 py-3">
                 <CompanyAttendancePagination
                   page={search.page ?? 1}
                   total={query.data.total}

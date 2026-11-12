@@ -90,19 +90,23 @@ export function ComplaintTable({
           header: 'კატეგორია',
           cell: (info) => complaintCategoryLabels[info.getValue()],
         }),
-        helper.accessor('assigneeName', {
-          header: 'პასუხისმგებელი',
-          cell: (info) => info.getValue() ?? 'ჯერ არ არის მინიჭებული',
-        }),
-        helper.accessor('visibility', {
-          header: 'ხილვადობა',
-          cell: (info) =>
-            info.getValue() === 'hr_only' ? (
-              <Badge variant="outline">კონფიდენციალური</Badge>
-            ) : (
-              'ჩვეულებრივი'
-            ),
-        }),
+        ...(review
+          ? [
+              helper.accessor('assigneeName', {
+                header: 'პასუხისმგებელი',
+                cell: (info) => info.getValue() ?? 'ჯერ არ არის მინიჭებული',
+              }),
+              helper.accessor('visibility', {
+                header: 'ხილვადობა',
+                cell: (info) =>
+                  info.getValue() === 'hr_only' ? (
+                    <Badge variant="outline">კონფიდენციალური</Badge>
+                  ) : (
+                    'ჩვეულებრივი'
+                  ),
+              }),
+            ]
+          : []),
         helper.accessor('createdAt', {
           header: 'რეგისტრაცია',
           cell: (info) => complaintDate(info.getValue()),

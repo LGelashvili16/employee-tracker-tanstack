@@ -1,19 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  IconUsers,
-  IconChevronLeft,
-  IconChevronRight,
-  IconUserPlus,
-} from '@tabler/icons-react'
+import { Link } from '@tanstack/react-router'
+import { IconUsers, IconUserPlus } from '@tabler/icons-react'
 import { Button } from '#/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from '#/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
+import { DataPagination } from '#/components/common/data-pagination'
 import { Badge } from '#/components/ui/badge'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Alert, AlertDescription } from '#/components/ui/alert'
@@ -34,11 +25,9 @@ import type { Actor } from '#/lib/authorization/actor'
 
 export function EmployeeAccounts({
   page,
-  onPageChange,
   actor,
 }: {
   page: number
-  onPageChange: (page: number) => void
   actor: Actor
 }) {
   const query = useQuery({
@@ -94,7 +83,7 @@ export function EmployeeAccounts({
       <div className="min-w-0">
         <Card
           aria-label="თანამშრომლების ანგარიშების სია"
-          className="min-w-0 gap-0 rounded-2xl"
+          className="min-w-0 gap-0 rounded-xl border pb-0 ring-0"
         >
           <CardHeader className="flex flex-row items-center justify-between gap-3 border-b pb-4">
             <CardTitle className="flex items-center gap-3">
@@ -138,30 +127,18 @@ export function EmployeeAccounts({
               />
             )}
           </CardContent>
-          <CardFooter className="flex items-center justify-between gap-3 border-t py-3">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page === 1 || query.isFetching}
-              onClick={() => onPageChange(page - 1)}
-            >
-              <IconChevronLeft data-icon="inline-start" aria-hidden="true" />{' '}
-              წინა
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              გვერდი {page}
-              {data ? ` / ${Math.max(1, Math.ceil(data.total / 20))}` : ''}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!data || page * 20 >= data.total || query.isFetching}
-              onClick={() => onPageChange(page + 1)}
-            >
-              შემდეგი{' '}
-              <IconChevronRight data-icon="inline-end" aria-hidden="true" />
-            </Button>
-          </CardFooter>
+          {data ? (
+            <div className="border-t px-4 py-3">
+              <DataPagination
+                page={page}
+                total={data.total}
+                pageSize={20}
+                renderLink={(nextPage) => (
+                  <Link to="/manage/employees" search={{ page: nextPage }} />
+                )}
+              />
+            </div>
+          ) : null}
         </Card>
       </div>
       {issuedCode ? (

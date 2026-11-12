@@ -23,6 +23,8 @@ const fitPadding = { top: 112, right: 64, bottom: 80, left: 64 }
 
 function MapFocus({
   pins,
+  pinsReady,
+  initialPin,
   selected,
   onSelect,
   location,
@@ -32,6 +34,8 @@ function MapFocus({
   actor,
 }: {
   pins: Array<JobMarker>
+  pinsReady: boolean
+  initialPin?: string
   selected?: JobMarker
   onSelect: (id: string) => void
   location?: ResolvedLocation
@@ -40,7 +44,7 @@ function MapFocus({
   focusRequest: number
   actor: Actor
 }) {
-  const { map, library } = useMap()
+  const { map, library, loaded } = useMap()
   const initialized = useRef(restoreCamera)
   function fit() {
     if (!pins.length) return
@@ -49,13 +53,28 @@ function MapFocus({
     map.fitBounds(bounds, { padding: fitPadding, maxZoom: 14, duration: 0 })
   }
   useEffect(() => {
-    if (!pins.length || initialized.current) return
+    if (!loaded || !pinsReady || initialized.current) return
     initialized.current = true
-    if (location || selected) return
+    if (
+      location ||
+      (selected && (selected.id !== initialPin || focusRequest > 0)) ||
+      !pins.length
+    )
+      return
     const bounds = new library.LngLatBounds()
     for (const pin of pins) bounds.extend([pin.longitude, pin.latitude])
     map.fitBounds(bounds, { padding: fitPadding, maxZoom: 14, duration: 0 })
-  }, [map, library, pins, location, selected])
+  }, [
+    map,
+    library,
+    loaded,
+    pinsReady,
+    pins,
+    location,
+    selected,
+    initialPin,
+    focusRequest,
+  ])
   useEffect(() => {
     const target = location ?? selected
     const key = target
@@ -69,6 +88,7 @@ function MapFocus({
     // The map is recreated in the expanded dialog. A previously focused result must not reset the restored camera.
     if (focused.current === key) return
     focused.current = key
+    if (selected?.id === initialPin && !location && focusRequest === 0) return
     if (target)
       map.flyTo({
         center: [target.longitude, target.latitude],
@@ -87,6 +107,7 @@ function MapFocus({
     location?.latitude,
     focused,
     focusRequest,
+    initialPin,
   ])
   const visiblePins =
     selected && !pins.some((pin) => pin.id === selected.id)
@@ -136,6 +157,8 @@ function MapFocus({
 }
 export default function JobsMap({
   pins,
+  pinsReady,
+  initialPin,
   selected,
   onSelect,
   onPick,
@@ -155,6 +178,8 @@ export default function JobsMap({
   onBuildingsChange,
 }: {
   pins: Array<JobMarker>
+  pinsReady: boolean
+  initialPin?: string
   selected?: JobMarker
   onSelect: (id: string) => void
   onPick: (position: JobMapPosition) => void
@@ -179,6 +204,8 @@ export default function JobsMap({
     <Map camera={camera} showPlaces={showPlaces} showBuildings={showBuildings}>
       <MapFocus
         pins={pins}
+        pinsReady={pinsReady}
+        initialPin={initialPin}
         selected={selected}
         location={location}
         onSelect={onSelect}

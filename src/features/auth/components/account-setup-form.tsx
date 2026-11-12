@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { Link } from '@tanstack/react-router'
+import { IconArrowRight, IconCheck } from '@tabler/icons-react'
+import { toast } from 'sonner'
 import { authClient } from '#/lib/auth/auth-client'
 import { accountSetupFormSchema } from '#/features/access/access.schemas'
 import { Button } from '#/components/ui/button'
@@ -63,11 +65,53 @@ export function AccountSetupForm({
         }
         form.reset()
         setComplete(true)
+        toast.success(
+          purpose === 'activation'
+            ? 'ანგარიში გააქტიურებულია.'
+            : 'პაროლი წარმატებით შეიცვალა.',
+        )
       } catch {
         setError('სერვერთან დაკავშირება ვერ მოხერხდა. სცადეთ მოგვიანებით.')
       }
     },
   })
+  if (complete) {
+    return (
+      <Card className="w-full py-8 shadow-sm sm:px-4 sm:py-10">
+        <CardContent className="flex flex-col items-center gap-6 text-center">
+          <div role="status" className="flex flex-col items-center gap-4">
+            <span
+              aria-hidden="true"
+              className="flex size-16 items-center justify-center rounded-full bg-badge-green text-badge-green-foreground ring-8 ring-badge-green/30"
+            >
+              <IconCheck className="size-8" stroke={2.5} />
+            </span>
+            <div className="flex flex-col gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {purpose === 'activation'
+                  ? 'ანგარიში გააქტიურებულია'
+                  : 'პაროლი შეცვლილია'}
+              </h1>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {purpose === 'activation'
+                  ? 'პაროლი შენახულია. ახლა შეგიძლიათ შეხვიდეთ თქვენი მომხმარებლის სახელითა და ახალი პაროლით.'
+                  : 'შეგიძლიათ შეხვიდეთ თქვენი მომხმარებლის სახელითა და ახალი პაროლით.'}
+              </p>
+            </div>
+          </div>
+          <Button
+            nativeButton={false}
+            role="link"
+            className="h-10 w-full"
+            render={<Link to="/auth/login" />}
+          >
+            შესვლა
+            <IconArrowRight aria-hidden="true" />
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
   return (
     <Card className="w-full shadow-sm">
       <CardHeader className="gap-3 pb-7">
@@ -79,90 +123,83 @@ export function AccountSetupForm({
         <CardDescription>{content.description}</CardDescription>
       </CardHeader>
       <CardContent>
-        {complete ? (
-          <p role="status" className="text-sm leading-7">
-            პაროლი შენახულია. შეგიძლიათ შეხვიდეთ თქვენს ანგარიშში მომხმარებლის
-            სახელითა და ახალი პაროლით.
-          </p>
-        ) : (
-          <form
-            noValidate
-            onSubmit={(event) => {
-              event.preventDefault()
-              void form.handleSubmit()
-            }}
-          >
-            <FieldGroup>
-              {setupFields.map(({ name, label }) => (
-                <form.Field name={name} key={name}>
-                  {(field) => {
-                    const id = `setup-${name}`
-                    const invalid = !field.state.meta.isValid
-                    return (
-                      <Field data-invalid={invalid}>
-                        <FieldLabel htmlFor={id}>{label}</FieldLabel>
-                        {name === 'code' ? (
-                          <Input
-                            id={id}
-                            name={name}
-                            autoComplete="off"
-                            spellCheck={false}
-                            autoCapitalize="none"
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(event) =>
-                              field.handleChange(event.target.value)
-                            }
-                            aria-invalid={invalid}
-                            aria-describedby={`${id}-error`}
-                            className="h-10 font-mono uppercase tracking-wider"
-                            placeholder="XXXX-XXXX-XXXX"
-                          />
-                        ) : (
-                          <PasswordInput
-                            id={id}
-                            name={name}
-                            label={label}
-                            value={field.state.value}
-                            invalid={invalid}
-                            onBlur={field.handleBlur}
-                            onChange={field.handleChange}
-                          />
-                        )}
-                        <FieldError
-                          id={`${id}-error`}
-                          errors={field.state.meta.errors}
+        <form
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault()
+            void form.handleSubmit()
+          }}
+        >
+          <FieldGroup>
+            {setupFields.map(({ name, label }) => (
+              <form.Field name={name} key={name}>
+                {(field) => {
+                  const id = `setup-${name}`
+                  const invalid = !field.state.meta.isValid
+                  return (
+                    <Field data-invalid={invalid}>
+                      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+                      {name === 'code' ? (
+                        <Input
+                          id={id}
+                          name={name}
+                          autoComplete="off"
+                          spellCheck={false}
+                          autoCapitalize="none"
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(event) =>
+                            field.handleChange(event.target.value)
+                          }
+                          aria-invalid={invalid}
+                          aria-describedby={`${id}-error`}
+                          className="h-10 font-mono uppercase tracking-wider"
+                          placeholder="XXXX-XXXX-XXXX"
                         />
-                      </Field>
-                    )
-                  }}
-                </form.Field>
-              ))}
-              {error ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {error}
-                </p>
-              ) : null}
-              <form.Subscribe selector={(state) => state.isSubmitting}>
-                {(pending) => (
-                  <Button
-                    type="submit"
-                    disabled={pending}
-                    aria-busy={pending}
-                    className="h-10 w-full"
-                  >
-                    <span className="flex size-4 items-center justify-center">
-                      {pending ? <Spinner aria-hidden="true" /> : null}
-                    </span>
-                    {purpose === 'activation'
-                      ? 'ანგარიშის გააქტიურება'
-                      : 'პაროლის შენახვა'}
-                  </Button>
-                )}
-              </form.Subscribe>
-            </FieldGroup>
-          </form>
-        )}
+                      ) : (
+                        <PasswordInput
+                          id={id}
+                          name={name}
+                          label={label}
+                          value={field.state.value}
+                          invalid={invalid}
+                          onBlur={field.handleBlur}
+                          onChange={field.handleChange}
+                        />
+                      )}
+                      <FieldError
+                        id={`${id}-error`}
+                        errors={field.state.meta.errors}
+                      />
+                    </Field>
+                  )
+                }}
+              </form.Field>
+            ))}
+            {error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+            <form.Subscribe selector={(state) => state.isSubmitting}>
+              {(pending) => (
+                <Button
+                  type="submit"
+                  disabled={pending}
+                  aria-busy={pending}
+                  className="h-10 w-full"
+                >
+                  <span className="flex size-4 items-center justify-center">
+                    {pending ? <Spinner aria-hidden="true" /> : null}
+                  </span>
+                  {purpose === 'activation'
+                    ? 'ანგარიშის გააქტიურება'
+                    : 'პაროლის შენახვა'}
+                </Button>
+              )}
+            </form.Subscribe>
+          </FieldGroup>
+        </form>
       </CardContent>
       <CardFooter>
         <Button

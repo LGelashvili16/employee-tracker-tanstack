@@ -3,6 +3,7 @@ import {
   IconArrowUpRight,
   IconCalendarClock,
   IconClock,
+  IconClipboardList,
 } from '@tabler/icons-react'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
@@ -40,7 +41,10 @@ export function UserWorkRecordsCard({
   return (
     <Card className="rounded-2xl py-5 sm:py-6">
       <CardHeader className="px-5 sm:px-6">
-        <CardTitle>
+        <CardTitle className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+            <IconClipboardList className="size-5" aria-hidden="true" />
+          </span>
           <h2>სამუშაო ჩანაწერები</h2>
         </CardTitle>
       </CardHeader>

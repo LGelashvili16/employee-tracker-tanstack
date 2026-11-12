@@ -1,3 +1,5 @@
+import { formatGeorgianDate } from '#/lib/date-format'
+
 export const jobsTimeZone = 'Asia/Tbilisi'
 
 export function jobsToday(now = new Date()) {
@@ -30,5 +32,5 @@ export function formatJobsRange(range: { from: string; to: string }) {
   return `${formatJobDay(range.from)} - ${formatJobDay(range.to)}`
 }
 export function formatJobDay(date: string) {
-  return date.split('-').reverse().join('.')
+  return formatGeorgianDate(date)
 }

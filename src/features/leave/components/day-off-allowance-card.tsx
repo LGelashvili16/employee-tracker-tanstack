@@ -89,7 +89,10 @@ export function EmployeeDayOffBalanceCard({
   return (
     <Card className="rounded-2xl py-5 sm:py-6">
       <CardHeader className="px-5 sm:px-6">
-        <CardTitle>
+        <CardTitle className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+            <IconCalendarPause className="size-5" aria-hidden="true" />
+          </span>
           <h2>დასვენება და შვებულება</h2>
         </CardTitle>
       </CardHeader>

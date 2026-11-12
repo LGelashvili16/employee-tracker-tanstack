@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AnchorHTMLAttributes } from 'react'
 import { RegisterPage } from './register-page'
+import { AccountSetupForm } from '../components/account-setup-form'
 
 const submit = vi.hoisted(() => vi.fn())
 vi.mock('#/lib/auth/auth-client', () => ({ authClient: { $fetch: submit } }))
@@ -65,7 +66,12 @@ describe('employee account activation', () => {
       body: { code: 'A'.repeat(12), newPassword: 'example-password-123' },
     })
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'პაროლი შენახულია',
+      'ანგარიში გააქტიურებულია',
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('პაროლი შენახულია')
+    expect(screen.getByRole('link', { name: 'შესვლა' })).toHaveAttribute(
+      'href',
+      '/auth/login',
     )
     expect(screen.queryByLabelText('ერთჯერადი კოდი')).not.toBeInTheDocument()
   })
@@ -101,5 +107,32 @@ describe('employee account activation', () => {
       'კოდი არასწორია, ვადაგასულია ან უკვე გამოყენებულია',
     )
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('keeps password reset confirmation separate from activation', async () => {
+    submit.mockResolvedValue({ data: { status: true }, error: null })
+    const user = userEvent.setup()
+    render(<AccountSetupForm purpose="reset" />)
+    await user.type(screen.getByLabelText('ერთჯერადი კოდი'), 'A'.repeat(12))
+    await user.type(
+      screen.getByLabelText('ახალი პაროლი'),
+      'example-password-123',
+    )
+    await user.type(
+      screen.getByLabelText('პაროლის გამეორება'),
+      'example-password-123',
+    )
+    await user.click(screen.getByRole('button', { name: 'პაროლის შენახვა' }))
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'პაროლი შეცვლილია',
+    )
+    expect(screen.getByRole('link', { name: 'შესვლა' })).toHaveAttribute(
+      'href',
+      '/auth/login',
+    )
+    expect(
+      screen.queryByText('ანგარიში გააქტიურებულია'),
+    ).not.toBeInTheDocument()
+    expect(submit).toHaveBeenCalledWith('/employee-reset', expect.anything())
   })
 })

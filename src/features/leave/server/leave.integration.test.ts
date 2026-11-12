@@ -1059,7 +1059,7 @@ describe.runIf(enabled)('vacation workflow against isolated PostgreSQL', () => {
     )
     expect(employeeNotice).toMatchObject({
       title: 'არყოფნის თარიღები შეიცვალა',
-      body: '2026-11-10 - 2026-11-10.',
+      body: '10 ნოემბერი, 2026 - 10 ნოემბერი, 2026.',
       destination: { kind: 'leave', requestId: id, review: false },
     })
     await expect(service.reviewLeave(reviewer, change)).rejects.toThrow()
@@ -1132,7 +1132,7 @@ describe.runIf(enabled)('vacation workflow against isolated PostgreSQL', () => {
         byReviewer ? [actor.id] : ['vacation-admin', 'vacation-hr'],
       )
       expect(
-        notices.every((row) => row.body === '2026-11-09 - 2026-11-11.'),
+        notices.every((row) => row.body === '9 ნოემბერი, 2026 - 11 ნოემბერი, 2026.'),
       ).toBe(true)
       expect(
         notices.every((row) => row.destination.review === !byReviewer),

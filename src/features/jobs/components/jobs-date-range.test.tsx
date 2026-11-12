@@ -44,7 +44,7 @@ it('selects the current month initially and applies last month with pagination r
   render(<JobsFilters search={search} onChange={onChange} />)
   await userEvent.click(
     screen.getByRole('button', {
-      name: 'სამუშაოების შექმნის პერიოდი: 01.11.2026 - 30.11.2026',
+      name: 'სამუშაოების შექმნის პერიოდი: 1 ნოემბერი, 2026 - 30 ნოემბერი, 2026',
     }),
   )
   await userEvent.click(screen.getByRole('button', { name: 'წინა თვე' }))
@@ -97,7 +97,7 @@ it('applies a custom range only after confirmation and restores external URL ran
   ).not.toBeInTheDocument()
   expect(
     screen.getByRole('button', {
-      name: 'სამუშაოების შექმნის პერიოდი: 01.09.2026 - 30.09.2026',
+      name: 'სამუშაოების შექმნის პერიოდი: 1 სექტემბერი, 2026 - 30 სექტემბერი, 2026',
     }),
   ).toBeInTheDocument()
 })

@@ -7,6 +7,7 @@ import { Spinner } from '#/components/ui/spinner'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import { AttendanceDeviationBadges } from './attendance-deviation-badges'
 import { useModal } from '#/hooks/use-modal'
+import { formatGeorgianDate } from '#/lib/date-format'
 import { FinishWorkConfirmation } from './finish-work-confirmation'
 import { StartNonworkingDayConfirmation } from './start-nonworking-day-confirmation'
 import { ChartStatFlow } from '#/components/charts/chart-stat-flow'
@@ -80,7 +81,7 @@ export function AttendanceClock({
             <IconClock className="size-5" aria-hidden="true" />
           </span>
           {oldSession
-            ? `${open.workDate} დღის აღრიცხული დრო`
+            ? `${formatGeorgianDate(open.workDate)} დღის აღრიცხული დრო`
             : 'დღეს ნამუშევარი'}
         </CardTitle>
         <div className="flex flex-wrap items-center gap-3">

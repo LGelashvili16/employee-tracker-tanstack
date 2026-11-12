@@ -39,3 +39,29 @@ it('keeps cached job results separate for each selected date range', async () =>
   expect(request).toHaveBeenCalledTimes(2)
   client.clear()
 })
+
+it('keeps map results separate from paginated list results', async () => {
+  request.mockReset()
+  request.mockImplementation(({ data }: { data: { view: string } }) =>
+    Promise.resolve({
+      ok: true,
+      value: {
+        total: 20,
+        items: Array.from({ length: data.view === 'map' ? 20 : 12 }),
+        markers: [],
+        unmappedTotal: 0,
+        mapTruncated: false,
+      },
+    }),
+  )
+  const client = new QueryClient()
+  const map = jobsQueryOptions('actor', jobSearchSchema.parse({ view: 'map' }))
+  const list = jobsQueryOptions(
+    'actor',
+    jobSearchSchema.parse({ view: 'list' }),
+  )
+  expect((await client.fetchQuery(map)).items).toHaveLength(20)
+  expect((await client.fetchQuery(list)).items).toHaveLength(12)
+  expect(request).toHaveBeenCalledTimes(2)
+  client.clear()
+})

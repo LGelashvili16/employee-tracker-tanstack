@@ -1,52 +1,144 @@
 import { useState } from 'react'
 import {
+  IconCalendarDue,
   IconChevronDown,
+  IconDots,
   IconExternalLink,
   IconHistory,
   IconMapPin,
   IconNotes,
+  IconPencil,
   IconUser,
-  IconCalendarDue,
 } from '@tabler/icons-react'
 import { Button } from '#/components/ui/button'
-import { Card, CardContent } from '#/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '#/components/ui/collapsible'
-import { Separator } from '#/components/ui/separator'
-import { hasJobCoordinates } from '../jobs.rules'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '#/components/ui/dropdown-menu'
+import {
+  allowedJobTransitions,
+  canEditJob,
+  hasJobCoordinates,
+} from '../jobs.rules'
 import { formatJobDate, jobStatuses } from '../jobs.presentation'
 import { formatJobDay } from '../jobs.dates'
 import { JobStatusBadge } from './job-status-badge'
 import { JobKindBadge } from './job-kind-badge'
-import { JobActionDialog, JobActions } from './job-actions'
+import { JobActionDialog } from './job-actions'
 import type { JobAction } from './job-actions'
 import type { Actor } from '#/lib/authorization/actor'
 import type { JobDetail } from '../jobs.types'
 
 export function JobDetails({ job, actor }: { job: JobDetail; actor: Actor }) {
   const [action, setAction] = useState<JobAction | null>(null)
-  const latestChange = job.history.at(0)
+  const [showAllHistory, setShowAllHistory] = useState(false)
+  const transitions = allowedJobTransitions(actor, job)
+  const primary = transitions.find(
+    (status) => status !== 'rejected' && status !== 'pending',
+  )
+  const secondary = transitions.filter((status) => status !== primary)
+  const editable = canEditJob(actor, job)
+  const located = hasJobCoordinates(job)
+  const PrimaryIcon = primary ? jobStatuses[primary].icon : null
   const address =
     job.address ||
     job.locationLabelKa ||
     job.locationLabelEn ||
     job.streetNameKa ||
     job.streetNameEn
+  const history = showAllHistory ? job.history : job.history.slice(0, 3)
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
-      <header className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <JobStatusBadge status={job.status} />
-          <JobKindBadge kind={job.kind} />
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <JobStatusBadge status={job.status} />
+            <JobKindBadge kind={job.kind} />
+          </div>
+          <h2 className="text-lg leading-snug font-semibold break-words">
+            {job.title}
+          </h2>
         </div>
-        <h2 className="text-lg leading-relaxed font-semibold break-words">
-          {job.title}
-        </h2>
+        {secondary.length || editable || located ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="outline"
+                  depth="raised"
+                  size="icon"
+                  aria-label="სამუშაოს მოქმედებები"
+                />
+              }
+            >
+              <IconDots aria-hidden="true" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-52">
+              <DropdownMenuGroup>
+                {editable ? (
+                  <DropdownMenuItem
+                    onClick={() => setAction({ type: 'edit', job })}
+                  >
+                    <IconPencil aria-hidden="true" />
+                    რედაქტირება
+                  </DropdownMenuItem>
+                ) : null}
+                {located ? (
+                  <DropdownMenuItem
+                    render={
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${job.latitude},${job.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      />
+                    }
+                  >
+                    <IconExternalLink aria-hidden="true" />
+                    მარშრუტის გახსნა
+                  </DropdownMenuItem>
+                ) : null}
+                {secondary.map((status) => {
+                  const Icon = jobStatuses[status].icon
+                  return (
+                    <DropdownMenuItem
+                      key={status}
+                      variant={
+                        status === 'rejected' ? 'destructive' : 'default'
+                      }
+                      onClick={() =>
+                        setAction({ type: 'transition', job, status })
+                      }
+                    >
+                      <Icon aria-hidden="true" />
+                      {jobStatuses[status].action}
+                    </DropdownMenuItem>
+                  )
+                })}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </header>
+      {primary && PrimaryIcon ? (
+        <Button
+          depth="raised"
+          className="min-h-11 w-full"
+          onClick={() =>
+            setAction({ type: 'transition', job, status: primary })
+          }
+        >
+          <PrimaryIcon aria-hidden="true" />
+          {jobStatuses[primary].action}
+        </Button>
+      ) : null}
       <Card size="sm" className="shrink-0">
+        <CardHeader>
+          <CardTitle>სამუშაოს ინფორმაცია</CardTitle>
+        </CardHeader>
         <CardContent>
           <dl className="flex flex-col gap-4 text-sm">
             <div>
@@ -56,7 +148,7 @@ export function JobDetails({ job, actor }: { job: JobDetail; actor: Actor }) {
               </dt>
               <dd className="pl-7 leading-relaxed break-words">
                 {address ||
-                  (hasJobCoordinates(job)
+                  (located
                     ? `${job.latitude.toFixed(6)}, ${job.longitude.toFixed(6)}`
                     : 'არ არის მითითებული')}
               </dd>
@@ -88,93 +180,41 @@ export function JobDetails({ job, actor }: { job: JobDetail; actor: Actor }) {
                 )}
               </dd>
             </div>
-            {latestChange ? (
-              <div>
-                <dt className="mb-1 flex items-center gap-3 text-xs text-muted-foreground">
-                  <IconHistory className="size-4 shrink-0" aria-hidden="true" />
-                  ბოლო ცვლილება
-                </dt>
-                <dd className="flex flex-col gap-1 pl-7">
-                  <span className="break-words">{latestChange.actorName}</span>
-                  <time
-                    dateTime={latestChange.createdAt}
-                    title="თბილისის დროით"
-                    className="text-xs text-muted-foreground"
-                  >
-                    {formatJobDate(latestChange.createdAt)}
-                  </time>
-                </dd>
-              </div>
-            ) : null}
           </dl>
         </CardContent>
       </Card>
       {job.notes ? (
-        <section
-          className="flex flex-col gap-2"
-          aria-label="ინსტრუქციები და შენიშვნები"
-        >
-          <h3 className="flex items-center gap-2 text-sm font-medium">
-            <IconNotes
+        <Card size="sm" className="shrink-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IconNotes
+                className="size-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+              ინსტრუქციები და შენიშვნები
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+              {job.notes}
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+      <Card size="sm" className="shrink-0">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <IconHistory
               className="size-4 text-muted-foreground"
               aria-hidden="true"
             />
-            ინსტრუქციები და შენიშვნები
-          </h3>
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-            {job.notes}
-          </p>
-        </section>
-      ) : null}
-      <div
-        role="group"
-        className="flex flex-col gap-2"
-        aria-label="სამუშაოს მოქმედებები"
-      >
-        <JobActions actor={actor} job={job} onAction={setAction} />
-        {hasJobCoordinates(job) ? (
-          <Button
-            variant="outline"
-            depth="raised"
-            nativeButton={false}
-            render={
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${job.latitude},${job.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              />
-            }
-            className="min-h-11 justify-start"
-          >
-            <IconExternalLink data-icon="inline-start" aria-hidden="true" />
-            მარშრუტის გახსნა
-          </Button>
-        ) : null}
-      </div>
-      <Separator />
-      <Collapsible>
-        <CollapsibleTrigger
-          render={
-            <Button
-              variant="outline"
-              depth="raised"
-              className="group min-h-11 w-full justify-start"
-            />
-          }
-        >
-          <IconHistory data-icon="inline-start" aria-hidden="true" />
-          ცვლილებების ისტორია
-          <IconChevronDown
-            data-icon="inline-end"
-            aria-hidden="true"
-            className="ml-auto transition-transform group-data-panel-open:rotate-180 motion-reduce:transition-none"
-          />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="flex flex-col gap-4 pt-4">
-            <p className="text-xs text-muted-foreground">თბილისის დროით</p>
-            <ol className="flex flex-col gap-4 border-l pl-4">
-              {job.history.map((event) => (
+            ცვლილებების ისტორია
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {history.length ? (
+            <ol className="ml-1 flex flex-col gap-4 border-l pl-4">
+              {history.map((event) => (
                 <li
                   key={event.id}
                   className="relative flex flex-col gap-1 text-sm"
@@ -207,14 +247,32 @@ export function JobDetails({ job, actor }: { job: JobDetail; actor: Actor }) {
                 </li>
               ))}
             </ol>
-            {job.hasMoreHistory ? (
-              <p className="text-xs text-muted-foreground">
-                ნაჩვენებია ბოლო 25 ცვლილება.
-              </p>
-            ) : null}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              ცვლილებები ჯერ არ არის.
+            </p>
+          )}
+          {job.history.length > 3 ? (
+            <Button
+              variant="ghost"
+              className="mt-3 w-full justify-between"
+              aria-expanded={showAllHistory}
+              onClick={() => setShowAllHistory(!showAllHistory)}
+            >
+              {showAllHistory ? 'ნაკლების ნახვა' : 'ყველა ცვლილების ნახვა'}
+              <IconChevronDown
+                aria-hidden="true"
+                className={showAllHistory ? 'rotate-180' : undefined}
+              />
+            </Button>
+          ) : null}
+          {job.hasMoreHistory && (showAllHistory || job.history.length <= 3) ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              ნაჩვენებია ბოლო 25 ცვლილება.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
       <JobActionDialog
         actor={actor}
         action={action}

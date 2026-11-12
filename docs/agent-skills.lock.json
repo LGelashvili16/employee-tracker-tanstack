@@ -299,6 +299,18 @@
       "treeSha256": "e97a2a1883859853c0f8f8ddb946a5f21603047c0119c5b9e95e594da76feb54",
       "fileCount": 21,
       "upstreamLicenseNotice": "UPSTREAM-LICENSE.txt"
+    },
+    {
+      "name": "animate",
+      "repository": "https://github.com/emilkowalski/skills",
+      "commit": "4061b67b8d976a186aca118594f54b638c5f718a",
+      "sourcePath": "skills/animate",
+      "sourceUrl": "https://github.com/emilkowalski/skills/tree/4061b67b8d976a186aca118594f54b638c5f718a/skills/animate",
+      "localPath": ".agents/skills/animate",
+      "skillSha256": "39138996033e0dbe53e73217514116eaeca774bae84a0687c80d445a4e0cc3a6",
+      "treeSha256": "444717cb19ab77aeb46cb078a75ac51a71c78aaafb6aa903fafbfda310268b61",
+      "fileCount": 3,
+      "upstreamLicenseNotice": "UPSTREAM-LICENSE.txt"
     }
   ]
 }

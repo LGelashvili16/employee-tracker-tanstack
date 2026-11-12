@@ -577,16 +577,25 @@ describe.runIf(enabled)('jobs map against isolated PostgreSQL', () => {
       })
     const first = await service.listCompanyJobs(worker, {
       ...search,
+      view: 'list',
       sort: 'title',
     })
     const second = await service.listCompanyJobs(worker, {
       ...search,
+      view: 'list',
       sort: 'title',
       page: 2,
     })
     expect(first.total).toBe(14)
     expect(first.items).toHaveLength(12)
     expect(second.items).toHaveLength(2)
+    const map = await service.listCompanyJobs(worker, {
+      ...search,
+      view: 'map',
+      page: 2,
+    })
+    expect(map.items).toHaveLength(14)
+    expect(map.markers).toHaveLength(14)
     expect(
       first.items
         .map((item) => item.id)

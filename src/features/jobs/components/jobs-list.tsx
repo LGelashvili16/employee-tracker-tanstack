@@ -1,15 +1,11 @@
 import { useMemo } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import {
   createColumnHelper,
   tableFeatures,
   useTable,
 } from '@tanstack/react-table'
-import {
-  IconArrowUp,
-  IconArrowDown,
-  IconChevronRight,
-} from '@tabler/icons-react'
+import { IconArrowUp, IconArrowDown } from '@tabler/icons-react'
 import {
   Table,
   TableBody,
@@ -18,7 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table'
-import { Button } from '#/components/ui/button'
 import { formatJobDate } from '../jobs.presentation'
 import { formatJobDay } from '../jobs.dates'
 import { JobStatusBadge } from './job-status-badge'
@@ -34,6 +29,7 @@ export function JobsList({
   items: Array<JobSummary>
   search: JobSearch
 }) {
+  const navigate = useNavigate()
   const columns = useMemo(
     () =>
       helper.columns([
@@ -114,24 +110,6 @@ export function JobsList({
             </span>
           ),
         }),
-        helper.display({
-          id: 'detail',
-          header: 'დეტალები',
-          cell: ({ row }) => (
-            <Button
-              variant="outline"
-              depth="raised"
-              size="icon"
-              nativeButton={false}
-              render={
-                <Link to="/jobs" search={{ ...search, pin: row.original.id }} />
-              }
-              aria-label={`სამუშაოს ნახვა: ${row.original.title}`}
-            >
-              <IconChevronRight aria-hidden="true" />
-            </Button>
-          ),
-        }),
       ]),
     [search],
   )
@@ -170,7 +148,30 @@ export function JobsList({
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.map((row) => (
-            <TableRow key={row.id}>
+            <TableRow
+              key={row.id}
+              className="cursor-pointer focus-within:bg-muted/50"
+              onClick={(event) => {
+                if (
+                  event.defaultPrevented ||
+                  event.button !== 0 ||
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.altKey ||
+                  window.getSelection()?.toString() ||
+                  (event.target instanceof Element &&
+                    event.target.closest(
+                      'a, button, input, textarea, select, [role="button"], [role="link"], [contenteditable="true"]',
+                    ))
+                )
+                  return
+                void navigate({
+                  to: '/jobs',
+                  search: { ...search, pin: row.original.id },
+                })
+              }}
+            >
               {row.getAllCells().map((cell) => (
                 <TableCell key={cell.id} className="px-4 py-4">
                   <table.FlexRender cell={cell} />

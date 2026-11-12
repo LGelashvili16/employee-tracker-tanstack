@@ -1,10 +1,11 @@
 import { Link, useLocation } from '@tanstack/react-router'
+import { IconCalendarCheck, IconClock } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 
 const attendanceLinks = [
-  { to: '/attendance', label: 'დასწრება' },
-  { to: '/timesheets', label: 'სამუშაო საათები' },
+  { to: '/attendance', label: 'დასწრება', icon: IconCalendarCheck },
+  { to: '/timesheets', label: 'სამუშაო საათები', icon: IconClock },
 ] as const
 
 export function AttendanceNavigation({ children }: { children: ReactNode }) {
@@ -25,7 +26,7 @@ export function AttendanceNavigation({ children }: { children: ReactNode }) {
               nativeButton={false}
               key={item.to}
               value={item.to}
-              className="h-9 flex-none rounded-lg px-4 motion-reduce:transition-none"
+              className="h-9 flex-none px-4 motion-reduce:transition-none"
               render={
                 <Link
                   to={item.to}
@@ -33,6 +34,7 @@ export function AttendanceNavigation({ children }: { children: ReactNode }) {
                 />
               }
             >
+              <item.icon aria-hidden="true" />
               {item.label}
             </TabsTrigger>
           ))}

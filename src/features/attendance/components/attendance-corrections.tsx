@@ -13,6 +13,7 @@ import {
 import { readMyAttendanceCorrections } from '../attendance.functions'
 import type { AttendanceCorrection } from '../attendance.types'
 import { formatAttendanceTimestamp } from '../attendance.rules'
+import { formatGeorgianDate } from '#/lib/date-format'
 
 function exactTime(value: string | null, timezone: string) {
   if (!value) return 'არ იყო აღრიცხული'
@@ -23,7 +24,7 @@ function Correction({ item }: { item: AttendanceCorrection }) {
   return (
     <li className="flex flex-col gap-3 border-b pb-4 last:border-0 last:pb-0">
       <p className="text-sm font-medium">
-        {item.workDate} · {item.actorName}
+        {formatGeorgianDate(item.workDate)} · {item.actorName}
       </p>
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
         {(['startedAt', 'endedAt'] as const).map((field) => (

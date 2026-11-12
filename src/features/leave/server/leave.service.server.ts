@@ -2,6 +2,7 @@ import { deliverNotifications } from '#/features/notifications/server/notificati
 import { getCompanyWorkday } from '#/features/scheduling/server/scheduling.service.server'
 import '@tanstack/react-start/server-only'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
+import { formatGeorgianDate } from '#/lib/date-format'
 import {
   currentAuthorization,
   hasPermission,
@@ -343,7 +344,7 @@ async function notifyLeave(
     eventKey: `leave:${saved.id}:${saved.revision}:${action}`,
     actorId,
     title,
-    body: `${saved.startDate}${saved.endDate ? ` - ${saved.endDate}` : ''}.${reason ? ` ${reason}` : ''}`,
+    body: `${formatGeorgianDate(saved.startDate)}${saved.endDate ? ` - ${formatGeorgianDate(saved.endDate)}` : ''}.${reason ? ` ${reason}` : ''}`,
     destination: { kind: 'leave' as const, requestId: saved.id, review },
   }
   if (review) {

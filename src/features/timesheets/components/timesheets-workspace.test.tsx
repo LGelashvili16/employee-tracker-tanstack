@@ -100,7 +100,7 @@ describe('timesheet views', () => {
     )
     const user = userEvent.setup()
     await user.click(
-      await screen.findByRole('button', { name: '2026-11-05 სესიების ნახვა' }),
+      await screen.findByRole('button', { name: '5 ნოემბერი, 2026 სესიების ნახვა' }),
     )
     expect(screen.getByText('შესწორებულია')).toBeVisible()
     expect(onChange).toHaveBeenCalledWith({

@@ -6,7 +6,12 @@ import {
   QueryClientProvider,
   useQuery,
 } from '@tanstack/react-query'
-import { IconRefresh } from '@tabler/icons-react'
+import {
+  IconCalendarWeek,
+  IconCalendarOff,
+  IconChecklist,
+  IconRefresh,
+} from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Button } from '#/components/ui/button'
@@ -88,12 +93,15 @@ function SettingsContent({
             className="w-max gap-1 rounded-xl border p-0.5 group-data-horizontal/tabs:h-auto"
           >
             <TabsTrigger value="schedule" className="min-h-10 px-4">
+              <IconCalendarWeek aria-hidden="true" />
               განრიგი
             </TabsTrigger>
             <TabsTrigger value="leave" className="min-h-10 px-4">
+              <IconCalendarOff aria-hidden="true" />
               დასვენება და შვებულება
             </TabsTrigger>
             <TabsTrigger value="attendance" className="min-h-10 px-4">
+              <IconChecklist aria-hidden="true" />
               დასწრების წესები
             </TabsTrigger>
           </TabsList>
