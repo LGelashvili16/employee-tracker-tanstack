@@ -5,6 +5,10 @@ import { eventStreamResponse } from './event-stream.server'
 import type { RealtimeEvent } from './event-stream.server'
 import type { RealtimeSignal, RealtimeTopic } from './realtime.schemas'
 import type { Actor } from '#/lib/authorization/actor'
+import {
+  currentRequestIp,
+  networkAllowed,
+} from '#/features/attendance-security/server/network.server'
 
 /** Features own resource authorization and safe projections, including snapshots. */
 export type RealtimeHandler = {
@@ -37,6 +41,7 @@ export async function eventsResponse(
       headers: { 'Cache-Control': 'private, no-store' },
     })
   const actorId = actor.id
+  const ip = currentRequestIp(request)
   const handlersByTopic = new Map<RealtimeTopic, Array<RealtimeHandler>>()
   for (const handler of handlers) {
     const registered = handlersByTopic.get(handler.topic) ?? []
@@ -49,6 +54,7 @@ export async function eventsResponse(
   return eventStreamResponse(request, {
     accepts,
     authorized: async () => {
+      if (!(await networkAllowed(ip))) return false
       actor = await readActorFromHeaders(request.headers, true)
       return actor?.id === actorId
     },

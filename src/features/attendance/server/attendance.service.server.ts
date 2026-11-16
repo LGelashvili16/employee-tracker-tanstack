@@ -13,17 +13,44 @@ import * as repository from './attendance.repository.server'
 import type { Actor } from '#/lib/authorization/actor'
 import type { AttendanceOverview } from '../attendance.types'
 import { attendanceSetting } from '#/db/schema'
+import {
+  authorizeClockAction,
+  recordPunch,
+} from '#/features/attendance-security/server/attendance-security.service.server'
+import type { clockProofSchema } from '#/features/attendance-security/attendance-security.schemas'
+import type { ClockSecurityContext } from '#/features/attendance-security/server/attendance-security-context.server'
+import type { z } from 'zod'
+import { currentActor } from '#/features/attendance-security/server/attendance-security.repository.server'
+
+export async function getAssistedClockState(actor: Actor, userId: string) {
+  return repository.transactAttendance(async (tx) => {
+    await currentActor(tx, actor, 'attendance.clock.assist')
+    if (actor.id === userId) throw new AuthorizationError()
+    const employeeId = await activeEmployee(tx, actor, false, userId)
+    const workday = await getEmployeeWorkday(new Date(), employeeId, tx)
+    const latest = await repository.latestSession(tx, employeeId)
+    const open = await repository.openSession(tx, employeeId)
+    const leave = await readApprovedLeaveForAttendance(tx, userId, workday.date)
+    return {
+      lastSessionId: latest?.id ?? null,
+      openSessionId: open?.id ?? null,
+      workDate: workday.date,
+      nonWorking: workday.kind === 'day_off' || Boolean(leave),
+    }
+  })
+}
 
 export class AttendanceWorkflowError extends Error {}
 async function activeEmployee(
   tx: repository.AttendanceTransaction,
   actor: Actor | null,
   write: boolean,
+  subjectUserId = actor?.id,
 ) {
   if (!actor) throw new AuthorizationError()
   const { identity, person } = await repository.employeeForActor(
     tx,
-    actor.id,
+    subjectUserId!,
     write,
   )
   if (!identity || identity.state !== 'active' || person?.status === 'inactive')
@@ -122,15 +149,39 @@ export async function readEmployeeCorrections(
     return repository.employeeCorrections(tx, employeeId, page)
   })
 }
-export async function checkIn(actor: Actor | null, input: unknown) {
+export async function checkIn(
+  actor: Actor | null,
+  input: unknown,
+  context?: ClockSecurityContext,
+  proof?: z.infer<typeof clockProofSchema>,
+) {
   if (!actor) throw new AuthorizationError()
   return repository.transactAttendance(async (tx) => {
-    const employeeId = await activeEmployee(tx, actor, true)
     const result = checkInSchema.safeParse(input)
     if (!result.success)
       throw new AttendanceWorkflowError(
         'შესვლის მოთხოვნა არასწორია. განაახლეთ გვერდი.',
       )
+    const security = await authorizeClockAction(
+      tx,
+      actor,
+      {
+        ...proof,
+        intent: {
+          kind: 'in',
+          data: result.data,
+          ...(proof?.intent.targetUserId
+            ? {
+                targetUserId: proof.intent.targetUserId,
+                reason: proof.intent.reason,
+              }
+            : {}),
+        },
+      },
+      context,
+    )
+    const subjectUserId = security.intent.targetUserId ?? actor.id
+    const employeeId = await activeEmployee(tx, actor, true, subjectUserId)
     const existing = await repository.sessionForRequest(
       tx,
       employeeId,
@@ -154,7 +205,7 @@ export async function checkIn(actor: Actor | null, input: unknown) {
     const nonWorkingDay = workday.kind === 'day_off'
     const approvedLeave = await readApprovedLeaveForAttendance(
       tx,
-      actor.id,
+      subjectUserId,
       workday.date,
       true,
     )
@@ -203,15 +254,54 @@ export async function checkIn(actor: Actor | null, input: unknown) {
       throw new AttendanceWorkflowError(
         'შესვლა ვერ დაფიქსირდა. სცადეთ ხელახლა.',
       )
+    await recordPunch(tx, {
+      sessionId: created.id,
+      employeeId,
+      subjectUserId,
+      actorId: actor.id,
+      kind: 'in',
+      source: security.intent.targetUserId ? 'hr' : 'employee',
+      occurredAt: now,
+      ip: security.ip,
+      deviceId: security.deviceId,
+      credentialId: security.credentialId,
+      userVerified: security.userVerified,
+      reason: security.intent.reason,
+    })
     return created
   })
 }
-export async function checkOut(actor: Actor | null, input: unknown) {
+export async function checkOut(
+  actor: Actor | null,
+  input: unknown,
+  context?: ClockSecurityContext,
+  proof?: z.infer<typeof clockProofSchema>,
+) {
+  if (!actor) throw new AuthorizationError()
   return repository.transactAttendance(async (tx) => {
-    const employeeId = await activeEmployee(tx, actor, true)
     const result = checkOutSchema.safeParse(input)
     if (!result.success)
       throw new AttendanceWorkflowError('გასვლის მოთხოვნა არასწორია.')
+    const security = await authorizeClockAction(
+      tx,
+      actor,
+      {
+        ...proof,
+        intent: {
+          kind: 'out',
+          data: result.data,
+          ...(proof?.intent.targetUserId
+            ? {
+                targetUserId: proof.intent.targetUserId,
+                reason: proof.intent.reason,
+              }
+            : {}),
+        },
+      },
+      context,
+    )
+    const subjectUserId = security.intent.targetUserId ?? actor.id
+    const employeeId = await activeEmployee(tx, actor, true, subjectUserId)
     const open = await repository.openSession(tx, employeeId)
     if (!open || open.id !== result.data.sessionId)
       throw new AttendanceWorkflowError(
@@ -231,6 +321,20 @@ export async function checkOut(actor: Actor | null, input: unknown) {
       throw new AttendanceWorkflowError(
         'გასვლა ვერ დაფიქსირდა. განაახლეთ გვერდი.',
       )
+    await recordPunch(tx, {
+      sessionId: open.id,
+      employeeId,
+      subjectUserId,
+      actorId: actor.id,
+      kind: 'out',
+      source: security.intent.targetUserId ? 'hr' : 'employee',
+      occurredAt: now,
+      ip: security.ip,
+      deviceId: security.deviceId,
+      credentialId: security.credentialId,
+      userVerified: security.userVerified,
+      reason: security.intent.reason,
+    })
     return { id: open.id }
   })
 }

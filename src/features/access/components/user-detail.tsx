@@ -1,4 +1,5 @@
 import { EmployeeDayOffBalanceCard } from '#/features/leave/components/day-off-allowance-card'
+import { EmployeeNetworkCard } from '#/features/attendance-security/components/employee-network-card'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
@@ -102,6 +103,9 @@ export function UserDetail({
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-6">
           <UserProfileCard record={record} />
+          {actor.id !== userId && hasPermission(actor, 'security.configure') ? (
+            <EmployeeNetworkCard actorId={actor.id} userId={userId} />
+          ) : null}
           <UserScheduleCard
             week={record.workingWeek}
             companyWeek={companyWeek}

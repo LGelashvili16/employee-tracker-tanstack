@@ -11,6 +11,8 @@ import { CompanyAttendanceSessionsTable } from '../components/company-attendance
 import { AttendanceDayPicker } from '../components/attendance-day-picker'
 import { companyAttendanceUserQuery } from '../company-attendance.queries'
 import { formatWorkedTime, sessionMetrics } from '../attendance.rules'
+import { AssistedClockCard } from '#/features/attendance-security/components/assisted-clock-card'
+import { hasPermission } from '#/lib/authorization/permissions'
 
 const route = getRouteApi('/_authenticated/manage/attendance/$userId')
 export function CompanyAttendanceUserPage() {
@@ -135,6 +137,10 @@ function EmployeeAttendanceWorkspace() {
               value="attendance"
               className="flex min-w-0 flex-col gap-6"
             >
+              {actor.id !== userId &&
+              hasPermission(actor, 'attendance.clock.assist') ? (
+                <AssistedClockCard actorId={actor.id} userId={userId} />
+              ) : null}
               <div
                 className="min-w-0 overflow-hidden rounded-xl border bg-card"
                 aria-busy={query.isFetching}

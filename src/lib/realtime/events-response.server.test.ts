@@ -8,6 +8,10 @@ const announcementEventsResponse = (request: Request) =>
   eventsResponse(request, [announcementRealtimeHandler])
 
 vi.mock('@tanstack/react-start/server-only', () => ({}))
+vi.mock('#/features/attendance-security/server/network.server', () => ({
+  currentRequestIp: () => '127.0.0.1',
+  networkAllowed: async () => true,
+}))
 const mocks = vi.hoisted(() => ({
   actor: vi.fn(),
   stream: vi.fn(),

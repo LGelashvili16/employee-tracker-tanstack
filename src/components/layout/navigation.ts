@@ -29,6 +29,12 @@ import type { Permission } from '#/lib/authorization/permissions'
 
 export const navigationItems = [
   {
+    to: '/manage/devices',
+    icon: IconShieldLock,
+    label: 'დასწრების მოწყობილობები',
+    permission: 'attendance.devices.manage',
+  },
+  {
     to: '/admin/access',
     icon: IconUserShield,
     label: 'მომხმარებლების წვდომა',

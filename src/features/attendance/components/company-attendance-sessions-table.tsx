@@ -30,15 +30,41 @@ const helper = createColumnHelper<typeof features, Row>()
 const columns = helper.columns([
   helper.accessor('startedAt', {
     header: 'შესვლა',
-    cell: ({ row }) =>
-      formatAttendanceDateTime(row.original.startedAt, row.original.timezone),
+    cell: ({ row }) => (
+      <div className="flex flex-col gap-1">
+        <span>
+          {formatAttendanceDateTime(
+            row.original.startedAt,
+            row.original.timezone,
+          )}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          აღრიცხა: {row.original.startedBy ?? 'ისტორიული ჩანაწერი'}
+        </span>
+      </div>
+    ),
   }),
   helper.accessor('endedAt', {
     header: 'გასვლა',
-    cell: ({ row }) =>
-      row.original.endedAt
-        ? formatAttendanceDateTime(row.original.endedAt, row.original.timezone)
-        : 'მიმდინარე',
+    cell: ({ row }) => (
+      <div className="flex flex-col gap-1">
+        <span>
+          {row.original.endedAt
+            ? formatAttendanceDateTime(
+                row.original.endedAt,
+                row.original.timezone,
+              )
+            : 'მიმდინარე'}
+        </span>
+        {row.original.endedAt ? (
+          <span className="text-xs text-muted-foreground">
+            აღრიცხა:{' '}
+            {row.original.endedBy ??
+              (row.original.autoClosedAt ? 'სისტემა' : 'ისტორიული ჩანაწერი')}
+          </span>
+        ) : null}
+      </div>
+    ),
   }),
   helper.display({
     id: 'duration',

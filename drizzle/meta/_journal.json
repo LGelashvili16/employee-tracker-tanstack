@@ -232,6 +232,27 @@
       "when": 1794816788621,
       "tag": "0032_superb_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794830171764,
+      "tag": "0033_attendance_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794830947679,
+      "tag": "0034_attendance_security_constraints",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794834821306,
+      "tag": "0035_passkey_disabled_by_default",
+      "breakpoints": true
     }
   ]
 }

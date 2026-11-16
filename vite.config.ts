@@ -16,8 +16,9 @@ const config = defineConfig({
   // Keep Start's optimizer artifacts separate from standalone local previews.
   cacheDir: 'node_modules/.vite/teamwork-start',
   optimizeDeps: {
-    // Account management is lazy-loaded; prebundle Query before navigating there.
-    include: ['@tanstack/react-query'],
+    // Lazy routes introduce Base UI subpaths after startup. Prebundle them together
+    // so navigation does not invalidate dependencies already loaded by the browser.
+    include: ['@tanstack/react-query', '@base-ui/react/**'],
   },
   resolve: {
     // Explicit filesystem aliases also resolve in Nitro's SSR module runner on Windows.

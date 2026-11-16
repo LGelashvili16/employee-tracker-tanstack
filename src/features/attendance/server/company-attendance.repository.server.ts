@@ -138,6 +138,12 @@ export async function companyAttendanceUser(
   const sessions = await tx
     .select({
       id: attendanceSession.id,
+      startedBy: sql<
+        string | null
+      >`(select u.name from attendance_punch p join "user" u on u.id = p.actor_id where p.session_id = attendance_session.id and p.kind = 'in')`,
+      endedBy: sql<
+        string | null
+      >`(select u.name from attendance_punch p join "user" u on u.id = p.actor_id where p.session_id = attendance_session.id and p.kind = 'out')`,
       date: attendanceSession.workDate,
       timezone: attendanceSession.timezone,
       startedAt: attendanceSession.startedAt,

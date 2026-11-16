@@ -1,12 +1,16 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import { toast } from 'sonner'
 import { finishMyWork, startMyWork } from '../attendance.functions'
 import { attendanceKey } from '../attendance.queries'
-import { checkInSchema, checkOutSchema } from '../attendance.schemas'
+import type { checkInSchema, checkOutSchema } from '../attendance.schemas'
 import type { AttendanceOverview } from '../attendance.types'
 import type { z } from 'zod'
+import {
+  ClockVerificationError,
+  verifyClockIntent,
+} from '#/features/attendance-security/verify-clock'
 
 type ClockAction =
   | { kind: 'in'; data: z.infer<typeof checkInSchema> }
@@ -19,19 +23,35 @@ export function useAttendanceActions(
   const start = useServerFn(startMyWork)
   const finish = useServerFn(finishMyWork)
   const client = useQueryClient()
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const request = useRef<z.infer<typeof checkInSchema> | null>(null)
   const mutation = useMutation({
-    mutationFn: (action: ClockAction) =>
-      action.kind === 'in'
-        ? start({ data: checkInSchema.parse(action.data) })
-        : finish({ data: checkOutSchema.parse(action.data) }),
+    mutationFn: async (action: ClockAction) => {
+      const proof = await verifyClockIntent(action)
+      return action.kind === 'in'
+        ? start({ data: proof })
+        : finish({ data: proof })
+    },
     retry: false,
     onSettled: () =>
-      client.invalidateQueries({ queryKey: attendanceKey(actorId) }),
+      Promise.all([
+        client.invalidateQueries({ queryKey: attendanceKey(actorId) }),
+        client.invalidateQueries({
+          queryKey: ['attendance-security', 'status', actorId],
+        }),
+      ]),
   })
   async function execute(action: ClockAction) {
-    const result = await mutation.mutateAsync(action).catch(() => null)
+    let verificationMessage: string | undefined
+    const result = await mutation
+      .mutateAsync(action)
+      .catch((error: unknown) => {
+        if (error instanceof ClockVerificationError)
+          verificationMessage = error.message
+        return null
+      })
     if (result?.ok) {
+      setErrorMessage(null)
       toast.success(
         action.kind === 'in'
           ? 'სამუშაოს დაწყება დაფიქსირდა.'
@@ -39,15 +59,22 @@ export function useAttendanceActions(
       )
       if (action.kind === 'in') request.current = null
     } else {
+      setErrorMessage(
+        result?.message ??
+          verificationMessage ??
+          'მოთხოვნა ვერ დასრულდა. გადაამოწმეთ დასწრების მდგომარეობა.',
+      )
       toast.error(
         result
           ? result.message
-          : 'მოთხოვნა ვერ დასრულდა. გადაამოწმეთ დასწრების მდგომარეობა ხელახლა ცდამდე.',
+          : (verificationMessage ??
+              'მოთხოვნა ვერ დასრულდა. გადაამოწმეთ დასწრების მდგომარეობა ხელახლა ცდამდე.'),
       )
     }
     return result?.ok ?? false
   }
   return {
+    errorMessage,
     pending: mutation.isPending,
     start: (confirmNonWorkingDay = false) => {
       // Retain an operation key across a lost response; retries must not create another working interval.

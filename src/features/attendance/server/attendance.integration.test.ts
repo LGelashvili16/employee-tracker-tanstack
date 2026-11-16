@@ -105,7 +105,33 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
       }
     }
     process.env.DATABASE_URL = target.toString()
-    service = await import('./attendance.service.server')
+    const implementation = await import('./attendance.service.server')
+    const securityContext = (subjectActor: Actor | null) =>
+      subjectActor
+        ? {
+            userId: subjectActor.id,
+            tokenHash: subjectActor.id,
+            sessionHash: subjectActor.id,
+            ip: '127.0.0.1',
+          }
+        : undefined
+    service = {
+      ...implementation,
+      checkIn: (subjectActor, input, context, proof) =>
+        implementation.checkIn(
+          subjectActor,
+          input,
+          context ?? securityContext(subjectActor),
+          proof,
+        ),
+      checkOut: (subjectActor, input, context, proof) =>
+        implementation.checkOut(
+          subjectActor,
+          input,
+          context ?? securityContext(subjectActor),
+          proof,
+        ),
+    }
     review = await import('./attendance-review.service.server')
     timesheets =
       await import('#/features/timesheets/server/timesheets.service.server')
@@ -127,10 +153,10 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     time('2026-11-04T06:05:00Z')
     await sql().query(
-      'DELETE FROM day_off_allowance_audit; DELETE FROM day_off_balance; DELETE FROM leave_audit; DELETE FROM leave_request; DELETE FROM employee_work_schedule; DELETE FROM attendance_audit; DELETE FROM attendance_reviewer; DELETE FROM attendance_setting; DELETE FROM attendance_session; DELETE FROM company_schedule_audit; DELETE FROM company_schedule_day; DELETE FROM company_schedule;',
+      'DELETE FROM attendance_punch; DELETE FROM attendance_challenge; DELETE FROM attendance_security_audit; DELETE FROM attendance_device; DELETE FROM attendance_employee_network; DELETE FROM attendance_security_policy; DELETE FROM day_off_allowance_audit; DELETE FROM day_off_balance; DELETE FROM leave_audit; DELETE FROM leave_request; DELETE FROM employee_work_schedule; DELETE FROM attendance_audit; DELETE FROM attendance_reviewer; DELETE FROM attendance_setting; DELETE FROM attendance_session; DELETE FROM company_schedule_audit; DELETE FROM company_schedule_day; DELETE FROM company_schedule;',
     )
     await sql().query(
-      `UPDATE "user" SET access_state = 'active'; UPDATE employee SET status = 'active';`,
+      `INSERT INTO attendance_security_policy (id, passkey_required) VALUES (1,false); INSERT INTO attendance_device (user_id, token_hash, name, state) SELECT id,id,'ტესტის ბრაუზერი','approved' FROM "user"; UPDATE "user" SET access_state = 'active'; UPDATE employee SET status = 'active';`,
     )
     await sql().query(
       `INSERT INTO company_schedule (effective_from, timezone, late_grace_minutes, early_departure_grace_minutes) VALUES ('2026-01-01', 'Asia/Tbilisi', 0, 0)`,

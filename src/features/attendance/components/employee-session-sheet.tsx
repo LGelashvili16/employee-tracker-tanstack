@@ -155,6 +155,17 @@ export function EmployeeSessionSheet({
                               'მიმდინარე'
                             )}
                           </dd>
+                          {field === 'startedAt' || current ? (
+                            <dd className="text-xs text-muted-foreground">
+                              აღრიცხა:{' '}
+                              {field === 'startedAt'
+                                ? (session.startedBy ?? 'ისტორიული ჩანაწერი')
+                                : (session.endedBy ??
+                                  (session.autoClosedAt
+                                    ? 'სისტემა'
+                                    : 'ისტორიული ჩანაწერი'))}
+                            </dd>
+                          ) : null}
                           {session.corrected && original !== current ? (
                             <dd className="text-xs text-muted-foreground tabular-nums">
                               თავდაპირველად:{' '}

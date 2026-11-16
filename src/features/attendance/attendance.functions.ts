@@ -1,21 +1,29 @@
+import { z } from 'zod'
+import { recordIdSchema } from '#/lib/route-schemas'
 import { createServerFn } from '@tanstack/react-start'
 import { setResponseHeader } from '@tanstack/react-start/server'
 import { authenticatedMiddleware } from '#/lib/auth/auth.middleware'
 import { enforcePolicy } from '#/lib/authorization/guards.server'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
+import { recordClockDenial } from '#/features/attendance-security/server/attendance-security.service.server'
+import type { Actor } from '#/lib/authorization/actor'
+import { clockProofSchema } from '#/features/attendance-security/attendance-security.schemas'
+import {
+  AttendanceSecurityError,
+  clockSecurityContext,
+} from '#/features/attendance-security/server/attendance-security-context.server'
 import {
   AttendanceWorkflowError,
   checkIn,
   checkOut,
   getAttendanceOverview,
+  getAssistedClockState,
   readEmployeeCorrections,
   readEmployeeDaySessions,
 } from './server/attendance.service.server'
 import {
-  checkInSchema,
   attendanceCorrectionsSchema,
   employeeSessionListSchema,
-  checkOutSchema,
   attendanceAssignmentSchema,
   attendanceCorrectionSchema,
   attendanceHistorySchema,
@@ -39,21 +47,30 @@ import {
   readCompanyAttendanceUser,
 } from './server/company-attendance.service.server'
 
-async function safely<T>(action: () => Promise<T>) {
+async function safely<T>(action: () => Promise<T>, actor?: Actor) {
   setResponseHeader('Cache-Control', 'private, no-store')
   try {
     return { ok: true as const, value: await enforcePolicy(action) }
   } catch (error) {
     if (error instanceof AuthorizationError) throw error
+    if (actor && error instanceof AttendanceSecurityError)
+      await recordClockDenial(actor.id, error.message).catch(() => undefined)
     return {
       ok: false as const,
       message:
-        error instanceof AttendanceWorkflowError
+        error instanceof AttendanceWorkflowError ||
+        error instanceof AttendanceSecurityError
           ? error.message
           : 'დასწრების მონაცემები ვერ დამუშავდა. სცადეთ ხელახლა.',
     }
   }
 }
+export const readAssistedClockState = createServerFn({ method: 'GET' })
+  .middleware([authenticatedMiddleware])
+  .validator(z.object({ userId: recordIdSchema }))
+  .handler(({ context, data }) =>
+    safely(() => getAssistedClockState(context.actor, data.userId)),
+  )
 export const readMyAttendance = createServerFn({ method: 'GET' })
   .middleware([authenticatedMiddleware])
   .handler(({ context }) => safely(() => getAttendanceOverview(context.actor)))
@@ -71,12 +88,32 @@ export const readMyAttendanceSessions = createServerFn({ method: 'GET' })
   )
 export const startMyWork = createServerFn({ method: 'POST' })
   .middleware([authenticatedMiddleware])
-  .validator(checkInSchema)
-  .handler(({ context, data }) => safely(() => checkIn(context.actor, data)))
+  .validator(clockProofSchema)
+  .handler(({ context, data }) =>
+    safely(async () => {
+      if (data.intent.kind !== 'in') throw new AuthorizationError()
+      return checkIn(
+        context.actor,
+        data.intent.data,
+        await clockSecurityContext(context.actor, true),
+        data,
+      )
+    }, context.actor),
+  )
 export const finishMyWork = createServerFn({ method: 'POST' })
   .middleware([authenticatedMiddleware])
-  .validator(checkOutSchema)
-  .handler(({ context, data }) => safely(() => checkOut(context.actor, data)))
+  .validator(clockProofSchema)
+  .handler(({ context, data }) =>
+    safely(async () => {
+      if (data.intent.kind !== 'out') throw new AuthorizationError()
+      return checkOut(
+        context.actor,
+        data.intent.data,
+        await clockSecurityContext(context.actor, true),
+        data,
+      )
+    }, context.actor),
+  )
 
 export const readCompanyAttendanceUsers = createServerFn({ method: 'GET' })
   .middleware([authenticatedMiddleware])

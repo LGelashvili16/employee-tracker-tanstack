@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 51. Last updated: 2026-11-12.
+Status: required project instructions. Version: 55. Last updated: 2026-11-16.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -340,6 +340,10 @@ When the user changes a shared UI standard, update this file instead of creating
 
 - The allowance settings tab includes the annual paid-vacation default, initially 24 working days and never below 24. January 1 adds each employee annual vacation allowance while preserving unused days. Keep the vacation addition separate from the day-off reset toggle.
 - Do not request a change reason when saving company leave limits, attendance warning thresholds, or attendance reviewer assignments. Record these changes in the audit log with an automatic reason.
+- Security policy settings and device approval, rejection, and revocation dialogs have no reason textarea. Retain actor, target, status changes, and automatic descriptions in the audit log.
+- Account security uses a bounded layout with the current browser summary before the device history Data Table and a compact password Card. Show device approval and Passkey status separately. When required by company policy, offer the same Passkey setup directly on the clock screen; enrollment must retain HR approval and must never automatically record attendance. Start native enrollment only after the employee selects its action.
+- On the clock screen, keep the setup prompt to an informational Alert explaining Passkey and the HR review requirement, plus a button labeled `Passkey-ის დამატება`. Omit browser identity, device-state badges, and configuration links from this prompt. While an enrolled device awaits HR review, keep that action disabled. The full device summary belongs on account security.
+- Bound security settings to a readable content width, with separate Cards for passkey verification and network access. Include `(Passkey)` in the extra-verification switch label and default new policies to off. Use compact setting descriptions and a right-aligned save action. Device management opens with all devices and uses rounded status tabs, including active registrations with a revocation action.
 
 ## Sick leave
 

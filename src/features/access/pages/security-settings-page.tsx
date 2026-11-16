@@ -1,15 +1,19 @@
-import { PlannedFeaturePage } from '#/components/common/planned-feature-page'
+import { getRouteApi } from '@tanstack/react-router'
+import { SecurityPolicy } from '#/features/attendance-security/components/security-policy-form'
+import { AttendanceSecurityProvider } from '#/features/attendance-security/providers/attendance-security-provider'
 
 export function SecuritySettingsPage() {
+  const { actor } = getRouteApi(
+    '/_authenticated/admin/settings/security',
+  ).useRouteContext()
   return (
-    <PlannedFeaturePage
-      title="უსაფრთხოების პოლიტიკა"
-      items={[
-        'მოქმედი სესიებისა და მოწყობილობების მიმოხილვა.',
-        'მრავალფაქტორიანი ავტორიზაციისა და ანგარიშის აღდგენის პოლიტიკა.',
-        'შესვლის წარუმატებელი მცდელობებისა და საეჭვო აქტივობის მიმოხილვა.',
-        'სესიის ხანგრძლივობისა და უსაფრთხოების ცვლილებების ისტორია.',
-      ]}
-    />
+    <section className="flex flex-col gap-6">
+      <h1 className="text-2xl font-semibold tracking-tight">
+        უსაფრთხოების პოლიტიკა
+      </h1>
+      <AttendanceSecurityProvider key={actor.id}>
+        <SecurityPolicy actorId={actor.id} />
+      </AttendanceSecurityProvider>
+    </section>
   )
 }

@@ -26,6 +26,8 @@ export const permissionSchema = z.enum(
     'roles.manage',
     'company.configure',
     'attendance.configure',
+    'attendance.devices.manage',
+    'attendance.clock.assist',
     'approvals.configure',
     'leave.configure',
     'security.configure',
@@ -95,6 +97,8 @@ export function currentAuthorization(value: {
 }
 
 const administrationPermissions = [
+  'attendance.devices.manage',
+  'attendance.clock.assist',
   'complaints.review.all',
   'announcements.manage',
   'manage.access',
@@ -132,6 +136,8 @@ const managementPermissions: Record<
     'employees.read',
   ],
   hr_manager: [
+    'attendance.devices.manage',
+    'attendance.clock.assist',
     'attendance.correct.all',
     'complaints.review.all',
     'complaints.read.confidential',

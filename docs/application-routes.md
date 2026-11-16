@@ -66,7 +66,7 @@ Remaining page shells are intentional unfinished workflows, not implemented dupl
 | Routes                                                                                                              | Unavailable workflow                                                                                                     |
 | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `/auth/verify-email`, `/auth/mfa`                                                                                   | Email verification and MFA.                                                                                              |
-| `/attendance/corrections`                                                                                           | Redirects to personal attendance. Correction history is available there.                                                  |
+| `/attendance/corrections`                                                                                           | Redirects to personal attendance. Correction history is available there.                                                 |
 | `/admin/settings/leave`                                                                                             | Vacation configuration.                                                                                                  |
 | `/manage/reports`                                                                                                   | Employee attendance and job reports.                                                                                     |
 | `/admin/invitations`                                                                                                | Invitation management. Role assignment and per-user exceptions are implemented in the separate account-access workflow.  |
@@ -139,6 +139,8 @@ Role grants are comma-separated validated identifiers provisioned only by truste
 - Better Auth retains its HTTP handler at `/api/auth/*`.
 
 ## Validation
+
+Attendance network rules and the optional passkey check are implemented at `/admin/settings/security`. Browser registration and passkey enrollment are on `/settings/security`; `/manage/devices` provides the permission-guarded HR/admin device approval queue. Employee profiles expose administrator-owned individual IP allowlists, and management attendance detail supports explicitly authorized HR-assisted clock actions with separate actor attribution. See [attendance security](attendance-security.md) for deployment trust, enrollment, recovery, and validation.
 
 Run `pnpm test`, `pnpm exec tsc --noEmit`, and `pnpm build`. Tests exercise role grants, denied direct permission checks, input validation, and attendance UI states. `RUN_ATTENDANCE_DB_TESTS=1 pnpm test src/features/attendance/server/attendance.integration.test.ts` runs isolated local PostgreSQL checks for employee scope, concurrent clock actions, idempotency, exact time calculations, schedule snapshots, and timezone transitions. Manager review tests cover explicit scope, current permissions, self-review denial, original-punch retention, atomic audit persistence, overlaps, stale versions and competing updates.
 

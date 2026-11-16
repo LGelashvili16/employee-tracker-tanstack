@@ -62,6 +62,8 @@ function mount(canReview = true, canCorrect = canReview) {
         rows={[
           {
             ...session(),
+            startedBy: 'ანა',
+            endedBy: 'ანა',
             canReview,
             canCorrect,
             date: session().workDate,

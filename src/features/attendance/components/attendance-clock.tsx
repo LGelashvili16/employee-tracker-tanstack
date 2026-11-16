@@ -1,4 +1,7 @@
 import { useCallback, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { deviceStatusOptions } from '#/features/attendance-security/attendance-security.queries'
+import { CurrentDeviceSetup } from '#/features/attendance-security/components/current-device-setup'
 import { IconCirclePause, IconCirclePlay, IconClock } from '@tabler/icons-react'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
@@ -43,6 +46,13 @@ export function AttendanceClock({
   workLog?: boolean
 }) {
   const action = useAttendanceActions(actorId, overview)
+  const security = useQuery(deviceStatusOptions(actorId))
+  const deviceStatus = security.data?.ok ? security.data.value : null
+  const setupRequired = Boolean(
+    deviceStatus?.passkeyRequired &&
+    (deviceStatus.currentDevice?.state !== 'approved' ||
+      !deviceStatus.currentDevice.hasPasskey),
+  )
   const { openModal } = useModal()
   const submitting = useRef(false)
   const sampleReceivedAt = useRef<number | null>(null)
@@ -104,6 +114,37 @@ export function AttendanceClock({
           compact ? 'gap-4' : 'gap-6',
         )}
       >
+        {setupRequired && deviceStatus ? (
+          <div className="w-full lg:col-span-full">
+            <CurrentDeviceSetup actorId={actorId} status={deviceStatus} clock />
+          </div>
+        ) : null}
+        {security.isError || security.data?.ok === false ? (
+          <Alert variant="warning" className="lg:col-span-full">
+            <AlertDescription>
+              მოწყობილობის სტატუსი ვერ შემოწმდა. განაახლეთ გვერდი ან
+              დაუკავშირდით HR-ს.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {action.errorMessage ? (
+          <Alert
+            variant="warning"
+            className="flex flex-col items-start gap-3 lg:col-span-full"
+          >
+            <AlertDescription>{action.errorMessage}</AlertDescription>
+            <Button
+              nativeButton={false}
+              role="link"
+              variant="outline"
+              depth="raised"
+              size="sm"
+              render={<a href="/settings/security" />}
+            >
+              მოწყობილობის გამართვა
+            </Button>
+          </Alert>
+        ) : null}
         <div
           className={cn(
             workLog
@@ -129,6 +170,7 @@ export function AttendanceClock({
             )}
             disabled={
               action.pending ||
+              setupRequired ||
               (!open && overview.workday.kind === 'unconfigured')
             }
             aria-busy={action.pending}
