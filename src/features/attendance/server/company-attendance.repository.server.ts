@@ -151,6 +151,7 @@ export async function companyAttendanceUser(
       maxOpenHours: attendanceSession.maxOpenHours,
       originalStartedAt: attendanceSession.originalStartedAt,
       originalEndedAt: attendanceSession.originalEndedAt,
+      autoClosedAt: attendanceSession.autoClosedAt,
       isFirstOfDay: sql<boolean>`row_number() over (partition by ${attendanceSession.workDate} order by ${attendanceSession.startedAt}, ${attendanceSession.id}) = 1`,
       isLastOfDay: sql<boolean>`row_number() over (partition by ${attendanceSession.workDate} order by ${attendanceSession.startedAt} desc, ${attendanceSession.id} desc) = 1`,
     })

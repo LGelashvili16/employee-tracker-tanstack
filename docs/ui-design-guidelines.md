@@ -339,7 +339,7 @@ When the user changes a shared UI standard, update this file instead of creating
 - The personal vacation page shows დასვენების დღეები in a compact blue shadcn Badge and available paid შვებულება in a purple Badge, measured in working days. Omit annual-limit, reset-date, and approval-deduction explanations from this summary.
 
 - The allowance settings tab includes the annual paid-vacation default, initially 24 working days and never below 24. January 1 adds each employee annual vacation allowance while preserving unused days. Keep the vacation addition separate from the day-off reset toggle.
-- Do not request a change reason when saving company leave limits. Record the settings change in the audit log with an automatic reason.
+- Do not request a change reason when saving company leave limits, attendance warning thresholds, or attendance reviewer assignments. Record these changes in the audit log with an automatic reason.
 
 ## Sick leave
 

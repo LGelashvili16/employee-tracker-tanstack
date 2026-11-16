@@ -150,7 +150,7 @@ function SettingsContent({
         <TabsContent
           value="leave"
           keepMounted
-          className="max-w-2xl data-[hidden]:hidden"
+          className="max-w-4xl data-[hidden]:hidden"
         >
           <DayOffSettingsCard canEdit={canConfigureLeave} />
         </TabsContent>

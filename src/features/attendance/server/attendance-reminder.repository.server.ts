@@ -105,6 +105,46 @@ export async function openCandidates(
   ).rows
 }
 
+/** Close a bounded batch at the cutoff, including sessions left open during outages. */
+export async function autoCloseSessions(
+  tx: AttendanceTransaction,
+  instant: string,
+) {
+  return (
+    await tx.execute<Candidate>(sql`with due as (
+    select id from attendance_session where ended_at is null
+      and started_at + interval '18 hours' <= ${instant}::timestamptz
+    order by started_at, id limit ${limit} for update skip locked
+  ), closed as (
+    update attendance_session s set ended_at=s.started_at + interval '18 hours',
+      auto_closed_at=s.started_at + interval '18 hours', revision=s.revision+1,
+      review_state='pending', approved_outside_seconds=0
+    from due where s.id=due.id and s.ended_at is null
+    returning s.id,s.employee_id,s.work_date
+  ) select e.user_id subject, r.recipient, c.work_date::text date,
+    'auto-checkout:'||c.id as key from closed c join employee e on e.id=c.employee_id
+    cross join lateral (
+      select active.user_id recipient from (${activeEmployees}) active where active.id=e.id
+      union select reviewer.recipient from (${reviewers}) reviewer where reviewer.employee_id=e.id
+    ) r`)
+  ).rows
+}
+
+export async function autoCloseWarnings(
+  tx: AttendanceTransaction,
+  instant: string,
+) {
+  return (
+    await tx.execute<Candidate>(sql`with c as (
+    select e.user_id subject,e.user_id recipient,s.work_date::text date,
+      'auto-checkout-warning:'||s.id as key
+    from attendance_session s join (${activeEmployees}) e on e.id=s.employee_id
+    where s.ended_at is null and s.started_at + interval '17 hours' <= ${instant}::timestamptz
+      and s.started_at + interval '18 hours' > ${instant}::timestamptz
+  ) select * from c where ${undelivered} order by key limit ${limit}`)
+  ).rows
+}
+
 export async function digestCandidates(
   tx: AttendanceTransaction,
   instant: string,

@@ -39,6 +39,7 @@ export type ReviewSession = WorkingSession & {
   approvedOutsideSeconds: number
   originalStartedAt: string | null
   originalEndedAt: string | null
+  autoClosedAt: string | null
   canReview: boolean
   canCorrect: boolean
 }

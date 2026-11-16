@@ -110,3 +110,31 @@ it('shows a safe failure without leaking database details', async () => {
   )
   expect(screen.queryByText('private sql details')).not.toBeInTheDocument()
 })
+
+it('identifies an automatic checkout as needing review', async () => {
+  api.read.mockResolvedValue({
+    ok: true,
+    value: {
+      hasMore: false,
+      serverNow: '2026-11-10T10:00:00Z',
+      items: [
+        {
+          id: 'automatic',
+          timezone: 'Asia/Tbilisi',
+          reviewState: 'pending',
+          startedAt: '2026-11-09T08:00:00Z',
+          endedAt: '2026-11-10T02:00:00Z',
+          originalStartedAt: '2026-11-09T08:00:00Z',
+          originalEndedAt: null,
+          autoClosedAt: '2026-11-10T02:00:00Z',
+          corrected: false,
+        },
+      ],
+    },
+  })
+  mount()
+  expect(
+    await screen.findByText('ავტომატური გასვლა, გადასამოწმებელია'),
+  ).toBeVisible()
+  expect(screen.queryByText('შესწორებულია')).not.toBeInTheDocument()
+})

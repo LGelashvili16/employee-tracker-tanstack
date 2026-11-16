@@ -105,6 +105,13 @@ export function EmployeeSessionSheet({
                       )}
                     </span>
                     <div className="flex flex-wrap gap-1">
+                      {session.autoClosedAt ? (
+                        <Badge variant="secondary">
+                          {session.reviewState === 'pending'
+                            ? 'ავტომატური გასვლა, გადასამოწმებელია'
+                            : 'ავტომატური გასვლა'}
+                        </Badge>
+                      ) : null}
                       {session.corrected ? (
                         <Badge variant="secondary">შესწორებულია</Badge>
                       ) : null}

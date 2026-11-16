@@ -92,6 +92,7 @@ export async function readCompanyAttendanceUser(
           expectedEndAt: session.expectedEndAt.toISOString(),
           originalStartedAt: session.originalStartedAt?.toISOString() ?? null,
           originalEndedAt: session.originalEndedAt?.toISOString() ?? null,
+          autoClosedAt: session.autoClosedAt?.toISOString() ?? null,
         })),
       }
     },

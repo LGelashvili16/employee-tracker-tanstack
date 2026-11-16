@@ -218,10 +218,19 @@ describe.runIf(enabled)('durable reminders against PostgreSQL', () => {
     const assignment = {
       reviewerId: 'manager',
       employeeId: person.id,
-      reason: 'ხელმძღვანელის ცვლილება',
     }
     await assignAttendanceReviewer(actor, { ...assignment, revoke: true })
     await assignAttendanceReviewer(actor, { ...assignment, revoke: false })
+    const assignmentAudit = await sql().query(
+      "select actor_id,reason from attendance_audit where target_id=$1 and action='attendance.reviewer_changed' order by created_at desc limit 2",
+      [person.id],
+    )
+    expect(assignmentAudit.rows.map((row) => row.reason).sort()).toEqual(
+      ['განმხილველის მინიჭების გაუქმება', 'განმხილველის მინიჭება'].sort(),
+    )
+    expect(assignmentAudit.rows.every((row) => row.actor_id === actor.id)).toBe(
+      true,
+    )
     expect(await run('2031-01-02T01:02Z')).toBe(1)
     expect(await run('2031-01-02T02:02Z')).toBe(0)
     await sql().query(
@@ -304,5 +313,57 @@ describe.runIf(enabled)('durable reminders against PostgreSQL', () => {
     await run('2031-01-06T05:02Z')
     expect(await count()).toBe(139)
     expect(await run('2031-01-06T05:03Z')).toBe(0)
+  })
+  it('warns before 18 hours and closes overdue sessions once at the cutoff for review', async () => {
+    await employees(['auto-subject', 'auto-reviewer'])
+    await sql().query(`
+      update "user" set roles='supervisor' where id='auto-reviewer';
+      insert into attendance_reviewer (reviewer_id,employee_id)
+        select 'auto-reviewer',id from employee where user_id='auto-subject';
+      insert into attendance_session(employee_id,request_id,work_date,timezone,schedule_effective_from,expected_start_at,expected_end_at,started_at)
+        select id,uuidv7(),'2031-01-08','Asia/Tbilisi','2031-01-01',
+          '2031-01-08 05:00Z','2031-01-08 13:00Z','2031-01-08 05:00Z'
+        from employee where user_id='auto-subject'
+    `)
+    await run('2031-01-08T21:59:00Z')
+    expect(
+      (
+        await sql().query(
+          "select id from notification where event_key like 'auto-checkout-warning:%' and recipient_id='auto-subject'",
+        )
+      ).rowCount,
+    ).toBe(0)
+    await run('2031-01-08T22:00:00Z')
+    expect(
+      (
+        await sql().query(
+          "select id from notification where event_key like 'auto-checkout-warning:%' and recipient_id='auto-subject'",
+        )
+      ).rowCount,
+    ).toBe(1)
+    await run('2031-01-09T01:00:00Z')
+    await run('2031-01-09T01:01:00Z')
+    const session = (
+      await sql()
+        .query(`select s.ended_at,s.auto_closed_at,s.original_ended_at,s.review_state,s.revision
+      from attendance_session s join employee e on e.id=s.employee_id where e.user_id='auto-subject'`)
+    ).rows[0]
+    expect(session.ended_at.toISOString()).toBe('2031-01-08T23:00:00.000Z')
+    expect(session.auto_closed_at.toISOString()).toBe(
+      '2031-01-08T23:00:00.000Z',
+    )
+    expect(session.original_ended_at).toBeNull()
+    expect(session.review_state).toBe('pending')
+    expect(session.revision).toBe(1)
+    expect(
+      (
+        await sql().query(
+          "select recipient_id from notification where event_key like 'auto-checkout:%' and recipient_id in ('auto-subject','auto-reviewer') order by recipient_id",
+        )
+      ).rows,
+    ).toEqual([
+      { recipient_id: 'auto-reviewer' },
+      { recipient_id: 'auto-subject' },
+    ])
   })
 })

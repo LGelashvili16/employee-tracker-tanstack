@@ -73,6 +73,7 @@ export async function listAttendanceForReview(
           expectedEndAt: session.expectedEndAt.toISOString(),
           originalStartedAt: session.originalStartedAt?.toISOString() ?? null,
           originalEndedAt: session.originalEndedAt?.toISOString() ?? null,
+          autoClosedAt: session.autoClosedAt?.toISOString() ?? null,
           reviewState: session.reviewState,
           revision: session.revision,
           approvedOutsideSeconds: session.approvedOutsideSeconds,

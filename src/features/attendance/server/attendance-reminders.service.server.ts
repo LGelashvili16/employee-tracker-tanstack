@@ -4,6 +4,8 @@ import type { DeliverNotificationsInput } from '#/features/notifications/notific
 import { deliverNotificationBatch } from '#/features/notifications/server/notifications.service.server'
 import { transactAttendance } from './attendance.repository.server'
 import {
+  autoCloseSessions,
+  autoCloseWarnings,
   checkinCandidates,
   digestCandidates,
   openCandidates,
@@ -42,6 +44,18 @@ export function runAttendanceReminders(now = new Date()) {
           },
         })
       }
+      for (const row of await autoCloseSessions(tx, instant))
+        notify(
+          row,
+          'სამუშაო სესია ავტომატურად დასრულდა',
+          'სესია 18 საათის შემდეგ ავტომატურად დასრულდა. გასვლის დრო სავარაუდოა და საჭიროებს გადამოწმებას.',
+        )
+      for (const row of await autoCloseWarnings(tx, instant))
+        notify(
+          row,
+          'სამუშაო სესია მალე დასრულდება',
+          'სესია 18 საათის შემდეგ ავტომატურად დასრულდება. საჭიროების შემთხვევაში დააფიქსირეთ გასვლა.',
+        )
       for (const row of await checkinCandidates(tx, instant))
         notify(
           row,

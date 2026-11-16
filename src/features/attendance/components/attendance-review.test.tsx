@@ -38,6 +38,7 @@ function session(): ReviewSession {
     startedAt: '2026-11-04T06:05:00.000Z',
     endedAt: '2026-11-04T15:30:00.000Z',
     originalStartedAt: '2026-11-04T06:05:00.000Z',
+    autoClosedAt: null,
     originalEndedAt: '2026-11-04T15:30:00.000Z',
     expectedStartAt: '2026-11-04T06:00:00.000Z',
     expectedEndAt: '2026-11-04T15:00:00.000Z',

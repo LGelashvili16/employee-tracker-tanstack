@@ -87,7 +87,6 @@ export const attendanceLimitSchema = z.object({
     .min(8, 'მინიმუმ 8 საათი.')
     .max(72, 'მაქსიმუმ 72 საათი.'),
   revision,
-  reason,
 })
 export const attendanceAssignmentSchema = z.object({
   employeeId: identifier,
@@ -96,5 +95,4 @@ export const attendanceAssignmentSchema = z.object({
     .min(1, 'აირჩიეთ ხელმძღვანელი.')
     .max(128, 'იდენტიფიკატორი არასწორია.'),
   revoke: z.boolean({ error: 'არჩევანი არასწორია.' }),
-  reason,
 })

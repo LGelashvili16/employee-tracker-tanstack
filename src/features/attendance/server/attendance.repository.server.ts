@@ -23,6 +23,7 @@ export async function employeeDaySessions(
       endedAt: attendanceSession.endedAt,
       originalStartedAt: attendanceSession.originalStartedAt,
       originalEndedAt: attendanceSession.originalEndedAt,
+      autoClosedAt: attendanceSession.autoClosedAt,
       reviewState: attendanceSession.reviewState,
       // Qualify the correlated ID explicitly: single-table Drizzle projections otherwise unqualify column references.
       corrected: sql<boolean>`exists (select 1 from ${attendanceAudit} where ${attendanceAudit.targetId} = attendance_session.id::text and ${attendanceAudit.action} = 'attendance.corrected')`,
@@ -256,8 +257,8 @@ export async function attendanceDays(
         sql<number>`count(*) filter (where ${attendanceSession.reviewState} = 'rejected')`.mapWith(
           Number,
         ),
-      requiresReview: sql<boolean>`bool_or(${attendanceSession.endedAt} is null and ${now}::timestamptz - ${attendanceSession.startedAt} >= ${attendanceSession.maxOpenHours} * interval '1 hour')`,
-      corrected: sql<boolean>`bool_or((${attendanceSession.originalStartedAt} is not null and ${attendanceSession.originalStartedAt} <> ${attendanceSession.startedAt}) or (${attendanceSession.endedAt} is not null and (${attendanceSession.originalEndedAt} is null or ${attendanceSession.originalEndedAt} <> ${attendanceSession.endedAt})))`,
+      requiresReview: sql<boolean>`bool_or((${attendanceSession.endedAt} is null and ${now}::timestamptz - ${attendanceSession.startedAt} >= ${attendanceSession.maxOpenHours} * interval '1 hour') or (${attendanceSession.autoClosedAt} is not null and ${attendanceSession.reviewState} = 'pending'))`,
+      corrected: sql<boolean>`bool_or((${attendanceSession.originalStartedAt} is not null and ${attendanceSession.originalStartedAt} <> ${attendanceSession.startedAt}) or (${attendanceSession.endedAt} is not null and (coalesce(${attendanceSession.originalEndedAt}, ${attendanceSession.autoClosedAt}) is null or coalesce(${attendanceSession.originalEndedAt}, ${attendanceSession.autoClosedAt}) <> ${attendanceSession.endedAt})))`,
     })
     .from(attendanceSession)
     .where(

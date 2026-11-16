@@ -1,0 +1,1 @@
+ALTER TABLE "attendance_session" ADD COLUMN "auto_closed_at" timestamp with time zone;

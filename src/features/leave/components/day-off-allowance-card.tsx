@@ -6,6 +6,7 @@ import {
   IconCalendarPause,
   IconSun,
   IconAdjustmentsHorizontal,
+  IconInfoCircle,
 } from '@tabler/icons-react'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Button } from '#/components/ui/button'
@@ -15,7 +16,13 @@ import { Switch } from '#/components/ui/switch'
 import { Spinner } from '#/components/ui/spinner'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Alert, AlertDescription } from '#/components/ui/alert'
-import { Field, FieldLabel, FieldError } from '#/components/ui/field'
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldSet,
+  FieldLegend,
+} from '#/components/ui/field'
 import {
   Dialog,
   DialogContent,
@@ -300,13 +307,24 @@ function BalanceForm({
 export function DayOffSettingsCard({ canEdit }: { canEdit: boolean }) {
   const query = useQuery(dayOffSettingsQuery())
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>დასვენებისა და შვებულების ლიმიტები</CardTitle>
+    <Card className="rounded-2xl [--card-spacing:--spacing(5)] sm:[--card-spacing:--spacing(6)]">
+      <CardHeader className="border-b">
+        <CardTitle className="font-semibold">
+          დასვენებისა და შვებულების ლიმიტები
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {query.isPending ? (
-          <PendingBalance />
+          <div
+            role="status"
+            aria-busy="true"
+            aria-label="პარამეტრები იტვირთება"
+          >
+            <div className="grid gap-6 md:grid-cols-2" aria-hidden="true">
+              <Skeleton className="h-56 w-full" />
+              <Skeleton className="h-56 w-full" />
+            </div>
+          </div>
         ) : !query.data ? (
           <BalanceError />
         ) : (
@@ -368,101 +386,136 @@ function SettingsForm({
         void form.handleSubmit()
       }}
     >
-      <p className="text-sm text-muted-foreground">
-        ახალი თანამშრომლებისთვის. შვებულება ლიმიტს არ ამცირებს.
-      </p>
-      <form.Field name="defaultDays">
-        {(field) => (
-          <Field>
-            <FieldLabel htmlFor="default-day-offs">
-              საწყისი ლიმიტი (დღე)
-            </FieldLabel>
-            <Input
-              id="default-day-offs"
-              type="number"
-              min={0}
-              max={366}
-              disabled={!canEdit}
-              value={
-                typeof field.state.value === 'number' &&
-                Number.isNaN(field.state.value)
-                  ? ''
-                  : field.state.value
-              }
-              onBlur={field.handleBlur}
-              onChange={(event) =>
-                field.handleChange(
-                  event.target.value === ''
-                    ? Number.NaN
-                    : Number(event.target.value),
-                )
-              }
-              aria-invalid={!field.state.meta.isValid}
-            />
-            <FieldError errors={field.state.meta.errors} />
-          </Field>
-        )}
-      </form.Field>
-      <form.Field name="resetYearly">
-        {(field) => (
-          <Field orientation="horizontal">
-            <FieldLabel htmlFor="reset-day-offs">
-              ბალანსის წლიური განახლება 1 იანვარს
-            </FieldLabel>
-            <Switch
-              id="reset-day-offs"
-              disabled={!canEdit}
-              checked={field.state.value}
-              onCheckedChange={field.handleChange}
-            />
-          </Field>
-        )}
-      </form.Field>
-      <p className="text-sm text-muted-foreground">
-        გამორთვისას ნაშთი შენარჩუნდება. ჩართვა იმოქმედებს მომდევნო 1 იანვრიდან.
-      </p>
-      <form.Field name="defaultVacationDays">
-        {(field) => (
-          <Field data-invalid={!field.state.meta.isValid}>
-            <FieldLabel htmlFor="default-vacation-days">
-              შვებულების წლიური ლიმიტი (სამუშაო დღე)
-              <span aria-hidden="true" className="text-destructive">
-                *
-              </span>
-            </FieldLabel>
-            <Input
-              id="default-vacation-days"
-              required
-              type="number"
-              min={24}
-              max={366}
-              disabled={!canEdit}
-              value={Number.isNaN(field.state.value) ? '' : field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(event) =>
-                field.handleChange(event.target.valueAsNumber)
-              }
-              aria-invalid={!field.state.meta.isValid}
-            />
-            <FieldError errors={field.state.meta.errors} />
-            <p className="text-sm text-muted-foreground">
-              ყოველ 1 იანვარს ემატება. გამოუყენებელი დღეები ინახება.
-            </p>
-          </Field>
-        )}
-      </form.Field>
+      <div className="grid gap-6 md:grid-cols-2 md:gap-8">
+        <FieldSet className="min-w-0 gap-5">
+          <FieldLegend className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+              <IconCalendarPause className="size-5" aria-hidden="true" />
+            </span>
+            დასვენების დღეები
+          </FieldLegend>
+          <form.Field name="defaultDays">
+            {(field) => (
+              <Field data-invalid={!field.state.meta.isValid}>
+                <FieldLabel htmlFor="default-day-offs">
+                  საწყისი ლიმიტი (დღე)
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </FieldLabel>
+                <Input
+                  id="default-day-offs"
+                  type="number"
+                  min={0}
+                  max={366}
+                  required
+                  disabled={!canEdit}
+                  value={
+                    Number.isNaN(field.state.value) ? '' : field.state.value
+                  }
+                  onBlur={field.handleBlur}
+                  onChange={(event) =>
+                    field.handleChange(event.target.valueAsNumber)
+                  }
+                  aria-invalid={!field.state.meta.isValid}
+                  aria-describedby="default-day-offs-info default-day-offs-error"
+                />
+                <FieldError
+                  id="default-day-offs-error"
+                  errors={field.state.meta.errors}
+                />
+              </Field>
+            )}
+          </form.Field>
+          <form.Field name="resetYearly">
+            {(field) => (
+              <Field
+                orientation="horizontal"
+                className="rounded-xl border bg-muted/30 p-4"
+              >
+                <FieldLabel htmlFor="reset-day-offs">
+                  ბალანსის წლიური განახლება 1 იანვარს
+                </FieldLabel>
+                <Switch
+                  id="reset-day-offs"
+                  disabled={!canEdit}
+                  checked={field.state.value}
+                  onCheckedChange={field.handleChange}
+                  aria-describedby="default-day-offs-info"
+                />
+              </Field>
+            )}
+          </form.Field>
+          <Alert variant="info" role="note" id="default-day-offs-info">
+            <IconInfoCircle aria-hidden="true" />
+            <AlertDescription>
+              საწყისი ლიმიტი ახალი თანამშრომლებისთვისაა. გამორთვისას ნაშთი
+              ინახება; ჩართვა მომდევნო 1 იანვრიდან მოქმედებს.
+            </AlertDescription>
+          </Alert>
+        </FieldSet>
+        <FieldSet className="min-w-0 gap-5">
+          <FieldLegend className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+              <IconSun className="size-5" aria-hidden="true" />
+            </span>
+            შვებულება
+          </FieldLegend>
+          <form.Field name="defaultVacationDays">
+            {(field) => (
+              <Field data-invalid={!field.state.meta.isValid}>
+                <FieldLabel htmlFor="default-vacation-days">
+                  შვებულების წლიური ლიმიტი (სამუშაო დღე)
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </FieldLabel>
+                <Input
+                  id="default-vacation-days"
+                  required
+                  type="number"
+                  min={24}
+                  max={366}
+                  disabled={!canEdit}
+                  value={
+                    Number.isNaN(field.state.value) ? '' : field.state.value
+                  }
+                  onBlur={field.handleBlur}
+                  onChange={(event) =>
+                    field.handleChange(event.target.valueAsNumber)
+                  }
+                  aria-invalid={!field.state.meta.isValid}
+                  aria-describedby="vacation-days-info vacation-days-error"
+                />
+                <FieldError
+                  id="vacation-days-error"
+                  errors={field.state.meta.errors}
+                />
+              </Field>
+            )}
+          </form.Field>
+          <Alert variant="info" role="note" id="vacation-days-info">
+            <IconInfoCircle aria-hidden="true" />
+            <AlertDescription>
+              ლიმიტი ახალი თანამშრომლებისთვისაა. დღეები ყოველ 1 იანვარს ემატება,
+              გამოუყენებელი ნაშთი ინახება და დასვენების დღეები არ მცირდება.
+            </AlertDescription>
+          </Alert>
+        </FieldSet>
+      </div>
       {canEdit ? (
         <>
           {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           ) : null}
           <form.Subscribe selector={(state) => state.isSubmitting}>
             {(pending) => (
               <Button
                 type="submit"
                 className="self-end"
+                depth="raised"
                 disabled={pending}
                 aria-busy={pending}
               >

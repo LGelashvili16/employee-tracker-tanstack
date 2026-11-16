@@ -107,6 +107,7 @@ export async function readEmployeeDaySessions(
         endedAt: row.endedAt?.toISOString() ?? null,
         originalStartedAt: row.originalStartedAt?.toISOString() ?? null,
         originalEndedAt: row.originalEndedAt?.toISOString() ?? null,
+        autoClosedAt: row.autoClosedAt?.toISOString() ?? null,
       })),
     }
   })
@@ -217,6 +218,10 @@ export async function checkOut(actor: Actor | null, input: unknown) {
         'ღია სამუშაო ჩანაწერი ვერ მოიძებნა. განაახლეთ გვერდი.',
       )
     const now = new Date()
+    if (now.getTime() >= open.startedAt.getTime() + 18 * 60 * 60 * 1000)
+      throw new AttendanceWorkflowError(
+        'სესიის ავტომატური დასრულება მიმდინარეობს. განაახლეთ გვერდი.',
+      )
     if (now < open.expectedEndAt && !result.data.confirmEarly)
       throw new AttendanceWorkflowError(
         'დაადასტურეთ სამუშაო დღის ადრე დასრულება.',

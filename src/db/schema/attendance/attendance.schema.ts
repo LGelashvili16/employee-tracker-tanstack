@@ -46,8 +46,10 @@ export const attendanceSession = pgTable(
     }).notNull(),
     /** Actual check-in UTC instant supplied by the application server, never by the browser. */
     startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
-    /** Actual check-out UTC instant from the server; null until an explicit successful check-out. */
+    /** Effective checkout; an automatic cutoff is provisional until reviewed. */
     endedAt: timestamp('ended_at', { withTimezone: true }),
+    /** Cutoff instant when the server automatically closed a forgotten session. */
+    autoClosedAt: timestamp('auto_closed_at', { withTimezone: true }),
     /** Original server punch retained when a manager corrects the effective interval. */
     originalStartedAt: timestamp('original_started_at', { withTimezone: true }),
     /** Original checkout remains null when a manager resolves a forgotten checkout. */

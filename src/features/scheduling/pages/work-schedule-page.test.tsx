@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkSchedulePage } from './work-schedule-page'
 
 const read = vi.hoisted(() => vi.fn())
+const saveLimit = vi.hoisted(() => vi.fn())
 vi.mock('#/features/attendance/attendance.functions', () => ({
   readAttendanceSettings: vi.fn(async () => ({
     ok: true,
@@ -15,7 +16,7 @@ vi.mock('#/features/attendance/attendance.functions', () => ({
       truncated: false,
     },
   })),
-  updateAttendanceLimit: vi.fn(),
+  updateAttendanceLimit: saveLimit,
   updateAttendanceReviewer: vi.fn(),
 }))
 const notifications = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
@@ -34,6 +35,8 @@ vi.mock('#/features/leave/day-off-allowance.functions', () => ({
 vi.mock('@tanstack/react-start', () => ({ useServerFn: (fn: unknown) => fn }))
 beforeEach(() => {
   read.mockReset()
+  saveLimit.mockReset()
+  saveLimit.mockResolvedValue({ ok: true, value: {} })
   notifications.success.mockReset()
   notifications.error.mockReset()
 })
@@ -117,6 +120,24 @@ describe('work schedule page states', () => {
         name: 'გადამოწმების ზღვარი (საათი)',
       }),
     ).toBeVisible()
+    expect(
+      screen.getByText(
+        /თუ სესია ღია დარჩა, ის 18 საათის შემდეგ ავტომატურად დასრულდება/,
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByRole('combobox', { name: 'თანამშრომელი' }),
+    ).toBeRequired()
+    expect(
+      screen.getByRole('combobox', { name: 'ხელმძღვანელი' }),
+    ).toBeRequired()
+    expect(screen.queryByLabelText('ცვლილების მიზეზი')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'ზღვრის შენახვა' }))
+    await waitFor(() =>
+      expect(saveLimit).toHaveBeenCalledWith({
+        data: { maxOpenHours: 16, revision: 0 },
+      }),
+    )
     expect(
       screen.queryByRole('button', { name: 'წესის შენახვა' }),
     ).not.toBeInTheDocument()

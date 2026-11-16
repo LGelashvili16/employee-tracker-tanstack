@@ -67,6 +67,13 @@ const columns = helper.columns([
       )
       return (
         <div className="flex min-w-48 flex-col gap-2">
+          {item.autoClosedAt ? (
+            <Badge variant="secondary">
+              {item.reviewState === 'pending'
+                ? 'ავტომატური გასვლა, გადასამოწმებელია'
+                : 'ავტომატური გასვლა'}
+            </Badge>
+          ) : null}
           {item.reviewState === 'approved' ||
           item.reviewState === 'rejected' ? (
             <Badge variant={item.reviewState === 'approved' ? 'green' : 'red'}>
@@ -77,7 +84,9 @@ const columns = helper.columns([
             corrected={Boolean(
               (item.originalStartedAt &&
                 item.originalStartedAt !== item.startedAt) ||
-              (item.endedAt && item.originalEndedAt !== item.endedAt),
+              (item.endedAt &&
+                item.originalEndedAt !== item.endedAt &&
+                (!item.autoClosedAt || item.autoClosedAt !== item.endedAt)),
             )}
             {...metrics}
             lateSeconds={item.isFirstOfDay ? metrics.lateSeconds : 0}

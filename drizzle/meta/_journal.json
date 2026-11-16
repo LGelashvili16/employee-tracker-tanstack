@@ -225,6 +225,13 @@
       "when": 1794406927548,
       "tag": "0031_attendance_digest_receipt",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794816788621,
+      "tag": "0032_superb_scarlet_spider",
+      "breakpoints": true
     }
   ]
 }

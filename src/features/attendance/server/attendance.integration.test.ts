@@ -1009,11 +1009,19 @@ describe.runIf(enabled)('attendance workflow against PostgreSQL', () => {
       await review.saveAttendanceLimit(hr, {
         maxOpenHours: 12,
         revision: 0,
-        reason: 'პერსონალის დასწრების წესის განახლება',
       })
       expect(
         (await review.readAttendanceConfiguration(hr)).setting.maxOpenHours,
       ).toBe(12)
+      const limitAudit = await sql().query(
+        "select actor_id, reason, before, after from attendance_audit where target_id='attendance-setting' and action='attendance.limit_changed' order by created_at desc limit 1",
+      )
+      expect(limitAudit.rows[0]).toMatchObject({
+        actor_id: hr.id,
+        reason: 'დასწრების გადამოწმების ზღვრის ცვლილება',
+        before: { maxOpenHours: 16 },
+        after: { maxOpenHours: 12 },
+      })
       for (const denied of [null, actor]) {
         await expect(
           companyAttendance.listCompanyAttendanceUsers(denied, {}),

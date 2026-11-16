@@ -110,7 +110,7 @@ export async function saveAttendanceLimit(actor: Actor | null, input: unknown) {
       current.id,
       'attendance-setting',
       'attendance.limit_changed',
-      data.reason,
+      'დასწრების გადამოწმების ზღვრის ცვლილება',
       before,
       after,
     )
@@ -173,7 +173,7 @@ export async function assignAttendanceReviewer(
       current.id,
       data.employeeId,
       'attendance.reviewer_changed',
-      data.reason,
+      data.revoke ? 'განმხილველის მინიჭების გაუქმება' : 'განმხილველის მინიჭება',
       before.map((row) => ({ reviewerId: row.reviewerId })),
       data.revoke ? [] : [{ reviewerId: data.reviewerId }],
     )
