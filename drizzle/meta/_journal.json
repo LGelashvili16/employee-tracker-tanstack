@@ -274,6 +274,20 @@
       "when": 1794907997665,
       "tag": "0038_optional_attendance_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794922029604,
+      "tag": "0039_production_teams",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794926393854,
+      "tag": "0040_team_deletion_audit",
+      "breakpoints": true
     }
   ]
 }

@@ -46,6 +46,7 @@ import { Route as AuthenticatedManageDevicesRouteImport } from './routes/_authen
 import { Route as AuthenticatedManageLeaveRouteImport } from './routes/_authenticated/manage/leave'
 import { Route as AuthenticatedManageReportsRouteImport } from './routes/_authenticated/manage/reports'
 import { Route as AuthenticatedManageScheduleRouteImport } from './routes/_authenticated/manage/schedule'
+import { Route as AuthenticatedManageTeamsRouteImport } from './routes/_authenticated/manage/teams'
 import { Route as AuthenticatedManageVacationsRouteImport } from './routes/_authenticated/manage/vacations'
 import { Route as AuthenticatedSettingsProfileRouteImport } from './routes/_authenticated/settings/profile'
 import { Route as AuthenticatedSettingsSecurityRouteImport } from './routes/_authenticated/settings/security'
@@ -266,6 +267,12 @@ const AuthenticatedManageScheduleRoute =
     path: '/schedule',
     getParentRoute: () => AuthenticatedManageRouteRoute,
   } as any)
+const AuthenticatedManageTeamsRoute =
+  AuthenticatedManageTeamsRouteImport.update({
+    id: '/teams',
+    path: '/teams',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
 const AuthenticatedManageVacationsRoute =
   AuthenticatedManageVacationsRouteImport.update({
     id: '/vacations',
@@ -396,6 +403,7 @@ export interface FileRoutesByFullPath {
   '/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/manage/reports': typeof AuthenticatedManageReportsRoute
   '/manage/schedule': typeof AuthenticatedManageScheduleRoute
+  '/manage/teams': typeof AuthenticatedManageTeamsRoute
   '/manage/vacations': typeof AuthenticatedManageVacationsRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/settings/security': typeof AuthenticatedSettingsSecurityRoute
@@ -448,6 +456,7 @@ export interface FileRoutesByTo {
   '/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/manage/reports': typeof AuthenticatedManageReportsRoute
   '/manage/schedule': typeof AuthenticatedManageScheduleRoute
+  '/manage/teams': typeof AuthenticatedManageTeamsRoute
   '/manage/vacations': typeof AuthenticatedManageVacationsRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/settings/security': typeof AuthenticatedSettingsSecurityRoute
@@ -504,6 +513,7 @@ export interface FileRoutesById {
   '/_authenticated/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/_authenticated/manage/reports': typeof AuthenticatedManageReportsRoute
   '/_authenticated/manage/schedule': typeof AuthenticatedManageScheduleRoute
+  '/_authenticated/manage/teams': typeof AuthenticatedManageTeamsRoute
   '/_authenticated/manage/vacations': typeof AuthenticatedManageVacationsRoute
   '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/_authenticated/settings/security': typeof AuthenticatedSettingsSecurityRoute
@@ -560,6 +570,7 @@ export interface FileRouteTypes {
     | '/manage/leave'
     | '/manage/reports'
     | '/manage/schedule'
+    | '/manage/teams'
     | '/manage/vacations'
     | '/settings/profile'
     | '/settings/security'
@@ -612,6 +623,7 @@ export interface FileRouteTypes {
     | '/manage/leave'
     | '/manage/reports'
     | '/manage/schedule'
+    | '/manage/teams'
     | '/manage/vacations'
     | '/settings/profile'
     | '/settings/security'
@@ -667,6 +679,7 @@ export interface FileRouteTypes {
     | '/_authenticated/manage/leave'
     | '/_authenticated/manage/reports'
     | '/_authenticated/manage/schedule'
+    | '/_authenticated/manage/teams'
     | '/_authenticated/manage/vacations'
     | '/_authenticated/settings/profile'
     | '/_authenticated/settings/security'
@@ -958,6 +971,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedManageScheduleRouteImport
       parentRoute: typeof AuthenticatedManageRouteRoute
     }
+    '/_authenticated/manage/teams': {
+      id: '/_authenticated/manage/teams'
+      path: '/teams'
+      fullPath: '/manage/teams'
+      preLoaderRoute: typeof AuthenticatedManageTeamsRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
     '/_authenticated/manage/vacations': {
       id: '/_authenticated/manage/vacations'
       path: '/vacations'
@@ -1157,6 +1177,7 @@ interface AuthenticatedManageRouteRouteChildren {
   AuthenticatedManageLeaveRoute: typeof AuthenticatedManageLeaveRoute
   AuthenticatedManageReportsRoute: typeof AuthenticatedManageReportsRoute
   AuthenticatedManageScheduleRoute: typeof AuthenticatedManageScheduleRoute
+  AuthenticatedManageTeamsRoute: typeof AuthenticatedManageTeamsRoute
   AuthenticatedManageVacationsRoute: typeof AuthenticatedManageVacationsRoute
   AuthenticatedManageEmployeesEmployeeIdRoute: typeof AuthenticatedManageEmployeesEmployeeIdRoute
   AuthenticatedManageEmployeesIndexRoute: typeof AuthenticatedManageEmployeesIndexRoute
@@ -1173,6 +1194,7 @@ const AuthenticatedManageRouteRouteChildren: AuthenticatedManageRouteRouteChildr
     AuthenticatedManageLeaveRoute: AuthenticatedManageLeaveRoute,
     AuthenticatedManageReportsRoute: AuthenticatedManageReportsRoute,
     AuthenticatedManageScheduleRoute: AuthenticatedManageScheduleRoute,
+    AuthenticatedManageTeamsRoute: AuthenticatedManageTeamsRoute,
     AuthenticatedManageVacationsRoute: AuthenticatedManageVacationsRoute,
     AuthenticatedManageEmployeesEmployeeIdRoute:
       AuthenticatedManageEmployeesEmployeeIdRoute,

@@ -19,6 +19,7 @@ export const permissionLabels: Record<Permission, string> = {
   'attendance.correct.all': 'კომპანიის დასწრების დროის შესწორება',
   'timesheets.review.team': 'მინიჭებული თანამშრომლების საათების ნახვა',
   'schedule.manage': 'თანამშრომლების განრიგის მართვა',
+  'teams.manage': 'წარმოების გუნდების მართვა',
   'jobs.manage': 'სამუშაოების მართვა',
   'jobs.claim': 'სამუშაოს აღება',
   'employees.read': 'თანამშრომლების ნახვა',

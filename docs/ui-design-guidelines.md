@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 69. Last updated: 2026-11-17.
+Status: required project instructions. Version: 76. Last updated: 2026-11-17.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -92,7 +92,7 @@ Map cartography has its own reference palette, maintained in `src/components/ui/
 
 ## Shared components are the default
 
-Employee management and the attendance directory belong in the management navigation group, labeled `მართვა`. The management attendance directory and employee detail use `/manage/attendance` and `/manage/attendance/$userId`. Company schedule and attendance configuration live on the dedicated `/manage/schedule` page, labeled `სამუშაო განრიგი`, with its own sidebar entry guarded by `attendance.configure`. Omit the rules shortcut from attendance and do not retain the old company-attendance/settings URL aliases. The application currently has no teams, team-creation workflows, or team-management route. Attendance review uses direct employee-to-reviewer assignments. HR receives the explicit permissions for these workflows. Keep company-wide reads distinct from assigned-employee review and correction scope. Platform administration is a separate concern. Its administration group contains working account controls and explicitly requested planned pages with specific future capabilities and a planned badge. Do not show an empty administration group, simulate unavailable actions, or retain old route aliases after moving a workflow.
+Employee management and the attendance directory belong in the management navigation group, labeled `მართვა`. The management attendance directory and employee detail use `/manage/attendance` and `/manage/attendance/$userId`. Company schedule and attendance configuration live on the dedicated `/manage/schedule` page, labeled `სამუშაო განრიგი`, with its own sidebar entry guarded by `attendance.configure`. Omit the rules shortcut from attendance and do not retain the old company-attendance/settings URL aliases. Production teams are managed at `/manage/teams`, labeled `გუნდები`, under an explicit `teams.manage` permission. Team membership is independent of attendance reviewer assignments. Attendance review uses direct employee-to-reviewer assignments. HR receives the explicit permissions for these workflows. Keep company-wide reads distinct from assigned-employee review and correction scope. Platform administration is a separate concern. Its administration group contains working account controls and explicitly requested planned pages with specific future capabilities and a planned badge. Do not show an empty administration group, simulate unavailable actions, or retain old route aliases after moving a workflow.
 
 - Use the existing Base UI/shadcn components for buttons, inputs, fields, selects, date pickers, checkboxes, switches, tabs, tables, pagination, badges, alerts, cards, dialogs, sheets, tooltips, Skeleton, and Spinner. Inspect their actual composition APIs before use.
 - Do not recreate shared controls with raw interactive HTML or add a competing UI library. Normal semantic HTML remains appropriate for page structure, text, lists, and genuine links.
@@ -446,3 +446,21 @@ Correction reasons are optional; blank reasons still retain the full actor/times
 Network-blocked document requests show a centered, Georgian Teamwork error card with the correct 403 status and guidance to use an allowed network or contact an administrator. Access-check failures show a separate 503 message and retry action. These pre-app documents use shadcn Card/Button, Tabler icons and self-contained fallback CSS because application assets may also be blocked. They work without JavaScript, respect the system color scheme and expose no session, IP or database details. API and server-function failures keep their plain-text response contract and all errors remain private and uncached.
 
 Error pages distinguish sign-in, permission, missing-resource, rate-limit, temporary-service, and unexpected failures where a safe status is available. Show Georgian recovery guidance and support references for unexpected failures. Diagnostic console records contain only generated reference IDs, UTC timestamps, source, status, and explicitly allowed technical categories. Never log raw errors, stacks, request URLs, tokens, SQL, IP addresses, or employee details. Expected 404s and permission denials do not need error-level logs. Offline guidance must clarify that writes require a connection.
+
+## Production teams
+
+Use the jobs map for future crew locations. `/manage/teams` owns team names, specialist rosters, optional leaders and deactivation. Transfers explicitly identify the previous team and preserve history. Teams with members must be emptied before deactivation. Device configuration and GPS tracking are separate workflows.
+
+Version 70 (2026-11-17): Added the authorized production-team management workflow and navigation.
+
+Version 71 (2026-11-17): Employee navigation uses a single-person icon; teams retain the multi-person icon. Team creation and management share one right-side sheet with a fixed header/footer and scrollable sections. Transfers are confirmed inline within the sheet, without nested modals.
+
+Version 72 (2026-11-17): Team creation and editing use one complete draft containing the name, roster and optional leader. One footer Save commits all changes atomically. Member selection, transfers, leader changes and deactivation remain local until Save; cancellation discards the draft.
+
+Version 73 (2026-11-17): Team sheets group team information, selected members and employee selection in shared shadcn cards. The specialist picker loads 20 active eligible employees initially, supports debounced name/username and job-title filters, and loads further pages near the end of its scroll area. Keep a keyboard-accessible load-more/retry fallback and preserve the existing single-save draft.
+
+Version 74 (2026-11-17): The team employee picker starts with production specialists selected and offers a labeled checkbox group for Employee, Production Supervisor and Sales Manager roles. Roles combine with name and job-title filters and restart infinite results at page one. HR and platform-administration accounts remain excluded even when they hold another selectable role.
+
+Version 75 (2026-11-17): Place employee role checkboxes in a shadcn filter popover with an icon trigger and selected-role count. Keep name search and job-title inputs compact, icon-assisted and individually clearable, with accessible Georgian labels.
+
+Version 76 (2026-11-17): Preserve the teams directory while an editor loads. Team removal and deactivation use destructive styling and Tabler icons; permanent deletion requires a clear confirmation, retains an audit snapshot and releases members. Disabled teams can be restored. Team history uses the shared collapsible with a Tabler disclosure icon.
