@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AnchorHTMLAttributes } from 'react'
+import { CompanyAttendanceUsersTable } from '../components/company-attendance-users-table'
 import { CompanyAttendancePage } from './company-attendance-page'
 import { CompanyAttendanceUserPage } from './company-attendance-user-page'
 import type { z } from 'zod'
@@ -123,9 +124,12 @@ beforeEach(() => {
           name: 'ანა',
           username: 'worker-1',
           state: 'active',
-          sessionCount: 0,
+          jobTitle: 'ოპერატორი',
+          attendanceStatus: 'working',
+          latestCheckIn: '2026-11-17T06:30:00.000Z',
         },
       ],
+      companyTimezone: 'Asia/Tbilisi',
       total: 41,
       page: 2,
       pageSize: 20,
@@ -148,7 +152,9 @@ beforeEach(() => {
         userId: 'worker',
         employeeId: 'employee',
         name: 'ანა',
-        username: 'worker-1',
+        code: 'worker-1',
+        jobTitle: 'ოპერატორი',
+        image: null,
       },
       date: '2026-11-05',
       today: '2026-11-05',
@@ -207,7 +213,7 @@ describe('company attendance navigation', () => {
       ).not.toBeInTheDocument()
     },
   )
-  it('opens the employee timesheet while retaining the selected attendance date', async () => {
+  it('preserves summary-only access and old timesheet bookmarks without a second tab', async () => {
     calls.detailSearch = {
       date: '2026-11-04',
       view: 'timesheet',
@@ -216,10 +222,21 @@ describe('company attendance navigation', () => {
       hoursSort: 'seconds-desc',
       hoursStatus: 'approved',
     }
+    calls.detail.mockResolvedValue({
+      ok: true,
+      value: {
+        subject: { userId: 'worker', name: 'ანა' },
+        date: '2026-11-01',
+        endDate: '2026-11-30',
+        today: '2026-11-05',
+        companyTimezone: 'Asia/Tbilisi',
+        serverNow: '2026-11-05T10:00:00Z',
+        sessions: [],
+        canReadAttendance: false,
+        canReadTimesheets: true,
+      },
+    })
     mount('detail')
-    expect(
-      await screen.findByRole('tab', { name: 'სამუშაო საათები' }),
-    ).toHaveAttribute('aria-selected', 'true')
     expect(
       await screen.findByRole('heading', {
         name: 'შესაბამისი ჩანაწერები ვერ მოიძებნა',
@@ -235,24 +252,85 @@ describe('company attendance navigation', () => {
       },
     })
     expect(calls.detail).toHaveBeenCalledWith({
-      data: { userId: 'worker', date: '2026-11-04', period: 'week' },
+      data: { userId: 'worker', date: '2026-11-01', period: 'month' },
     })
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('textbox', { name: 'თანამშრომლის ძიება' }),
+      screen.queryByRole('heading', { name: 'დასწრების ისტორია' }),
     ).not.toBeInTheDocument()
-    const attendance = screen
-      .getByRole('tab', { name: 'დასწრებები' })
-      .getAttribute('href')
-    expect(attendance).toContain('/manage/attendance/worker?')
-    expect(attendance).toContain('view=attendance')
-    expect(attendance).toContain('date=2026-11-04')
+    expect(
+      screen.queryByRole('button', { name: 'დასწრების აღრიცხვა' }),
+    ).not.toBeInTheDocument()
+  })
+  it('shows a month and its totals in the same attendance workspace', async () => {
+    calls.detailSearch = { period: 'month', date: '2026-11-15' }
+    calls.detail.mockResolvedValue({
+      ok: true,
+      value: {
+        subject: { userId: 'worker', name: 'ანა' },
+        date: '2026-11-01',
+        endDate: '2026-11-30',
+        today: '2026-11-17',
+        companyTimezone: 'Asia/Tbilisi',
+        serverNow: '2026-11-17T10:00:00Z',
+        sessions: [],
+        canReadAttendance: true,
+        canReadTimesheets: true,
+      },
+    })
+    mount('detail')
+    const activity = await screen.findByRole('list', {
+      name: 'თვის დასწრების მიმოხილვა',
+    })
+    const days = within(activity).getAllByRole('listitem')
+    expect(days).toHaveLength(30)
+    expect(days[0]).toHaveClass('xl:first:col-start-7')
+    expect(days[0].querySelector('time')).toHaveAttribute(
+      'datetime',
+      '2026-11-01',
+    )
+    expect(days[1].querySelector('time')).toHaveAttribute(
+      'datetime',
+      '2026-11-02',
+    )
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'თვე' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    expect(
+      screen.getByRole('button', { name: 'სამუშაო თვის არჩევა' }),
+    ).toHaveTextContent('ნოემბერი 2026')
+    expect(calls.detail).toHaveBeenCalledWith({
+      data: { userId: 'worker', date: '2026-11-15', period: 'month' },
+    })
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'წინა თვე' }))
+    expect(calls.navigate).toHaveBeenCalledWith({
+      search: { period: 'month', view: undefined, date: '2026-10-01' },
+    })
   })
   it('lists empty accounts, opens the dynamic user URL and preserves URL search and sort when paginating', async () => {
     mount('users')
     expect(
       await screen.findByRole('link', { name: 'სესიების ნახვა: ანა' }),
     ).toHaveAttribute('href', '/manage/attendance/worker')
-    expect(screen.getByRole('cell', { name: '0' })).toBeVisible()
+    expect(
+      screen.getByRole('columnheader', { name: 'თანამდებობა' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('columnheader', { name: 'ანგარიშის სტატუსი' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('ოპერატორი')).toBeInTheDocument()
+    expect(screen.getByText('სამუშაოზეა')).toBeInTheDocument()
+    expect(screen.getByText('17 ნოემბერი, 2026, 10:30')).toHaveAttribute(
+      'datetime',
+      '2026-11-17T06:30:00.000Z',
+    )
+    expect(
+      screen.queryByRole('columnheader', { name: 'სესიები' }),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('link', { name: 'დასწრების წესები' }),
     ).not.toBeInTheDocument()
@@ -315,7 +393,7 @@ describe('company attendance navigation', () => {
     ).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'წინა კვირა' }))
     expect(calls.navigate).toHaveBeenCalledWith({
-      search: { date: '2026-10-26' },
+      search: { date: '2026-10-26', period: 'week', view: undefined },
     })
   })
   it('does not imply absence when the selected day has no sessions', async () => {
@@ -332,11 +410,70 @@ describe('company attendance navigation', () => {
     })
     mount('detail')
     expect(
-      await screen.findByText('არჩეულ კვირაში დასწრების ჩანაწერები არ არის.'),
+      await screen.findByText('არჩეულ პერიოდში დასწრების ჩანაწერები არ არის.'),
     ).toBeVisible()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'სამუშაო კვირის არჩევა' }),
     ).toHaveTextContent('2 ნოემბერი 2026 - 8 ნოემბერი 2026')
   })
+})
+
+it.each([
+  ['working', 'სამუშაოზეა'],
+  ['recorded', 'დაფიქსირებულია'],
+  ['not-recorded', 'არ დაფიქსირებულა'],
+  ['unavailable', 'წვდომა შეზღუდულია'],
+] as const)(
+  'shows %s without inventing absence or a check-in',
+  (attendanceStatus, label) => {
+    render(
+      <CompanyAttendanceUsersTable
+        items={[
+          {
+            userId: 'worker',
+            name: 'ანა',
+            username: 'worker',
+            state: 'active',
+            jobTitle: null,
+            attendanceStatus,
+            latestCheckIn: null,
+          },
+        ]}
+        timezone="Asia/Tbilisi"
+        search={{ page: 1, sort: 'name-asc' }}
+      />,
+    )
+    expect(screen.getAllByRole('cell', { name: label }).length).toBeGreaterThan(
+      0,
+    )
+    expect(document.querySelector('time')).not.toBeInTheDocument()
+    expect(screen.queryByText('არ გამოცხადდა')).not.toBeInTheDocument()
+  },
+)
+
+it('shows the employee profile and derives weekly summaries without counting a second check-in as a late day', async () => {
+  mount('detail')
+  await screen.findByRole('heading', { name: 'ანა', level: 1 })
+  expect(screen.getByText('ოპერატორი')).toBeInTheDocument()
+  expect(screen.getByText('@worker-1')).toBeInTheDocument()
+  expect(
+    screen.getByText('აღრიცხული დრო', { selector: 'dt' }).nextElementSibling,
+  ).toHaveTextContent('02:00:00')
+  expect(
+    screen.getByText('დღეები ჩანაწერით').nextElementSibling,
+  ).toHaveTextContent('1')
+  expect(
+    screen.getByText('გვიან დაწყებული დღეები').nextElementSibling,
+  ).toHaveTextContent('0')
+  const days = within(
+    screen.getByRole('list', { name: 'კვირის დასწრების მიმოხილვა' }),
+  ).getAllByRole('listitem')
+  expect(days).toHaveLength(7)
+  expect(screen.queryByText('არ გამოცხადდა')).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('textbox', {
+      name: 'თანამშრომლის ნაცვლად მოქმედების მიზეზი',
+    }),
+  ).not.toBeInTheDocument()
 })

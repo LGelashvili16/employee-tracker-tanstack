@@ -64,7 +64,7 @@ export const attendanceAudit = pgTable(
     targetId: text('target_id').notNull(),
     /** Stable attendance operation identifier. */
     action: text('action').notNull(),
-    /** Required explanation for manager and configuration actions. */
+    /** Optional for manual entries and corrections; required for review and configuration actions. */
     reason: text('reason').notNull(),
     /** Minimal state immediately before the write. */
     before: jsonb('before').notNull(),
@@ -77,7 +77,7 @@ export const attendanceAudit = pgTable(
     index('attendance_audit_target').on(table.targetId, table.createdAt),
     check(
       'attendance_audit_reason_valid',
-      sql`length(trim(${table.reason})) between 5 and 500`,
+      sql`length(trim(${table.reason})) <= 500 and (${table.action} in ('attendance.corrected', 'attendance.created') or length(trim(${table.reason})) >= 5)`,
     ),
   ],
 )

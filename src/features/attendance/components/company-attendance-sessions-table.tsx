@@ -93,6 +93,9 @@ const columns = helper.columns([
       )
       return (
         <div className="flex min-w-48 flex-col gap-2">
+          {item.manuallyRecorded ? (
+            <Badge variant="secondary">ხელით აღრიცხული</Badge>
+          ) : null}
           {item.autoClosedAt ? (
             <Badge variant="secondary">
               {item.reviewState === 'pending'

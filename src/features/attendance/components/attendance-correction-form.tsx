@@ -41,20 +41,23 @@ export function AttendanceCorrectionForm({
       call({ data }),
     retry: false,
   })
+  const defaultValues: z.input<typeof attendanceCorrectionSchema> = {
+    sessionId: session.id,
+    revision: session.revision,
+    start: formatAttendanceLocalInput(session.startedAt, session.timezone),
+    end: session.endedAt
+      ? formatAttendanceLocalInput(session.endedAt, session.timezone)
+      : '',
+    reason: '',
+  }
   const form = useForm({
-    defaultValues: {
-      sessionId: session.id,
-      revision: session.revision,
-      start: formatAttendanceLocalInput(session.startedAt, session.timezone),
-      end: session.endedAt
-        ? formatAttendanceLocalInput(session.endedAt, session.timezone)
-        : '',
-      reason: '',
-    },
+    defaultValues,
     validators: { onSubmit: attendanceCorrectionSchema },
     onSubmit: async ({ value }) => {
       onPending(true)
-      const result = await mutation.mutateAsync(value).catch(() => null)
+      const result = await mutation
+        .mutateAsync(attendanceCorrectionSchema.parse(value))
+        .catch(() => null)
       onPending(false)
       if (!result?.ok) {
         toast.error(
@@ -112,14 +115,13 @@ export function AttendanceCorrectionForm({
               {(field) => (
                 <Field data-invalid={!field.state.meta.isValid}>
                   <FieldLabel htmlFor={`correction-reason-${session.id}`}>
-                    შესწორების მიზეზი <span aria-hidden="true">*</span>
+                    შესწორების მიზეზი
                   </FieldLabel>
                   <Textarea
                     id={`correction-reason-${session.id}`}
-                    required
                     disabled={mutation.isPending}
                     aria-describedby={`correction-reason-${session.id}-error`}
-                    value={field.state.value}
+                    value={field.state.value ?? ''}
                     onChange={(event) => field.handleChange(event.target.value)}
                     onBlur={field.handleBlur}
                     aria-invalid={!field.state.meta.isValid}

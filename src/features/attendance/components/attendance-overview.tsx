@@ -8,7 +8,6 @@ import { MotionConfig, motion, useReducedMotion } from 'motion/react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Button } from '#/components/ui/button'
-import { Skeleton } from '#/components/ui/skeleton'
 import { Spinner } from '#/components/ui/spinner'
 import { attendanceOptions } from '../attendance.queries'
 import { AttendanceClock } from './attendance-clock'
@@ -22,10 +21,12 @@ import { AttendanceScheduleWidget } from './attendance-schedule-widget'
 import { AttendanceWeeklyWidget } from './attendance-weekly-widget'
 import { ApprovedLeaveNotice } from './approved-leave-notice'
 
-// Share row heights across the compact widgets, with the clock spanning both rows.
-const dashboardGrid = 'sm:grid-cols-2 xl:auto-rows-fr xl:grid-cols-4'
-const dashboardClock = 'sm:col-span-2 xl:row-span-2'
-const dashboardSummary = 'min-w-0'
+import {
+  AttendanceOverviewSkeleton,
+  dashboardGrid,
+  dashboardClock,
+  dashboardSummary,
+} from './attendance-overview-skeleton'
 
 export function AttendanceOverview({
   actorId,
@@ -77,36 +78,10 @@ function OverviewContent({
     )
   if (query.isPending)
     return (
-      <div role="status" aria-busy="true" aria-label="დასწრება იტვირთება">
-        {heading ? <div className="mb-6">{heading}</div> : null}
-        <div aria-hidden="true" className="flex flex-col gap-4">
-          <div
-            className={cn('grid gap-4', dashboardLayout ? dashboardGrid : '')}
-          >
-            <Skeleton
-              className={cn(
-                dashboardLayout
-                  ? 'h-96 rounded-2xl xl:h-full'
-                  : 'h-80 rounded-2xl lg:h-44',
-                dashboardLayout ? dashboardClock : '',
-              )}
-            />
-            {dashboardLayout ? (
-              <>
-                <Skeleton className="h-64 rounded-2xl" />
-                <Skeleton className="h-64 rounded-2xl" />
-                <Skeleton
-                  className={cn('h-64 rounded-2xl', dashboardSummary)}
-                />
-                <Skeleton
-                  className={cn('h-64 rounded-2xl', dashboardSummary)}
-                />
-              </>
-            ) : null}
-          </div>
-          <Skeleton className="h-52 rounded-2xl" />
-        </div>
-      </div>
+      <AttendanceOverviewSkeleton
+        dashboardLayout={dashboardLayout}
+        heading={heading}
+      />
     )
   const result = query.data
   async function refresh() {

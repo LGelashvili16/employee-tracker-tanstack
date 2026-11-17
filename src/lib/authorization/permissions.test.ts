@@ -135,6 +135,8 @@ describe('role and permission boundaries', () => {
   })
   it('grants administrators platform configuration, company reads, and vacation review', () => {
     const platformPermissions = [
+      'attendance.record.manage',
+      'attendance.correct.self',
       'attendance.clock.assist',
       'attendance.devices.manage',
       'attendance.devices.approve.self',
@@ -226,4 +228,21 @@ describe('role and permission boundaries', () => {
     expect(hasAnyPermission(['supervisor'], required)).toBe(true)
     expect(hasAnyPermission(['employee'], required)).toBe(false)
   })
+})
+
+it('grants self-correction only to administrators and owners by default', () => {
+  expect(hasPermission(['admin'], 'attendance.correct.self')).toBe(true)
+  expect(hasPermission(['owner'], 'attendance.correct.self')).toBe(true)
+  expect(hasPermission(['hr_manager'], 'attendance.correct.self')).toBe(false)
+  expect(hasPermission(['supervisor'], 'attendance.correct.self')).toBe(false)
+  expect(hasPermission(['employee'], 'attendance.correct.self')).toBe(false)
+  expect(
+    hasPermission(
+      {
+        roles: ['owner'],
+        permissionOverrides: { allow: [], deny: ['attendance.correct.self'] },
+      },
+      'attendance.correct.self',
+    ),
+  ).toBe(false)
 })

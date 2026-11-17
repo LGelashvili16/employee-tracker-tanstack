@@ -52,7 +52,7 @@ export async function lockReviewSubject(
   tx: AttendanceTransaction,
   reviewerId: string,
   sessionId: string,
-  scope: 'team' | 'company' = 'team',
+  scope: 'team' | 'company' | 'self' = 'team',
 ) {
   const target = (
     await tx
@@ -61,7 +61,11 @@ export async function lockReviewSubject(
       .where(
         and(
           eq(attendanceSession.id, sessionId),
-          scope === 'team' ? reviewerScope(reviewerId) : undefined,
+          scope === 'team'
+            ? reviewerScope(reviewerId)
+            : scope === 'self'
+              ? sql`${attendanceSession.employeeId} in (select ${employee.id} from ${employee} where ${employee.userId} = ${reviewerId})`
+              : undefined,
         ),
       )
       .limit(1)
@@ -91,7 +95,13 @@ export async function lockReviewSubject(
       .where(eq(employee.id, target.employeeId))
       .for('update')
   ).at(0)
-  if (!person || person.userId === reviewerId) return null
+  if (
+    !person ||
+    (scope === 'self'
+      ? person.userId !== reviewerId
+      : person.userId === reviewerId)
+  )
+    return null
   const record = (
     await tx
       .select()

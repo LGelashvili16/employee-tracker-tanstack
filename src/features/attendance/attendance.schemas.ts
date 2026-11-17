@@ -27,6 +27,12 @@ const reason = z
   .trim()
   .min(5, 'მიზეზი უნდა შეიცავდეს სულ მცირე 5 სიმბოლოს.')
   .max(500, 'მიზეზი არ უნდა აღემატებოდეს 500 სიმბოლოს.')
+export const optionalAttendanceReasonSchema = z
+  .string({ error: 'მიზეზი არასწორია.' })
+  .trim()
+  .max(500, 'მიზეზი არ უნდა აღემატებოდეს 500 სიმბოლოს.')
+  .optional()
+  .default('')
 const revision = z
   .number({ error: 'ჩანაწერის ვერსია არასწორია.' })
   .int('ვერსია უნდა იყოს მთელი რიცხვი.')
@@ -52,7 +58,7 @@ export const attendanceCorrectionSchema = z
   .object({
     sessionId: identifier,
     revision,
-    reason,
+    reason: optionalAttendanceReasonSchema,
     start: localTime,
     end: localTime,
   })
@@ -60,6 +66,20 @@ export const attendanceCorrectionSchema = z
     path: ['end'],
     message: 'დასრულება უნდა იყოს დაწყების შემდეგ.',
   })
+export const manualAttendanceSchema = z
+  .object({
+    userId: recordIdSchema,
+    requestId: identifier,
+    start: localTime,
+    includeEnd: z.boolean({ error: 'მიუთითეთ დასრულების არჩევანი.' }),
+    end: z.union([localTime, z.literal('')]),
+    reason: optionalAttendanceReasonSchema,
+  })
+  .refine(
+    (value) =>
+      !value.includeEnd || (value.end !== '' && value.end > value.start),
+    { path: ['end'], message: 'დასრულება უნდა იყოს დაწყების შემდეგ.' },
+  )
 export const attendanceListSchema = z.object({
   userId: recordIdSchema.optional(),
   page: z

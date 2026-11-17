@@ -1,6 +1,6 @@
 import { deliverNotifications } from '#/features/notifications/server/notifications.service.server'
 import '@tanstack/react-start/server-only'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, or, eq, sql } from 'drizzle-orm'
 import { attendanceAudit, attendanceSession, employee, user } from '#/db/schema'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
 import { hasPermission } from '#/lib/authorization/permissions'
@@ -82,10 +82,11 @@ export async function listAttendanceForReview(
             scope === 'team' &&
             hasPermission(current, 'attendance.review.team'),
           canCorrect:
-            subjectUserId !== current.id &&
-            (hasPermission(current, 'attendance.correct.all') ||
-              (scope === 'team' &&
-                hasPermission(current, 'attendance.review.team'))),
+            subjectUserId === current.id
+              ? hasPermission(current, 'attendance.correct.self')
+              : hasPermission(current, 'attendance.correct.all') ||
+                (scope === 'team' &&
+                  hasPermission(current, 'attendance.review.team')),
         }),
       )
     return { items, hasMore: rows.length > 50, serverNow: now.toISOString() }
@@ -102,7 +103,9 @@ export async function attendanceReviewHistory(
     const current = access.actor
     const companyCorrection =
       access.company && hasPermission(current, 'attendance.correct.all')
-    if (!companyCorrection) assertPermission(current, 'attendance.read.team')
+    const selfCorrection = hasPermission(current, 'attendance.correct.self')
+    if (!companyCorrection && !selfCorrection)
+      assertPermission(current, 'attendance.read.team')
     const records = await tx
       .select({ id: attendanceSession.id })
       .from(attendanceSession)
@@ -110,8 +113,15 @@ export async function attendanceReviewHistory(
       .where(
         and(
           eq(attendanceSession.id, sessionId),
-          companyCorrection ? undefined : repository.reviewerScope(current.id),
-          sql`${employee.userId} <> ${current.id}`,
+          companyCorrection
+            ? undefined
+            : or(
+                selfCorrection ? eq(employee.userId, current.id) : undefined,
+                hasPermission(current, 'attendance.read.team')
+                  ? repository.reviewerScope(current.id)
+                  : undefined,
+              ),
+          selfCorrection ? undefined : sql`${employee.userId} <> ${current.id}`,
         ),
       )
       .limit(1)
@@ -240,15 +250,26 @@ export async function correctAttendance(actor: Actor | null, input: unknown) {
     const access = await authorizeAttendanceWorkspace(tx, actor)
     const companyCorrection =
       access.company && hasPermission(access.actor, 'attendance.correct.all')
-    const current = companyCorrection
-      ? access.actor
-      : await authorizeAttendance(tx, actor, 'attendance.review.team')
-    const record = await repository.lockReviewSubject(
-      tx,
-      current.id,
-      data.sessionId,
-      companyCorrection ? 'company' : 'team',
-    )
+    const current = access.actor
+    // Self-correction is an explicit grant and never shares the approval path.
+    let record = hasPermission(current, 'attendance.correct.self')
+      ? await repository.lockReviewSubject(
+          tx,
+          current.id,
+          data.sessionId,
+          'self',
+        )
+      : null
+    if (!record) {
+      if (!companyCorrection)
+        assertPermission(current, 'attendance.review.team')
+      record = await repository.lockReviewSubject(
+        tx,
+        current.id,
+        data.sessionId,
+        companyCorrection ? 'company' : 'team',
+      )
+    }
     if (!record) throw new AuthorizationError()
     checkVersion(record, data.revision)
     // A minute-precision form must not silently round unchanged original punches.

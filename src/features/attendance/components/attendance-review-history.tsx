@@ -7,6 +7,7 @@ import { formatAttendanceDateTime } from '../attendance.rules'
 const actions: Record<string, string> = {
   'attendance.approved': 'დადასტურება',
   'attendance.rejected': 'უარყოფა',
+  'attendance.created': 'ხელით აღრიცხვა',
   'attendance.corrected': 'დროის შესწორება',
 }
 export function AttendanceReviewHistory({
@@ -55,7 +56,9 @@ export function AttendanceReviewHistory({
                 {actions[item.action] ?? 'დასწრების ცვლილება'}: {item.actorName}
                 , {formatAttendanceDateTime(item.createdAt, timezone)}
               </span>
-              <span className="text-muted-foreground">{item.reason}</span>
+              {item.reason ? (
+                <span className="text-muted-foreground">{item.reason}</span>
+              ) : null}
             </li>
           ))}
         </ul>

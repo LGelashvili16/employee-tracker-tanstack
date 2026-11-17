@@ -1,4 +1,5 @@
 import '@tanstack/react-start/server-only'
+import { endOfMonth, format, parseISO } from 'date-fns'
 import { hasPermission } from '#/lib/authorization/permissions'
 import { authorizeAttendanceWorkspace } from './attendance-review.policy.server'
 import { transactAttendance } from './attendance.repository.server'
@@ -19,13 +20,36 @@ export async function listCompanyAttendanceUsers(
   return transactAttendance(
     async (tx) => {
       const access = await authorizeAttendanceWorkspace(tx, actor)
+      const now = new Date()
+      const workday = await getCompanyWorkday(now, tx)
       const result = await repository.companyAttendanceUsers(
         tx,
         data,
         access.company ? undefined : access.actor.id,
+        {
+          date: workday.date,
+          now: now.toISOString(),
+          canReadAttendance: access.canReadAttendance,
+        },
       )
       return {
         ...result,
+        companyTimezone: workday.timezone,
+        items: result.items.map(
+          ({ hasOpenSession, hasTodaySession, latestCheckIn, ...item }) => ({
+            ...item,
+            attendanceStatus: !access.canReadAttendance
+              ? ('unavailable' as const)
+              : hasOpenSession
+                ? ('working' as const)
+                : hasTodaySession
+                  ? ('recorded' as const)
+                  : ('not-recorded' as const),
+            latestCheckIn: latestCheckIn
+              ? new Date(latestCheckIn).toISOString()
+              : null,
+          }),
+        ),
         scope: access.company ? ('company' as const) : ('assigned' as const),
       }
     },
@@ -45,8 +69,18 @@ export async function readCompanyAttendanceUser(
       const workday = await getCompanyWorkday(now, tx)
       const selectedDate = data.date ?? workday.date
       const week = attendanceWeek(selectedDate)
-      const date = data.period === 'week' ? week.start : selectedDate
-      const endDate = data.period === 'week' ? week.end : selectedDate
+      const date =
+        data.period === 'month'
+          ? `${selectedDate.slice(0, 7)}-01`
+          : data.period === 'week'
+            ? week.start
+            : selectedDate
+      const endDate =
+        data.period === 'month'
+          ? format(endOfMonth(parseISO(selectedDate)), 'yyyy-MM-dd')
+          : data.period === 'week'
+            ? week.end
+            : selectedDate
       const result = await repository.companyAttendanceUser(
         tx,
         { ...data, date, endDate },
@@ -67,10 +101,11 @@ export async function readCompanyAttendanceUser(
           : result.subject.assigned)
       const serverNow = now.toISOString()
       const canCorrect =
-        result.subject.userId !== access.actor.id &&
-        ((access.company &&
-          hasPermission(access.actor, 'attendance.correct.all')) ||
-          canReview)
+        result.subject.userId === access.actor.id
+          ? hasPermission(access.actor, 'attendance.correct.self')
+          : (access.company &&
+              hasPermission(access.actor, 'attendance.correct.all')) ||
+            canReview
       return {
         ...result,
         serverNow,

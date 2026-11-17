@@ -1,3 +1,4 @@
+import { formatGeorgianDateTime } from '#/lib/date-format'
 import { useMemo } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
@@ -32,8 +33,10 @@ const helper = createColumnHelper<typeof features, CompanyAttendanceAccount>()
 export function CompanyAttendanceUsersTable({
   items,
   search,
+  timezone,
 }: {
   items: Array<CompanyAttendanceAccount>
+  timezone: string
   search: CompanyAttendanceSearch
 }) {
   const navigate = useNavigate()
@@ -94,6 +97,14 @@ export function CompanyAttendanceUsersTable({
             </Link>
           ),
         }),
+        helper.accessor('jobTitle', {
+          header: 'თანამდებობა',
+          cell: ({ row }) => (
+            <span className="text-sm text-muted-foreground">
+              {row.original.jobTitle || 'არ არის მითითებული'}
+            </span>
+          ),
+        }),
         helper.accessor('username', {
           header: () => (
             <Button
@@ -133,33 +144,37 @@ export function CompanyAttendanceUsersTable({
             </span>
           ),
         }),
-        helper.accessor('state', {
-          header: 'ანგარიშის სტატუსი',
-          cell: ({ row }) => (
-            <Badge
-              variant={
-                row.original.state === 'active'
-                  ? 'green'
-                  : row.original.state === 'suspended'
-                    ? 'red'
-                    : 'yellow'
-              }
-            >
-              {row.original.state === 'active'
-                ? 'აქტიური'
-                : row.original.state === 'suspended'
-                  ? 'შეჩერებული'
-                  : 'გასააქტიურებელი'}
-            </Badge>
-          ),
+        helper.accessor('attendanceStatus', {
+          header: 'დღევანდელი დასწრება',
+          cell: ({ row }) => {
+            const status = row.original.attendanceStatus
+            return (
+              <Badge variant={status === 'working' ? 'green' : 'secondary'}>
+                {status === 'working'
+                  ? 'სამუშაოზეა'
+                  : status === 'recorded'
+                    ? 'დაფიქსირებულია'
+                    : status === 'unavailable'
+                      ? 'წვდომა შეზღუდულია'
+                      : 'არ დაფიქსირებულა'}
+              </Badge>
+            )
+          },
         }),
-        helper.accessor('sessionCount', {
-          header: 'სესიები',
-          cell: ({ row }) => (
-            <span className="block text-right tabular-nums">
-              {row.original.sessionCount}
-            </span>
-          ),
+        helper.accessor('latestCheckIn', {
+          header: 'ბოლო შემოსვლა',
+          cell: ({ row }) =>
+            row.original.latestCheckIn ? (
+              <time dateTime={row.original.latestCheckIn}>
+                {formatGeorgianDateTime(row.original.latestCheckIn, timezone)}
+              </time>
+            ) : (
+              <span className="text-muted-foreground">
+                {row.original.attendanceStatus === 'unavailable'
+                  ? 'წვდომა შეზღუდულია'
+                  : 'არ დაფიქსირებულა'}
+              </span>
+            ),
         }),
         helper.display({
           id: 'details',
@@ -183,7 +198,7 @@ export function CompanyAttendanceUsersTable({
           ),
         }),
       ]),
-    [search, sort],
+    [search, sort, timezone],
   )
   const table = useTable({
     features,
@@ -192,7 +207,7 @@ export function CompanyAttendanceUsersTable({
     getRowId: (row) => row.userId,
   })
   return (
-    <Table className="min-w-[42rem]">
+    <Table className="min-w-[56rem]">
       <TableHeader className="bg-muted/40">
         {table.getHeaderGroups().map((group) => (
           <TableRow key={group.id}>
@@ -200,7 +215,6 @@ export function CompanyAttendanceUsersTable({
               <TableHead
                 key={header.id}
                 className={
-                  header.column.id === 'sessionCount' ||
                   header.column.id === 'details'
                     ? 'h-12 px-4 text-right'
                     : 'h-12 px-4'

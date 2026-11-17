@@ -28,13 +28,18 @@ export const attendanceDayFormSchema = z.object({ date: attendanceDaySchema })
 const attendanceHistorySearchSchema = z.object({
   date: attendanceDaySchema.optional(),
 })
-export const companyAttendanceUserSearchSchema =
-  attendanceHistorySearchSchema.extend(employeeTimesheetSearchSchema.shape)
+export const companyAttendanceUserSearchSchema = attendanceHistorySearchSchema
+  .extend(employeeTimesheetSearchSchema.shape)
+  .extend({
+    period: z
+      .enum(['week', 'month'], { error: 'აირჩიეთ დასაშვები პერიოდი.' })
+      .optional(),
+  })
 export const companyAttendanceUserSchema = attendanceHistorySearchSchema.extend(
   {
     userId: recordIdSchema,
     period: z
-      .enum(['day', 'week'], { error: 'აირჩიეთ დასაშვები პერიოდი.' })
+      .enum(['day', 'week', 'month'], { error: 'აირჩიეთ დასაშვები პერიოდი.' })
       .optional(),
   },
 )

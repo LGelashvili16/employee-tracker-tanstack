@@ -267,6 +267,13 @@
       "when": 1794841607347,
       "tag": "0037_manual_device_activation",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794907997665,
+      "tag": "0038_optional_attendance_notes",
+      "breakpoints": true
     }
   ]
 }

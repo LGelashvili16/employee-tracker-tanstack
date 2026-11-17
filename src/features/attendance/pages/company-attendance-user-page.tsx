@@ -1,17 +1,18 @@
 import { useMemo } from 'react'
-import { IconCalendarCheck, IconClock } from '@tabler/icons-react'
+import { IconArrowLeft } from '@tabler/icons-react'
 import { getRouteApi, Link } from '@tanstack/react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Skeleton } from '#/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { EmployeeTimesheetsWorkspace } from '#/features/timesheets/components/employee-timesheets-workspace'
 import { employeeTimesheetSearch } from '#/features/timesheets/timesheets.schemas'
 import { CompanyAttendanceSessionsTable } from '../components/company-attendance-sessions-table'
 import { AttendanceDayPicker } from '../components/attendance-day-picker'
 import { companyAttendanceUserQuery } from '../company-attendance.queries'
-import { formatWorkedTime, sessionMetrics } from '../attendance.rules'
-import { AssistedClockCard } from '#/features/attendance-security/components/assisted-clock-card'
+import { EmployeeAttendanceSummary } from '../components/employee-attendance-summary'
+import { Avatar, AvatarImage, AvatarFallback } from '#/components/ui/avatar'
+import { Button } from '#/components/ui/button'
+import { AssistedClockSheet } from '#/features/attendance-security/components/assisted-clock-sheet'
 import { hasPermission } from '#/lib/authorization/permissions'
 
 const route = getRouteApi('/_authenticated/manage/attendance/$userId')
@@ -25,26 +26,21 @@ function EmployeeAttendanceWorkspace() {
   const { userId } = route.useParams()
   const search = route.useSearch()
   const navigate = route.useNavigate()
+  const period =
+    search.period ?? (search.view === 'timesheet' ? 'month' : 'week')
+  const selectedDate =
+    !search.period && search.view === 'timesheet' && search.month
+      ? `${search.month}-01`
+      : search.date
   const query = useQuery({
     ...companyAttendanceUserQuery(actor.id, {
-      date: search.date,
+      date: selectedDate,
       userId,
-      period: 'week',
+      period,
     }),
     placeholderData: keepPreviousData,
   })
   const result = query.data
-  const tabs = [
-    ...(result?.canReadAttendance !== false
-      ? [{ value: 'attendance', label: 'დასწრებები' } as const]
-      : []),
-    ...(result?.canReadTimesheets !== false
-      ? [{ value: 'timesheet', label: 'სამუშაო საათები' } as const]
-      : []),
-  ]
-  const view =
-    tabs.find((tab) => tab.value === search.view)?.value ??
-    (result?.canReadAttendance === false ? 'timesheet' : 'attendance')
   const rows = useMemo(
     () =>
       result?.sessions.map((session) => ({
@@ -53,30 +49,45 @@ function EmployeeAttendanceWorkspace() {
       })) ?? [],
     [result],
   )
-  const seconds = rows.reduce(
-    (total, row) =>
-      total +
-      sessionMetrics(
-        row.startedAt,
-        row.endedAt,
-        row.expectedStartAt,
-        row.expectedEndAt,
-        row.serverNow,
-      ).seconds,
-    0,
-  )
   return (
     <section className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {result?.subject.name ?? 'თანამშრომლის ჩანაწერები'}
-        </h1>
-        <Link
-          className="text-sm underline underline-offset-4"
-          to="/manage/attendance"
+        <div className="flex min-w-0 items-center gap-4">
+          <Avatar className="size-14 rounded-xl">
+            <AvatarImage src={result?.subject.image ?? undefined} alt="" />
+            <AvatarFallback className="rounded-xl text-lg">
+              {(result?.subject.name ?? '')
+                .split(' ')
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((part) => part[0])
+                .join('')}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {result?.subject.name ?? 'თანამშრომლის ჩანაწერები'}
+            </h1>
+            {result ? (
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                <span>
+                  {result.subject.jobTitle || 'თანამდებობა არ არის მითითებული'}
+                </span>
+                {result.subject.code ? (
+                  <span className="font-mono">@{result.subject.code}</span>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          nativeButton={false}
+          render={<Link to="/manage/attendance" />}
         >
+          <IconArrowLeft aria-hidden="true" />
           ყველა თანამშრომელი
-        </Link>
+        </Button>
       </header>
       {query.isPending ? (
         <div className="flex flex-col gap-6">
@@ -100,81 +111,108 @@ function EmployeeAttendanceWorkspace() {
         </Alert>
       ) : (
         <>
-          <Tabs value={view} className="min-w-0 gap-6">
-            <nav
-              aria-label="თანამშრომლის სამუშაო ჩანაწერები"
-              className="-m-1 overflow-x-auto p-1"
-            >
-              <TabsList
-                aria-label="თანამშრომლის სამუშაო ჩანაწერები"
-                className="w-max gap-1 rounded-xl border p-0.5 group-data-horizontal/tabs:h-auto"
+          {result.canReadAttendance === false ? (
+            <EmployeeTimesheetsWorkspace
+              actorId={actor.id}
+              userId={userId}
+              search={{
+                userId,
+                month: search.month,
+                page: search.hoursPage,
+                sort: search.hoursSort,
+                status: search.hoursStatus,
+              }}
+              onChange={(value, replace) => {
+                void navigate({
+                  search: { ...search, ...employeeTimesheetSearch(value) },
+                  replace,
+                })
+              }}
+              renderLink={(value) => (
+                <Link
+                  to="/manage/attendance/$userId"
+                  params={{ userId }}
+                  search={{ ...search, ...employeeTimesheetSearch(value) }}
+                />
+              )}
+            />
+          ) : (
+            <div className="flex min-w-0 flex-col gap-6">
+              <div
+                role="group"
+                aria-label="დასწრების პერიოდი"
+                className="flex w-fit gap-1 rounded-xl border bg-muted/40 p-1"
               >
-                {tabs.map((tab) => (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
+                {(['week', 'month'] as const).map((value) => (
+                  <Button
+                    key={value}
+                    variant={period === value ? 'secondary' : 'ghost'}
+                    size="sm"
                     nativeButton={false}
-                    className="h-9 flex-none px-4 motion-reduce:transition-none"
+                    role="link"
                     render={
                       <Link
                         to="/manage/attendance/$userId"
                         params={{ userId }}
-                        search={{ ...search, view: tab.value }}
+                        search={{
+                          ...search,
+                          period: value,
+                          date: selectedDate ?? result.date,
+                          view: undefined,
+                        }}
                       />
                     }
+                    aria-current={period === value ? 'true' : undefined}
                   >
-                    {tab.value === 'attendance' ? (
-                      <IconCalendarCheck aria-hidden="true" />
-                    ) : (
-                      <IconClock aria-hidden="true" />
-                    )}
-                    {tab.label}
-                  </TabsTrigger>
+                    {value === 'week' ? 'კვირა' : 'თვე'}
+                  </Button>
                 ))}
-              </TabsList>
-            </nav>
-            <TabsContent
-              value="attendance"
-              className="flex min-w-0 flex-col gap-6"
-            >
-              {actor.id !== userId &&
-              hasPermission(actor, 'attendance.clock.assist') ? (
-                <AssistedClockCard actorId={actor.id} userId={userId} />
-              ) : null}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <AttendanceDayPicker
+                  weekly={period === 'week'}
+                  monthly={period === 'month'}
+                  date={selectedDate ?? result.date}
+                  today={result.today}
+                  onChange={(date) => {
+                    void navigate({
+                      search: { ...search, period, view: undefined, date },
+                    })
+                  }}
+                />
+                {hasPermission(actor, 'attendance.record.manage') &&
+                (actor.id !== userId ||
+                  hasPermission(actor, 'attendance.correct.self')) ? (
+                  <AssistedClockSheet
+                    userId={userId}
+                    employeeName={result.subject.name}
+                    timezone={result.companyTimezone}
+                    serverNow={result.serverNow}
+                  />
+                ) : null}
+              </div>
+              {query.isPlaceholderData ? (
+                <Skeleton
+                  aria-hidden="true"
+                  className="h-72 w-full rounded-xl"
+                />
+              ) : (
+                <EmployeeAttendanceSummary
+                  result={result}
+                  monthly={period === 'month'}
+                />
+              )}
               <div
                 className="min-w-0 overflow-hidden rounded-xl border bg-card"
                 aria-busy={query.isFetching}
               >
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b p-4">
-                  <AttendanceDayPicker
-                    weekly
-                    date={search.date ?? result.date}
-                    today={result.today}
-                    onChange={(date) => {
-                      void navigate({ search: { ...search, date } })
-                    }}
-                  />
-                  {query.isPlaceholderData ? (
-                    <Skeleton
-                      aria-hidden="true"
-                      className="h-5 w-48 motion-reduce:animate-none"
-                    />
-                  ) : (
-                    <dl className="flex flex-wrap items-center gap-6 text-sm">
-                      <div className="flex items-center gap-2">
-                        <dt className="text-muted-foreground">სესიები</dt>
-                        <dd className="font-medium tabular-nums">
-                          {rows.length}
-                        </dd>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <dt className="text-muted-foreground">აღრიცხული დრო</dt>
-                        <dd className="font-medium tabular-nums">
-                          {formatWorkedTime(seconds)}
-                        </dd>
-                      </div>
-                    </dl>
-                  )}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+                  <h2 className="font-medium">დასწრების ისტორია</h2>
+                  <span className="text-sm text-muted-foreground">
+                    {query.isPlaceholderData
+                      ? 'იტვირთება'
+                      : `${rows.length} ჩანაწერი`}
+                  </span>
                 </div>
                 {query.isPlaceholderData ? (
                   <AttendanceSessionsSkeleton />
@@ -185,7 +223,7 @@ function EmployeeAttendanceWorkspace() {
                     role="status"
                     className="px-6 py-12 text-center text-sm text-muted-foreground"
                   >
-                    არჩეულ კვირაში დასწრების ჩანაწერები არ არის.
+                    არჩეულ პერიოდში დასწრების ჩანაწერები არ არის.
                   </p>
                 )}
                 {!query.isPlaceholderData && query.isFetching ? (
@@ -203,36 +241,8 @@ function EmployeeAttendanceWorkspace() {
                   </span>
                 </div>
               </div>
-            </TabsContent>
-            <TabsContent value="timesheet" className="min-w-0">
-              {view === 'timesheet' ? (
-                <EmployeeTimesheetsWorkspace
-                  actorId={actor.id}
-                  userId={userId}
-                  search={{
-                    userId,
-                    month: search.month,
-                    page: search.hoursPage,
-                    sort: search.hoursSort,
-                    status: search.hoursStatus,
-                  }}
-                  onChange={(value, replace) => {
-                    void navigate({
-                      search: { ...search, ...employeeTimesheetSearch(value) },
-                      replace,
-                    })
-                  }}
-                  renderLink={(value) => (
-                    <Link
-                      to="/manage/attendance/$userId"
-                      params={{ userId }}
-                      search={{ ...search, ...employeeTimesheetSearch(value) }}
-                    />
-                  )}
-                />
-              ) : null}
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
         </>
       )}
     </section>

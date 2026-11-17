@@ -67,6 +67,7 @@ function mount(canReview = true, canCorrect = canReview) {
             canReview,
             canCorrect,
             date: session().workDate,
+            manuallyRecorded: false,
             serverNow: '2026-11-04T16:00:00.000Z',
           },
         ]}

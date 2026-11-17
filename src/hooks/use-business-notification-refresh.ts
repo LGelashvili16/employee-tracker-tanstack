@@ -42,6 +42,9 @@ export function useBusinessNotificationRefresh(actorId: string) {
       kind === 'leave'
     ) {
       void client.invalidateQueries({ queryKey: attendanceKey(actorId) })
+      void client.invalidateQueries({
+        queryKey: ['company-attendance-users', actorId],
+      })
       void client.invalidateQueries({ queryKey: ['timesheets', actorId] })
       void client.invalidateQueries({
         queryKey: ['company-timesheets', actorId],

@@ -1,3 +1,4 @@
+import { createManualAttendance } from './server/manual-attendance.service.server'
 import { z } from 'zod'
 import { recordIdSchema } from '#/lib/route-schemas'
 import { createServerFn } from '@tanstack/react-start'
@@ -26,6 +27,7 @@ import {
   employeeSessionListSchema,
   attendanceAssignmentSchema,
   attendanceCorrectionSchema,
+  manualAttendanceSchema,
   attendanceHistorySchema,
   attendanceLimitSchema,
   attendanceReviewSchema,
@@ -161,4 +163,11 @@ export const readAttendanceReviewHistory = createServerFn({ method: 'GET' })
   .validator(attendanceHistorySchema)
   .handler(({ context, data }) =>
     safely(() => attendanceReviewHistory(context.actor, data)),
+  )
+
+export const recordManualAttendance = createServerFn({ method: 'POST' })
+  .middleware([authenticatedMiddleware])
+  .validator(manualAttendanceSchema)
+  .handler(({ context, data }) =>
+    safely(() => createManualAttendance(context.actor, data)),
   )

@@ -55,7 +55,8 @@ export async function isAssignedReviewer(
 export async function companyAttendanceUsers(
   tx: AttendanceTransaction,
   input: z.infer<typeof companyAttendanceListSchema>,
-  reviewerId?: string,
+  reviewerId: string | undefined,
+  summary: { date: string; now: string; canReadAttendance: boolean },
 ) {
   // Treat SQL LIKE metacharacters as literal search text.
   const pattern = `%${input.q.replace(/[\\%_]/g, '\\$&')}%`
@@ -80,10 +81,18 @@ export async function companyAttendanceUsers(
       name,
       username,
       state: user.accessState,
-      sessionCount:
-        sql<number>`(select count(*) from ${attendanceSession} where ${attendanceSession.employeeId} = ${employee.id})`.mapWith(
-          Number,
-        ),
+      jobTitle: employee.jobTitle,
+      hasOpenSession: summary.canReadAttendance
+        ? sql<boolean>`exists (select 1 from ${attendanceSession} where ${attendanceSession.employeeId} = ${employee.id} and ${attendanceSession.endedAt} is null and ${attendanceSession.startedAt} <= ${summary.now}::timestamptz)`
+        : sql<boolean>`false`,
+      hasTodaySession: summary.canReadAttendance
+        ? sql<boolean>`exists (select 1 from ${attendanceSession} where ${attendanceSession.employeeId} = ${employee.id} and ${attendanceSession.workDate} = ${summary.date}::date and ${attendanceSession.startedAt} <= ${summary.now}::timestamptz)`
+        : sql<boolean>`false`,
+      latestCheckIn: summary.canReadAttendance
+        ? sql<
+            string | null
+          >`(select max(${attendanceSession.startedAt})::text from ${attendanceSession} where ${attendanceSession.employeeId} = ${employee.id} and ${attendanceSession.startedAt} <= ${summary.now}::timestamptz)`
+        : sql<string | null>`null`,
     })
     .from(user)
     .leftJoin(employee, eq(employee.userId, user.id))
@@ -120,6 +129,8 @@ export async function companyAttendanceUser(
         name: sql<string>`coalesce(${employee.fullName}, ${user.name})`,
         code: sql<string>`coalesce(${employee.username}, ${user.username}, '')`,
         employeeId: employee.id,
+        jobTitle: employee.jobTitle,
+        image: user.image,
         assigned: assignedEmployee(reviewerId ?? ''),
       })
       .from(user)
@@ -134,16 +145,17 @@ export async function companyAttendanceUser(
   ).at(0)
   if (!subject) return null
   if (!subject.employeeId || !includeSessions) return { subject, sessions: [] }
-  // The service bounds the period to one day or week; retain complete work dates and overnight sessions.
+  // The service bounds the period to a day, week or calendar month; retain complete work dates and overnight sessions.
   const sessions = await tx
     .select({
       id: attendanceSession.id,
+      manuallyRecorded: sql<boolean>`exists (select 1 from attendance_audit a where a.target_id = attendance_session.id::text and a.action = 'attendance.created')`,
       startedBy: sql<
         string | null
-      >`(select u.name from attendance_punch p join "user" u on u.id = p.actor_id where p.session_id = attendance_session.id and p.kind = 'in')`,
+      >`coalesce((select u.name from attendance_punch p join "user" u on u.id = p.actor_id where p.session_id = attendance_session.id and p.kind = 'in'), (select u.name from attendance_audit a join "user" u on u.id = a.actor_id where a.target_id = attendance_session.id::text and a.action = 'attendance.created' limit 1))`,
       endedBy: sql<
         string | null
-      >`(select u.name from attendance_punch p join "user" u on u.id = p.actor_id where p.session_id = attendance_session.id and p.kind = 'out')`,
+      >`coalesce((select u.name from attendance_punch p join "user" u on u.id = p.actor_id where p.session_id = attendance_session.id and p.kind = 'out'), (select u.name from attendance_audit a join "user" u on u.id = a.actor_id where a.target_id = attendance_session.id::text and a.action = 'attendance.created' limit 1))`,
       date: attendanceSession.workDate,
       timezone: attendanceSession.timezone,
       startedAt: attendanceSession.startedAt,
@@ -170,10 +182,10 @@ export async function companyAttendanceUser(
       ),
     )
     .orderBy(
-      input.period === 'week'
+      input.period === 'week' || input.period === 'month'
         ? desc(attendanceSession.startedAt)
         : asc(attendanceSession.startedAt),
-      input.period === 'week'
+      input.period === 'week' || input.period === 'month'
         ? desc(attendanceSession.id)
         : asc(attendanceSession.id),
     )

@@ -102,6 +102,7 @@ export function CompanyAttendancePage() {
               {query.data.items.length ? (
                 <CompanyAttendanceUsersTable
                   items={query.data.items}
+                  timezone={query.data.companyTimezone}
                   search={search}
                 />
               ) : (
