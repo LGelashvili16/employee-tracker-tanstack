@@ -29,6 +29,8 @@ Subtle accent surfaces also identify active sidebar links, the current paginatio
 
 Selected select options and checked dropdown-menu checkbox/radio choices use the same subtle accent pair, including in portaled popups. Existing menu focus/hover highlights already consume these tokens. Keep ordinary cards, headings, separators and destructive actions independent of personal accent selection.
 
+Keep notification popup headers, footers, borders, header icons and idle actions neutral in both themes. Unread rows use a neutral shade, with accent-colored unread icons/count badges to identify state. Apply accent surfaces on hover, keyboard focus, expanded controls and selected theme options. Footer links become accented on hover/focus. Preserve muted read metadata and red unread dots. Use the shared `soft` Button variant for selected-state emphasis and the `accent` Badge variant for unread counts, not business outcomes. Avoid decorative persistent accent washes or shiny surfaces.
+
 The current order is neutral, sapphire, navy, cobalt, iris, indigo, wine, burnt orange, copper, antique gold, olive, forest, eucalyptus and jade. Antique gold is shared with the original set rather than duplicated.
 
 Run `pnpm exec vitest run src/lib/appearance.test.ts src/features/account/components/appearance-settings.test.tsx`, then inspect the new palette in both themes, including keyboard focus, hover, selected tabs and narrow layouts. The contrast test covers every registry entry automatically.

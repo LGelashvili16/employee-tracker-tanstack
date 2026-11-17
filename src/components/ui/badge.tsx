@@ -9,6 +9,7 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
+        accent: 'bg-accent text-accent-foreground',
         default:
           'bg-badge-default text-badge-default-foreground [a]:hover:bg-badge-default/80',
         green:

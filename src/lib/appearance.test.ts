@@ -133,6 +133,12 @@ describe('accent registry and startup restoration', () => {
             tokens?.accent ?? '',
           )
           expect(css.getPropertyValue('--badge-green')).toBe('')
+          if (tokens) {
+            expect(
+              contrast(tokens.accent, dark ? '#a3a3a3' : '#666666'),
+              `${palette.id} notification hover description`,
+            ).toBeGreaterThanOrEqual(4.5)
+          }
         }
       }
       root.dataset.accent = 'neutral'

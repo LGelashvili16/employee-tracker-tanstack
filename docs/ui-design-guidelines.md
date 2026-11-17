@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 64. Last updated: 2026-11-17.
+Status: required project instructions. Version: 66. Last updated: 2026-11-17.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -62,6 +62,8 @@ Place the page title outside and above a route-aware tabs wrapper when that wrap
 - Preserve dimensions during loading. Use the existing shadcn Skeleton and Spinner with Georgian accessible status, as required by `AGENTS.md`.
 
 ## Color, contrast, and iconography
+
+- Keep notification popup headers, footers, borders, header icons and idle actions neutral in both themes. Accent color identifies hover, focus, expanded/selected controls and unread icon/count state; unread-row backgrounds remain neutral. Footer links gain accent color only on hover/focus. Keep the theme selector's surrounding surface neutral and tint only its selected option. Avoid persistent decorative accent washes or shiny surfaces, especially in dark mode. Preserve body/read metadata contrast, red unread dots and existing status variants.
 
 - Keep neutral first in the accent selector and group neighboring hues together. Sort new palette entries automatically through the shared registry, preserving the same DOM and keyboard order. Extend subtle accent treatment to selected select options and checked menu choices. Reserve broad content surfaces, headings, separators and semantic status colors for their established purposes.
 
