@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 62. Last updated: 2026-11-17.
+Status: required project instructions. Version: 64. Last updated: 2026-11-17.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -62,6 +62,11 @@ Place the page title outside and above a route-aware tabs wrapper when that wrap
 - Preserve dimensions during loading. Use the existing shadcn Skeleton and Spinner with Georgian accessible status, as required by `AGENTS.md`.
 
 ## Color, contrast, and iconography
+
+- Keep neutral first in the accent selector and group neighboring hues together. Sort new palette entries automatically through the shared registry, preserving the same DOM and keyboard order. Extend subtle accent treatment to selected select options and checked menu choices. Reserve broad content surfaces, headings, separators and semantic status colors for their established purposes.
+
+- Personal accent colors are selected in გარეგნობა on `/settings/profile`, independently of light/dark/system mode. Keep the existing neutral option as the default alongside საფირონის ლურჯი, ძველი ოქროსფერი, სპილენძისფერი and ზამბახისფერი. Define new palettes only in `src/lib/appearance.ts`; see [adding appearance colors](appearance-colors.md). Use the generated semantic tokens for primary actions, links, focus and selected navigation. Preserve status, schedule and map color meanings.
+- The accent registry also includes ნეფრიტის მწვანე, ევკალიპტის მწვანე, ტყის მწვანე, ღვინისფერი, მუქი ლურჯი, ინდიგო, კობალტის ლურჯი, მუქი ნარინჯისფერი and ზეთისხილისფერი. Use each palette's reviewed light/dark primary and foreground pairs for checked switches, checkboxes and radio buttons. Tint current pagination, selected table rows, calendar ranges and text selection subtly. Preserve neutral's existing appearance. Verify button hover contrast as well as resting states; never recolor business-status badges to match the personal accent.
 
 - Use semantic tokens such as `background`, `foreground`, `muted`, `muted-foreground`, `border`, `primary`, and `destructive`, plus existing badge variants. Keep foundations in `src/styles.css` and variants in shared primitives.
 - Keep primary emphasis restrained. Use status colors for their established meaning rather than decorating arbitrary rows or headings.
@@ -431,3 +436,9 @@ Employee attendance uses one page for period totals and detailed sessions, with 
 The seven-column attendance activity grid runs Monday through Sunday. Offset the first day of a month to its weekday column, leaving preceding cells blank without inventing out-of-month records. Compact narrow-screen lists retain chronological order.
 
 Correction reasons are optional; blank reasons still retain the full actor/timestamp/before-and-after audit. Manual attendance entry uses a separate attendance.record.manage permission for administrators, owners and HR, and stays separate from device-verified punches. Its Sheet shows employee identity, check-in date/time, an off-by-default checkout Switch and optional note. Enabled checkout requires a valid later time. Reject future times, overlaps and daily-limit violations; mark entries as ხელით აღრიცხული and leave them pending review.
+
+## Network access error documents
+
+Network-blocked document requests show a centered, Georgian Teamwork error card with the correct 403 status and guidance to use an allowed network or contact an administrator. Access-check failures show a separate 503 message and retry action. These pre-app documents use shadcn Card/Button, Tabler icons and self-contained fallback CSS because application assets may also be blocked. They work without JavaScript, respect the system color scheme and expose no session, IP or database details. API and server-function failures keep their plain-text response contract and all errors remain private and uncached.
+
+Error pages distinguish sign-in, permission, missing-resource, rate-limit, temporary-service, and unexpected failures where a safe status is available. Show Georgian recovery guidance and support references for unexpected failures. Diagnostic console records contain only generated reference IDs, UTC timestamps, source, status, and explicitly allowed technical categories. Never log raw errors, stacks, request URLs, tokens, SQL, IP addresses, or employee details. Expected 404s and permission denials do not need error-level logs. Offline guidance must clarify that writes require a connection.

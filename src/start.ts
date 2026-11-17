@@ -1,20 +1,18 @@
 import { createMiddleware, createStart } from '@tanstack/react-start'
+import { reportError } from '#/lib/error-diagnostics'
 
 const networkMiddleware = createMiddleware().server(
   async ({ request, next }) => {
-    const { currentRequestIp, networkAllowed } =
-      await import('#/features/attendance-security/server/network.server')
+    const { networkAccessResponse } =
+      await import('#/features/attendance-security/server/network-access-page.server')
     try {
+      const { currentRequestIp, networkAllowed } =
+        await import('#/features/attendance-security/server/network.server')
       if (!(await networkAllowed(currentRequestIp(request))))
-        return new Response('ამ ქსელიდან წვდომა აკრძალულია.', {
-          status: 403,
-          headers: { 'Cache-Control': 'private, no-store' },
-        })
-    } catch {
-      return new Response('წვდომის შემოწმება დროებით მიუწვდომელია.', {
-        status: 503,
-        headers: { 'Cache-Control': 'private, no-store' },
-      })
+        return networkAccessResponse(request, 403)
+    } catch (error) {
+      const diagnostic = reportError('network-access', error, 503)
+      return networkAccessResponse(request, 503, diagnostic)
     }
     return next()
   },

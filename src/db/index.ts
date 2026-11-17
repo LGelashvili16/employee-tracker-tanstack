@@ -3,6 +3,7 @@ import 'dotenv/config'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import * as schema from './schema'
+import { reportError } from '#/lib/error-diagnostics'
 
 const databaseUrl = process.env.DATABASE_URL
 if (!databaseUrl) {
@@ -16,7 +17,7 @@ const pool = new Pool({
 })
 
 pool.on('error', (error) => {
-  console.error('Unexpected PostgreSQL pool error', error)
+  reportError('database-pool', error, 503)
 })
 
 export const db = drizzle({ client: pool, schema })
