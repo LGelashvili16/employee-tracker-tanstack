@@ -47,6 +47,7 @@ export function attendanceWeek(date: string) {
 }
 export const DAILY_WORK_TARGET_SECONDS = 8 * 3600
 export const DAILY_BREAK_ALLOWANCE_SECONDS = 3600
+export const MAX_WORKDAY_SECONDS = 18 * 3600
 
 /** Compare only actual recorded portions of an interval to its retained schedule. No break deduction or approval is inferred. */
 export function sessionMetrics(

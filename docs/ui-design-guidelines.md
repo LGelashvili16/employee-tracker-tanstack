@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 55. Last updated: 2026-11-16.
+Status: required project instructions. Version: 62. Last updated: 2026-11-17.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -341,9 +341,11 @@ When the user changes a shared UI standard, update this file instead of creating
 - The allowance settings tab includes the annual paid-vacation default, initially 24 working days and never below 24. January 1 adds each employee annual vacation allowance while preserving unused days. Keep the vacation addition separate from the day-off reset toggle.
 - Do not request a change reason when saving company leave limits, attendance warning thresholds, or attendance reviewer assignments. Record these changes in the audit log with an automatic reason.
 - Security policy settings and device approval, rejection, and revocation dialogs have no reason textarea. Retain actor, target, status changes, and automatic descriptions in the audit log.
+- Admins, owners, and HR can explicitly approve their own pending browser through the existing device review confirmation dialog, using `attendance.devices.approve.self` alongside device-management permission. Label the row action `საკუთარი მოწყობილობის დადასტურება`; never approve automatically on sign-in. Keep other self-review actions restricted. Record self-approval in the audit log and preserve IP, Passkey, account-status, and current-permission checks.
 - Account security uses a bounded layout with the current browser summary before the device history Data Table and a compact password Card. Show device approval and Passkey status separately. When required by company policy, offer the same Passkey setup directly on the clock screen; enrollment must retain HR approval and must never automatically record attendance. Start native enrollment only after the employee selects its action.
-- On the clock screen, keep the setup prompt to an informational Alert explaining Passkey and the HR review requirement, plus a button labeled `Passkey-ის დამატება`. Omit browser identity, device-state badges, and configuration links from this prompt. While an enrolled device awaits HR review, keep that action disabled. The full device summary belongs on account security.
-- Bound security settings to a readable content width, with separate Cards for passkey verification and network access. Include `(Passkey)` in the extra-verification switch label and default new policies to off. Use compact setting descriptions and a right-aligned save action. Device management opens with all devices and uses rounded status tabs, including active registrations with a revocation action.
+- The clock setup prompt contains a contextual Alert and a `მოწყობილობის აქტივაციის მოთხოვნა` button for every new browser, including the first. Sign-in automatically identifies the browser but never submits an HR activation request. Clicking the action submits it; afterward show a disabled `მოთხოვნა გაგზავნილია` button while HR review is pending. In Passkey mode, also offer `Passkey-ის დამატება` after the activation request when no key is saved. Omit browser identity, device-state badges, and configuration links from the clock prompt. The full device summary belongs on account security. Reapplication is explicit for rejected and revoked browsers, with existing keys retained.
+- Token-only verification never asks employees to create a key or enter a browser name. Newly identified inactive browsers do not appear in the HR request list or device history until an employee requests activation; they remain visible in their own current-browser summary. Use two switches labeled `ტოკენით გადამოწმება` and `დამატებითი გადამოწმება (Passkey)`. Passkey adds to token verification and is unavailable until token verification is enabled. Turning token verification off also turns Passkey off; turning token verification back on leaves Passkey off. IP rules apply independently. When enabled, Passkey requires both checks and never falls back to token-only verification.
+- Bound security settings to a readable content width, with separate Cards for verification settings and network access. Default new policies to automatic browser approval with Passkeys off. Use compact setting descriptions and a right-aligned save action. Device management opens with all devices and uses rounded status tabs, including active registrations with a revocation action. Its Type column reflects the active server policy: blue `Token`, purple `Token + Passkey`, or a secondary `გამორთულია` Badge. Show saved credential presence separately; a retained Passkey must not make a token-only activation appear to require Passkey.
 
 ## Sick leave
 
@@ -378,6 +380,10 @@ The notification bell toolbar uses ყველა შეტყობინე�
 
 ## Attendance directory navigation
 
+The management device table shows the latest decision actor and timestamp together in a `გადაწყვეტილება მიიღო` column, alongside the existing status. Pending requests show that a decision is awaited; never infer a reviewer from the employee identity or current viewer. Preserve approval, rejection, revocation, and self-approval attribution from the persisted decision fields.
+
+The attendance clock enforces an 18-hour combined limit for its retained work date, excluding clocked-out gaps and preserving the total across midnight. When a closed workday reaches the limit, disable another check-in for that date and show a persistent warning Alert explaining why. Automatic checkout is provisional and remains subject to review.
+
 Clicking non-interactive content anywhere in an employee attendance directory row opens /manage/attendance/$userId. Keep semantic table rows and real employee/detail links for keyboard and native new-tab navigation. Ignore modified clicks, text selections and nested interactive controls.
 
 ## Weekly employee attendance
@@ -405,3 +411,7 @@ Display full dates with Georgian month names, for example 10 ნოემბე�
 Keep personal working-hours rows as daily summaries. Mark days containing attendance corrections and provide a სესიები action opening a right-side, read-only shadcn Sheet. Show every clock-in/out as its own Card with exact current timestamps, seconds and status. Mark corrected sessions individually and show the original value beneath each changed time. Preserve overnight dates and paginate sessions server-side, with the selected day and page in validated URL state. Read only the signed-in employee's sessions. Use the existing SSE connection to refresh open details after corrections; show no timezone labels or edit controls.
 
 Attendance and working-hours lists and session sheets omit waiting-for-review badges. Keep corrected, active, approved, rejected and meaningful deviation indicators. Pending state still governs review actions, filtering and operational totals; do not infer approval from the absence of a badge.
+
+## Sidebar group navigation
+
+Personal-space and management sections use static shadcn SidebarGroupLabel titles with their links always visible on desktop and mobile. Section titles do not collapse or open popups. Reserve animated Accordion expansion for navigation items with actual nested children. Administration retains its desktop hover/click popup and mobile Accordion. Preserve permission filtering, active destinations and accessible unread indicators. Accordion transitions and popup animations respect reduced motion.

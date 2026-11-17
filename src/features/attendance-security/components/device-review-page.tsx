@@ -24,6 +24,7 @@ import {
 } from '../attendance-security.schemas'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Button } from '#/components/ui/button'
+import { Badge } from '#/components/ui/badge'
 import { FieldGroup } from '#/components/ui/field'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import {
@@ -83,6 +84,27 @@ function DeviceReviewWorkspace() {
       helper.columns([
         helper.accessor('userName', { header: 'თანამშრომელი' }),
         helper.accessor('name', { header: 'მოწყობილობა' }),
+        helper.display({
+          id: 'type',
+          header: 'ტიპი',
+          cell: () => (
+            <Badge
+              variant={
+                result?.passkeyRequired
+                  ? 'purple'
+                  : result?.browserApprovalRequired === false
+                    ? 'secondary'
+                    : 'blue'
+              }
+            >
+              {result?.passkeyRequired
+                ? 'Token + Passkey'
+                : result?.browserApprovalRequired === false
+                  ? 'გამორთულია'
+                  : 'Token'}
+            </Badge>
+          ),
+        }),
         helper.accessor('state', {
           header: 'სტატუსი',
           cell: ({ row }) => <DeviceState state={row.original.state} />,
@@ -110,10 +132,31 @@ function DeviceReviewWorkspace() {
             ),
         }),
         helper.display({
+          id: 'reviewer',
+          header: 'გადაწყვეტილება მიიღო',
+          cell: ({ row }) =>
+            row.original.reviewedAt ? (
+              <div className="flex flex-col gap-1">
+                <span>{row.original.reviewedByName ?? 'უცნობია'}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatAttendanceDateTime(
+                    row.original.reviewedAt,
+                    result?.timezone ?? 'Asia/Tbilisi',
+                  )}
+                </span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">
+                გადაწყვეტილება მოლოდინშია
+              </span>
+            ),
+        }),
+        helper.display({
           id: 'actions',
           header: 'მოქმედება',
           cell: ({ row }) =>
-            row.original.userId === actor.id ? (
+            row.original.userId === actor.id &&
+            (!result?.canApproveOwn || row.original.state !== 'pending') ? (
               <span className="text-muted-foreground">საკუთარი მოთხოვნა</span>
             ) : (
               <div className="flex gap-2">
@@ -128,20 +171,24 @@ function DeviceReviewWorkspace() {
                         })
                       }
                     >
-                      დადასტურება
+                      {row.original.userId === actor.id
+                        ? 'საკუთარი მოწყობილობის დადასტურება'
+                        : 'დადასტურება'}
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setSelection({
-                          device: row.original,
-                          decision: 'rejected',
-                        })
-                      }
-                    >
-                      უარყოფა
-                    </Button>
+                    {row.original.userId !== actor.id ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setSelection({
+                            device: row.original,
+                            decision: 'rejected',
+                          })
+                        }
+                      >
+                        უარყოფა
+                      </Button>
+                    ) : null}
                   </>
                 ) : row.original.state === 'approved' ? (
                   <Button
@@ -161,7 +208,13 @@ function DeviceReviewWorkspace() {
             ),
         }),
       ]),
-    [actor.id, result?.timezone],
+    [
+      actor.id,
+      result?.timezone,
+      result?.browserApprovalRequired,
+      result?.passkeyRequired,
+      result?.canApproveOwn,
+    ],
   )
   const table = useTable({
     features,

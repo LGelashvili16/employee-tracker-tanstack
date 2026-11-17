@@ -12,6 +12,7 @@ retains the resolved expectations so subsequent schedule changes cannot rewrite 
 - Midnight does not create a checkout, reset the counter, or mark attendance as missing.
 - A new check-in requires the previous session to be closed. It belongs to the new check-in date, even before 10:00.
 - Several sessions on one date are summed without counting gaps. The dashboard continues showing the entire starting day's total during overnight work.
+- The workday has an automatic 18-hour combined limit. Completed intervals reduce the remaining time for the open interval, including after midnight. At the limit, the background task records the exact cutoff as a provisional checkout and returns the session to pending review. Further check-ins for that same work date are blocked. Previously closed history is not rewritten; an overdue open session is caught up by the next task tick.
 - Check-in requires a configured employee schedule. On a configured nonworking day, the employee can start after confirming in the shared dialog. The server checks the confirmed company-local date against the current effective employee workday. Unconfigured schedules remain blocked. Existing sessions can continue into a day off; planned overnight schedules remain outside the current schedule model.
 
 ## Labels and time calculations
@@ -59,7 +60,7 @@ Employee-row locks serialize clock actions and corrections. Record revisions rej
 
 ## Long sessions
 
-The default warning threshold is 16 continuous hours. Attendance settings permit 8 through 72 hours and require a reason for changes. Each new session captures its threshold; changing the setting does not reinterpret existing sessions. Reaching the threshold asks for review and leaves the session running. It never invents a checkout. An employee may still explicitly check out, or an assigned reviewer may resolve the actual interval with a correction.
+The default warning threshold is 16 continuous hours. Attendance settings permit 8 through 72 hours and record changes in the audit log. Each new session captures its threshold; changing the setting does not reinterpret existing sessions. Reaching this warning threshold asks for review and leaves the session running. The separate fixed 18-hour combined workday limit still applies and can end a session before a higher warning threshold is reached. An employee may explicitly check out before the fixed limit, or an authorized reviewer may resolve the actual interval with a correction. Automatic checkout leaves the original checkout null and marks the effective end as provisional.
 
 Warning and summary data refresh from the server every minute while the timer remains live. Background refresh and ordinary navigation do not emit success toasts. Explicit actions use Georgian success/error toasts and pending spinners.
 

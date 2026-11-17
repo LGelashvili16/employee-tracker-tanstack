@@ -26,6 +26,7 @@ export function SecuritySubmit({
 }
 export function DeviceState({ state }: { state: string }) {
   const labels: Record<string, string> = {
+    unrequested: 'არააქტიური',
     pending: 'დასადასტურებელი',
     approved: 'აქტიური',
     rejected: 'უარყოფილი',
@@ -34,7 +35,13 @@ export function DeviceState({ state }: { state: string }) {
   return (
     <Badge
       variant={
-        state === 'approved' ? 'green' : state === 'pending' ? 'yellow' : 'red'
+        state === 'approved'
+          ? 'green'
+          : state === 'pending'
+            ? 'yellow'
+            : state === 'unrequested'
+              ? 'secondary'
+              : 'red'
       }
     >
       {labels[state] ?? 'შეზღუდული'}

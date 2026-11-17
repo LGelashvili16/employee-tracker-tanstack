@@ -234,9 +234,9 @@ describe.runIf(enabled)('durable reminders against PostgreSQL', () => {
     expect(await run('2031-01-02T01:02Z')).toBe(1)
     expect(await run('2031-01-02T02:02Z')).toBe(0)
     await sql().query(
-      "update employee set status='inactive' where user_id='subject';insert into attendance_session(employee_id,request_id,work_date,timezone,schedule_effective_from,expected_start_at,expected_end_at,started_at,max_open_hours) select id,uuidv7(),'2031-01-01','Asia/Tbilisi','2031-01-01','2031-01-01 15:00Z','2031-01-01 15:00Z','2031-01-01 15:00Z',8 from employee where user_id='subject'",
+      "update employee set status='inactive' where user_id='subject';insert into attendance_session(employee_id,request_id,work_date,timezone,schedule_effective_from,expected_start_at,expected_end_at,started_at,max_open_hours) select id,uuidv7(),'2031-01-01','Asia/Tbilisi','2031-01-01','2031-01-01 23:07Z','2031-01-01 23:07Z','2031-01-01 23:07Z',8 from employee where user_id='subject'",
     )
-    expect(await run('2031-01-02T02:03Z')).toBe(2)
+    await run('2031-01-02T07:08Z')
     expect(
       (
         await sql().query(
@@ -313,6 +313,56 @@ describe.runIf(enabled)('durable reminders against PostgreSQL', () => {
     await run('2031-01-06T05:02Z')
     expect(await count()).toBe(139)
     expect(await run('2031-01-06T05:03Z')).toBe(0)
+  })
+  it('closes at 18 combined hours across intervals and midnight, excluding clocked-out breaks and other workdays', async () => {
+    await employees(['combined-limit'])
+    await sql()
+      .query(`insert into attendance_session(employee_id,request_id,work_date,timezone,schedule_effective_from,expected_start_at,expected_end_at,started_at,ended_at)
+      select id,uuidv7(),day,'Asia/Tbilisi','2031-01-01',start_at,start_at,start_at,end_at from employee cross join (values
+        (date '2031-01-09',timestamptz '2031-01-09 05:00Z',timestamptz '2031-01-09 06:00Z'),
+        (date '2031-01-10',timestamptz '2031-01-10 05:00Z',timestamptz '2031-01-10 14:00Z'),
+        (date '2031-01-10',timestamptz '2031-01-10 20:00Z',null::timestamptz)
+      ) intervals(day,start_at,end_at) where user_id='combined-limit'`)
+    await run('2031-01-11T03:59:00Z')
+    expect(
+      (
+        await sql().query(
+          `select count(*)::int as total from notification where event_key like 'auto-checkout-warning:%' and recipient_id='combined-limit'`,
+        )
+      ).rows[0].total,
+    ).toBe(0)
+    await run('2031-01-11T04:00:00Z')
+    expect(
+      (
+        await sql().query(
+          `select count(*)::int as total from notification where event_key like 'auto-checkout-warning:%' and recipient_id='combined-limit'`,
+        )
+      ).rows[0].total,
+    ).toBe(1)
+    await run('2031-01-11T05:00:00Z')
+    await run('2031-01-11T06:00:00Z')
+    const rows = (
+      await sql().query(
+        `select s.started_at,s.ended_at,s.auto_closed_at,s.original_ended_at,s.review_state,s.revision from attendance_session s join employee e on e.id=s.employee_id where e.user_id='combined-limit' order by s.started_at`,
+      )
+    ).rows
+    expect(rows[1].ended_at.toISOString()).toBe('2031-01-10T14:00:00.000Z')
+    expect(rows[2].ended_at?.toISOString()).toBe('2031-01-11T05:00:00.000Z')
+    expect(rows[2].auto_closed_at?.toISOString()).toBe(
+      '2031-01-11T05:00:00.000Z',
+    )
+    expect(rows[2]).toMatchObject({
+      original_ended_at: null,
+      review_state: 'pending',
+      revision: 1,
+    })
+    expect(
+      (
+        await sql().query(
+          `select count(*)::int as total from notification where event_key like 'auto-checkout:%' and recipient_id='combined-limit'`,
+        )
+      ).rows[0].total,
+    ).toBe(1)
   })
   it('warns before 18 hours and closes overdue sessions once at the cutoff for review', async () => {
     await employees(['auto-subject', 'auto-reviewer'])

@@ -25,12 +25,23 @@ import {
 import { SecuritySubmit } from './security-controls'
 
 const policyFormSchema = securityPolicySchema
-  .omit({ allowedIps: true, blockedIps: true })
+  .omit({
+    allowedIps: true,
+    blockedIps: true,
+  })
   .extend({
+    browserApprovalRequired:
+      securityPolicySchema.shape.browserApprovalRequired.removeDefault(),
     allowedIpsText: z.string().max(10000, 'სია ზედმეტად დიდია.'),
     blockedIpsText: z.string().max(10000, 'სია ზედმეტად დიდია.'),
   })
   .superRefine((value, ctx) => {
+    if (value.passkeyRequired && !value.browserApprovalRequired)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['passkeyRequired'],
+        message: 'Passkey-ისთვის ტოკენით გადამოწმებაც ჩართული უნდა იყოს.',
+      })
     for (const [field, schema] of [
       ['allowedIpsText', securityPolicySchema.shape.allowedIps],
       ['blockedIpsText', securityPolicySchema.shape.blockedIps],
@@ -86,8 +97,9 @@ function PolicyForm({
   const client = useQueryClient()
   const form = useForm({
     defaultValues: {
-      ipRestrictionEnabled: policy.ipRestrictionEnabled,
+      browserApprovalRequired: policy.browserApprovalRequired,
       passkeyRequired: policy.passkeyRequired,
+      ipRestrictionEnabled: policy.ipRestrictionEnabled,
       allowedIpsText: policy.allowedIps.join('\n'),
       blockedIpsText: policy.blockedIps.join('\n'),
       revision: policy.revision,
@@ -128,28 +140,82 @@ function PolicyForm({
               დასწრების დადასტურება
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <form.Field name="passkeyRequired">
+          <CardContent className="flex flex-col gap-6">
+            <form.Field name="browserApprovalRequired">
               {(field) => (
-                <Field orientation="horizontal" className="items-start gap-6">
+                <Field
+                  orientation="horizontal"
+                  className="items-start gap-6"
+                  data-invalid={!field.state.meta.isValid}
+                >
                   <FieldContent>
-                    <FieldLabel htmlFor="passkey-required">
-                      შესვლისა და გასვლის დამატებითი დადასტურება (Passkey)
+                    <FieldLabel htmlFor="browser-approval-required">
+                      ტოკენით გადამოწმება
                     </FieldLabel>
-                    <FieldDescription>
-                      შესვლისა და გასვლისას ბიომეტრიით ან მოწყობილობის PIN კოდით
-                      დადასტურება. გამორთვისას მოწყობილობისა და ქსელის
-                      შეზღუდვები ძალაში რჩება.
+                    <FieldDescription id="browser-approval-help">
+                      ბრაუზერი ავტომატურად აქტიურდება HR-ის დადასტურების შემდეგ.
+                      გამორთვისას მოწყობილობისა და Passkey-ის შემოწმება აღარ
+                      მოითხოვება. ქსელის წესები კვლავ მოქმედებს.
                     </FieldDescription>
+                    <FieldError
+                      id="browser-approval-error"
+                      errors={field.state.meta.errors}
+                    />
                   </FieldContent>
                   <Switch
-                    id="passkey-required"
+                    id="browser-approval-required"
                     checked={field.state.value}
-                    onCheckedChange={field.handleChange}
+                    onCheckedChange={(checked) => {
+                      field.handleChange(checked)
+                      if (!checked) form.setFieldValue('passkeyRequired', false)
+                    }}
+                    onBlur={field.handleBlur}
+                    aria-invalid={!field.state.meta.isValid}
+                    aria-describedby="browser-approval-help browser-approval-error"
                   />
                 </Field>
               )}
             </form.Field>
+            <form.Subscribe
+              selector={(state) => state.values.browserApprovalRequired}
+            >
+              {(browserEnabled) => (
+                <form.Field name="passkeyRequired">
+                  {(field) => (
+                    <Field
+                      orientation="horizontal"
+                      className="items-start gap-6"
+                      data-disabled={!browserEnabled}
+                      data-invalid={!field.state.meta.isValid}
+                    >
+                      <FieldContent>
+                        <FieldLabel htmlFor="passkey-required">
+                          დამატებითი გადამოწმება (Passkey)
+                        </FieldLabel>
+                        <FieldDescription id="passkey-required-help">
+                          ყოველ შესვლასა და გასვლაზე საჭიროა ბიომეტრიით ან PIN
+                          კოდით დადასტურება. ჯერ ჩართეთ ტოკენით გადამოწმება.
+                          ორივე შემოწმება სავალდებულოა.
+                        </FieldDescription>
+                        <FieldError
+                          id="passkey-required-error"
+                          errors={field.state.meta.errors}
+                        />
+                      </FieldContent>
+                      <Switch
+                        id="passkey-required"
+                        checked={field.state.value}
+                        onCheckedChange={field.handleChange}
+                        onBlur={field.handleBlur}
+                        disabled={!browserEnabled}
+                        aria-invalid={!field.state.meta.isValid}
+                        aria-describedby="passkey-required-help passkey-required-error"
+                      />
+                    </Field>
+                  )}
+                </form.Field>
+              )}
+            </form.Subscribe>
           </CardContent>
         </Card>
         <Card>

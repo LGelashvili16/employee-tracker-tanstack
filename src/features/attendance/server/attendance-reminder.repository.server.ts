@@ -8,6 +8,7 @@ import {
 } from '#/lib/authorization/permissions'
 import type { Permission } from '#/lib/authorization/permissions'
 import type { AttendanceTransaction } from './attendance.repository.server'
+import { workdayAutomaticCutoffSql } from './attendance.repository.server'
 
 type Candidate = {
   subject: string
@@ -110,14 +111,19 @@ export async function autoCloseSessions(
   tx: AttendanceTransaction,
   instant: string,
 ) {
+  const cutoff = workdayAutomaticCutoffSql(
+    sql`s.employee_id`,
+    sql`s.work_date`,
+    sql`s.started_at`,
+  )
   return (
     await tx.execute<Candidate>(sql`with due as (
-    select id from attendance_session where ended_at is null
-      and started_at + interval '18 hours' <= ${instant}::timestamptz
-    order by started_at, id limit ${limit} for update skip locked
+    select s.id,${cutoff} as cutoff from attendance_session s where s.ended_at is null
+      and ${cutoff} <= ${instant}::timestamptz
+    order by s.started_at,s.id limit ${limit} for update of s skip locked
   ), closed as (
-    update attendance_session s set ended_at=s.started_at + interval '18 hours',
-      auto_closed_at=s.started_at + interval '18 hours', revision=s.revision+1,
+    update attendance_session s set ended_at=due.cutoff,
+      auto_closed_at=due.cutoff, revision=s.revision+1,
       review_state='pending', approved_outside_seconds=0
     from due where s.id=due.id and s.ended_at is null
     returning s.id,s.employee_id,s.work_date
@@ -134,13 +140,18 @@ export async function autoCloseWarnings(
   tx: AttendanceTransaction,
   instant: string,
 ) {
+  const cutoff = workdayAutomaticCutoffSql(
+    sql`s.employee_id`,
+    sql`s.work_date`,
+    sql`s.started_at`,
+  )
   return (
     await tx.execute<Candidate>(sql`with c as (
     select e.user_id subject,e.user_id recipient,s.work_date::text date,
       'auto-checkout-warning:'||s.id as key
     from attendance_session s join (${activeEmployees}) e on e.id=s.employee_id
-    where s.ended_at is null and s.started_at + interval '17 hours' <= ${instant}::timestamptz
-      and s.started_at + interval '18 hours' > ${instant}::timestamptz
+    where s.ended_at is null and ${cutoff} - interval '1 hour' <= ${instant}::timestamptz
+      and ${cutoff} > ${instant}::timestamptz
   ) select * from c where ${undelivered} order by key limit ${limit}`)
   ).rows
 }

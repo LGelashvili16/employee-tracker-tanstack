@@ -203,6 +203,10 @@ export async function checkIn(
       )
     const workday = await getEmployeeWorkday(now, employeeId, tx)
     const nonWorkingDay = workday.kind === 'day_off'
+    if (await repository.workdayLimitReached(tx, employeeId, workday.date))
+      throw new AttendanceWorkflowError(
+        'ამ სამუშაო დღისთვის 18-საათიანი ჯამური ზღვარი მიღწეულია.',
+      )
     const approvedLeave = await readApprovedLeaveForAttendance(
       tx,
       subjectUserId,
@@ -254,20 +258,24 @@ export async function checkIn(
       throw new AttendanceWorkflowError(
         'შესვლა ვერ დაფიქსირდა. სცადეთ ხელახლა.',
       )
-    await recordPunch(tx, {
-      sessionId: created.id,
-      employeeId,
-      subjectUserId,
-      actorId: actor.id,
-      kind: 'in',
-      source: security.intent.targetUserId ? 'hr' : 'employee',
-      occurredAt: now,
-      ip: security.ip,
-      deviceId: security.deviceId,
-      credentialId: security.credentialId,
-      userVerified: security.userVerified,
-      reason: security.intent.reason,
-    })
+    await recordPunch(
+      tx,
+      {
+        sessionId: created.id,
+        employeeId,
+        subjectUserId,
+        actorId: actor.id,
+        kind: 'in',
+        source: security.intent.targetUserId ? 'hr' : 'employee',
+        occurredAt: now,
+        ip: security.ip,
+        deviceId: security.deviceId,
+        credentialId: security.credentialId,
+        userVerified: security.userVerified,
+        reason: security.intent.reason,
+      },
+      security.networkExemption,
+    )
     return created
   })
 }
@@ -308,7 +316,15 @@ export async function checkOut(
         'ღია სამუშაო ჩანაწერი ვერ მოიძებნა. განაახლეთ გვერდი.',
       )
     const now = new Date()
-    if (now.getTime() >= open.startedAt.getTime() + 18 * 60 * 60 * 1000)
+    if (
+      await repository.automaticCheckoutDue(
+        tx,
+        employeeId,
+        open.workDate,
+        open.startedAt,
+        now,
+      )
+    )
       throw new AttendanceWorkflowError(
         'სესიის ავტომატური დასრულება მიმდინარეობს. განაახლეთ გვერდი.',
       )
@@ -321,20 +337,24 @@ export async function checkOut(
       throw new AttendanceWorkflowError(
         'გასვლა ვერ დაფიქსირდა. განაახლეთ გვერდი.',
       )
-    await recordPunch(tx, {
-      sessionId: open.id,
-      employeeId,
-      subjectUserId,
-      actorId: actor.id,
-      kind: 'out',
-      source: security.intent.targetUserId ? 'hr' : 'employee',
-      occurredAt: now,
-      ip: security.ip,
-      deviceId: security.deviceId,
-      credentialId: security.credentialId,
-      userVerified: security.userVerified,
-      reason: security.intent.reason,
-    })
+    await recordPunch(
+      tx,
+      {
+        sessionId: open.id,
+        employeeId,
+        subjectUserId,
+        actorId: actor.id,
+        kind: 'out',
+        source: security.intent.targetUserId ? 'hr' : 'employee',
+        occurredAt: now,
+        ip: security.ip,
+        deviceId: security.deviceId,
+        credentialId: security.credentialId,
+        userVerified: security.userVerified,
+        reason: security.intent.reason,
+      },
+      security.networkExemption,
+    )
     return { id: open.id }
   })
 }

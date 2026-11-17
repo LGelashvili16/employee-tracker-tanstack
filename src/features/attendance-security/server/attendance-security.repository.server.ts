@@ -1,5 +1,6 @@
 import '@tanstack/react-start/server-only'
-import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import {
   attendanceDevice,
   attendanceSecurityAudit,
@@ -76,8 +77,10 @@ export async function listDevices(
   input: z.infer<typeof securityListSchema>,
   ownUserId?: string,
 ) {
+  const reviewer = alias(user, 'device_reviewer')
   const pattern = `%${input.q.replace(/[\\%_]/g, '\\$&')}%`
   const where = and(
+    ne(attendanceDevice.state, 'unrequested'),
     ownUserId || input.userId
       ? eq(attendanceDevice.userId, ownUserId ?? input.userId!)
       : undefined,
@@ -99,9 +102,11 @@ export async function listDevices(
       revision: attendanceDevice.revision,
       createdAt: attendanceDevice.createdAt,
       reviewedAt: attendanceDevice.reviewedAt,
+      reviewedByName: reviewer.name,
     })
     .from(attendanceDevice)
     .innerJoin(user, eq(user.id, attendanceDevice.userId))
+    .leftJoin(reviewer, eq(reviewer.id, attendanceDevice.reviewedBy))
     .where(where)
     .orderBy(
       input.sort === 'oldest'

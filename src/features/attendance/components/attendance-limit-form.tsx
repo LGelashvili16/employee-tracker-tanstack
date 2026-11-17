@@ -86,9 +86,9 @@ export function AttendanceLimitForm({
         <Alert variant="info" role="note" id="attendance-limit-info">
           <IconInfoCircle aria-hidden="true" />
           <AlertDescription>
-            თანამშრომელს შეუძლია მუშაობა ნებისმიერ დროს დაასრულოს. თუ სესია ღია
-            დარჩა, ის 18 საათის შემდეგ ავტომატურად დასრულდება. გადამოწმების
-            ზღვარი გაფრთხილებისთვისაა.
+            თანამშრომელს შეუძლია მუშაობა ნებისმიერ დროს დაასრულოს. თუ სამუშაო
+            დღის ჯამური დრო 18 საათს მიაღწევს, ღია სესია ავტომატურად დასრულდება.
+            გადამოწმების ზღვარი გაფრთხილებისთვისაა.
           </AlertDescription>
         </Alert>
         <form.Subscribe selector={(state) => state.isSubmitting}>

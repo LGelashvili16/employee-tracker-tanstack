@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { ensureSession } from '#/lib/auth/auth.functions'
 import { AppShell } from '#/components/layout/app-shell'
 import { RouteError, RoutePending } from '#/components/common/route-feedback'
+import { AutomaticDeviceRegistration } from '#/features/attendance-security/components/automatic-device-registration'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async () => ({ actor: await ensureSession() }),
@@ -12,5 +13,9 @@ export const Route = createFileRoute('/_authenticated')({
 })
 function AuthenticatedLayout() {
   const { actor } = Route.useRouteContext()
-  return <AppShell actor={actor} />
+  return (
+    <AutomaticDeviceRegistration key={actor.id}>
+      <AppShell actor={actor} />
+    </AutomaticDeviceRegistration>
+  )
 }

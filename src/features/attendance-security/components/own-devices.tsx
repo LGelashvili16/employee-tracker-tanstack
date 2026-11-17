@@ -21,30 +21,11 @@ import { Badge } from '#/components/ui/badge'
 import { Separator } from '#/components/ui/separator'
 import type { z } from 'zod'
 import type { securityListSchema } from '../attendance-security.schemas'
-import {
-  useQuery,
-  useQueryClient,
-  keepPreviousData,
-} from '@tanstack/react-query'
-import { useForm } from '@tanstack/react-form'
-import { toast } from 'sonner'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { Card, CardHeader, CardTitle, CardContent } from '#/components/ui/card'
 import { Alert, AlertDescription } from '#/components/ui/alert'
-import { Input } from '#/components/ui/input'
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '#/components/ui/field'
 import { Skeleton } from '#/components/ui/skeleton'
-import { requestAttendanceDevice } from '../attendance-security.functions'
-import { registerDeviceSchema } from '../attendance-security.schemas'
-import {
-  DeviceState,
-  SecurityPagination,
-  SecuritySubmit,
-} from './security-controls'
+import { DeviceState, SecurityPagination } from './security-controls'
 import { formatAttendanceDateTime } from '#/features/attendance/attendance.rules'
 
 type Device = Extract<
@@ -65,13 +46,11 @@ export function OwnDevices({
   onSearch: (search: z.infer<typeof securityListSchema>) => void
 }) {
   const { page } = search
-  const client = useQueryClient()
   const query = useQuery({
     ...ownDevicesOptions(actorId, search),
     placeholderData: keepPreviousData,
   })
   const result = query.data?.ok ? query.data.value : null
-  const current = result?.currentDevice
   const columns = useMemo(
     () =>
       helper.columns([
@@ -112,23 +91,6 @@ export function OwnDevices({
     data: result?.items ?? empty,
     getRowId: (row) => row.id,
   })
-  const form = useForm({
-    defaultValues: { name: '' },
-    validators: { onSubmit: registerDeviceSchema },
-    onSubmit: async ({ value }) => {
-      const response = await requestAttendanceDevice({ data: value }).catch(
-        () => null,
-      )
-      if (!response?.ok) {
-        toast.error(response?.message ?? 'მოთხოვნა ვერ გაიგზავნა.')
-        return
-      }
-      toast.success('მოწყობილობის მოთხოვნა გაგზავნილია.')
-      await client.invalidateQueries({
-        queryKey: ['attendance-security', 'own', actorId],
-      })
-    },
-  })
   return (
     <Card>
       <CardHeader>
@@ -163,49 +125,6 @@ export function OwnDevices({
         ) : (
           <>
             <CurrentDeviceSetup actorId={actorId} status={result} />
-            {(!result.currentDeviceId && !result.passkeyRequired) ||
-            (current && ['rejected', 'revoked'].includes(current.state)) ? (
-              <form
-                noValidate
-                onSubmit={(event) => {
-                  event.preventDefault()
-                  void form.handleSubmit()
-                }}
-              >
-                <FieldGroup>
-                  <form.Field name="name">
-                    {(field) => (
-                      <Field data-invalid={!field.state.meta.isValid}>
-                        <FieldLabel htmlFor="device-name">
-                          მოწყობილობის სახელი
-                        </FieldLabel>
-                        <Input
-                          id="device-name"
-                          value={field.state.value}
-                          onChange={(event) =>
-                            field.handleChange(event.target.value)
-                          }
-                          onBlur={field.handleBlur}
-                          aria-invalid={!field.state.meta.isValid}
-                          aria-describedby="device-name-error"
-                        />
-                        <FieldError
-                          id="device-name-error"
-                          errors={field.state.meta.errors}
-                        />
-                      </Field>
-                    )}
-                  </form.Field>
-                  <form.Subscribe selector={(s) => s.isSubmitting}>
-                    {(pending) => (
-                      <SecuritySubmit pending={pending}>
-                        მოწყობილობის რეგისტრაცია
-                      </SecuritySubmit>
-                    )}
-                  </form.Subscribe>
-                </FieldGroup>
-              </form>
-            ) : null}
             <Separator />
             <h2 className="text-sm font-semibold">
               რეგისტრირებული მოწყობილობები

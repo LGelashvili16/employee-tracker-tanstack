@@ -56,6 +56,7 @@ import type { AttendanceTransaction } from '#/features/attendance/server/attenda
 
 export const defaultSecurityPolicy = {
   id: 1,
+  browserApprovalRequired: true,
   ipRestrictionEnabled: false,
   passkeyRequired: false,
   allowedIps: [] as string[],
@@ -83,10 +84,10 @@ function requireContext(
   if (!context || context.userId !== actor.id || !context.sessionHash)
     throw new AuthorizationError()
 }
-export async function enforceClockNetwork(
+async function enforceClockNetwork(
   tx: AttendanceTransaction,
   policy: typeof defaultSecurityPolicy,
-  actorId: string,
+  actor: Actor,
   ip: string | null,
 ) {
   if (
@@ -94,7 +95,15 @@ export async function enforceClockNetwork(
     (!ip || policy.blockedIps.some((value) => normalizeIp(value) === ip))
   )
     fail('ამ ქსელიდან წვდომა აკრძალულია.')
-  if (!policy.ipRestrictionEnabled) return
+  if (!policy.ipRestrictionEnabled) return null
+  // Callers supply the locked, persisted authorization returned by currentActor.
+  const exemptRole = actor.roles.includes('owner')
+    ? 'owner'
+    : actor.roles.includes('admin')
+      ? 'admin'
+      : null
+  if (exemptRole) return { role: exemptRole, policyRevision: policy.revision }
+  const actorId = actor.id
   await tx.execute(
     sql`select pg_advisory_xact_lock(hashtextextended(${`attendance-network:${actorId}`}, 0))`,
   )
@@ -107,6 +116,7 @@ export async function enforceClockNetwork(
   const allowed = individual?.allowedIps ?? policy.allowedIps
   if (!ip || !allowed.some((value) => normalizeIp(value) === ip))
     fail('ამ ქსელიდან დასწრების აღრიცხვა აკრძალულია. დაუკავშირდით HR-ს.')
+  return null
 }
 async function browser(
   tx: AttendanceTransaction,
@@ -179,6 +189,25 @@ export async function requestDevice(
   context: ClockSecurityContext,
   reapply = false,
 ) {
+  return provisionDevice(actor, input, context, reapply ? 'manual' : 'clock')
+}
+export async function registerAutomaticDevice(
+  actor: Actor,
+  context: ClockSecurityContext,
+) {
+  return provisionDevice(
+    actor,
+    { name: 'დასწრების ბრაუზერი' },
+    context,
+    'sign_in',
+  )
+}
+async function provisionDevice(
+  actor: Actor,
+  input: unknown,
+  context: ClockSecurityContext,
+  trigger: 'manual' | 'clock' | 'sign_in',
+) {
   requireContext(actor, context)
   const { name } = registerDeviceSchema.parse(input)
   if (!context.tokenHash) throw new AuthorizationError()
@@ -186,12 +215,32 @@ export async function requestDevice(
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtextextended(${`attendance-device:${actor.id}`}, 0))`,
     )
-    await currentActor(tx, actor)
-    const policy = await readPolicy(tx)
-    await enforceClockNetwork(tx, policy, actor.id, context.ip)
+    const current = await currentActor(tx, actor)
+    let policy = await readPolicy(tx)
+    if (policy === defaultSecurityPolicy) {
+      // Provisioning materializes defaults so clock writes can lock a real policy row.
+      await tx
+        .insert(attendanceSecurityPolicy)
+        .values({ id: 1 })
+        .onConflictDoNothing()
+      policy = await readPolicy(tx)
+    }
+    if (trigger === 'sign_in') {
+      // Registration must not block login from a network disallowed for attendance.
+      // The application-wide blocklist still applies, as it does on all Start requests.
+      if (
+        policy.blockedIps.length &&
+        (!context.ip ||
+          policy.blockedIps.some((ip) => normalizeIp(ip) === context.ip))
+      )
+        fail('ამ ქსელიდან წვდომა აკრძალულია.')
+    } else await enforceClockNetwork(tx, policy, current, context.ip)
     const existing = await browser(tx, actor, context, true)
     if (existing) {
-      if (reapply && ['rejected', 'revoked'].includes(existing.state)) {
+      if (
+        trigger === 'manual' &&
+        ['unrequested', 'rejected', 'revoked'].includes(existing.state)
+      ) {
         await enforceDeviceCapacity(tx, actor.id)
         if (
           existing.reviewedAt &&
@@ -203,6 +252,10 @@ export async function requestDevice(
           .set({
             state: 'pending',
             name,
+            requestedIp: context.ip,
+            ...(existing.state === 'unrequested'
+              ? { createdAt: new Date() }
+              : {}),
             reviewedBy: null,
             reviewedAt: null,
             revision: existing.revision + 1,
@@ -213,10 +266,16 @@ export async function requestDevice(
           actor.id,
           existing.id,
           'device.requested',
-          'მოწყობილობის ხელახალი დადასტურების მოთხოვნა.',
+          'მოწყობილობის აქტივაციის მოთხოვნა.',
           { before: existing.state },
         )
-        await notifyReviewers(tx, actor.id, existing.id, existing.revision + 1)
+        if (policy.browserApprovalRequired)
+          await notifyReviewers(
+            tx,
+            actor.id,
+            existing.id,
+            existing.revision + 1,
+          )
         return { id: existing.id, state: 'pending' }
       }
       return { id: existing.id, state: existing.state }
@@ -228,6 +287,7 @@ export async function requestDevice(
         userId: actor.id,
         tokenHash: context.tokenHash!,
         name,
+        state: trigger === 'sign_in' ? 'unrequested' : 'pending',
         requestedIp: context.ip,
       })
       .returning()
@@ -235,11 +295,14 @@ export async function requestDevice(
       tx,
       actor.id,
       created.id,
-      'device.requested',
-      'მოწყობილობის რეგისტრაციის მოთხოვნა.',
+      trigger === 'sign_in' ? 'device.identified' : 'device.requested',
+      trigger === 'sign_in'
+        ? 'ბრაუზერი ამოცნობილია.'
+        : 'მოწყობილობის აქტივაციის მოთხოვნა.',
       { ip: context.ip, name },
     )
-    await notifyReviewers(tx, actor.id, created.id, 0)
+    if (trigger !== 'sign_in' && policy.browserApprovalRequired)
+      await notifyReviewers(tx, actor.id, created.id, 0)
     return { id: created.id, state: created.state }
   })
 }
@@ -268,14 +331,16 @@ export async function beginRegistration(
 ) {
   requireContext(actor, context)
   return db.transaction(async (tx) => {
-    await currentActor(tx, actor)
+    const current = await currentActor(tx, actor)
     const device = await browser(tx, actor, context, true)
-    if (!device || ['rejected', 'revoked'].includes(device.state))
-      fail('ჯერ მოითხოვეთ მოწყობილობის რეგისტრაცია ან დაუკავშირდით HR-ს.')
+    if (!device || !['pending', 'approved'].includes(device.state))
+      fail('ჯერ მოითხოვეთ მოწყობილობის აქტივაცია ან დაუკავშირდით HR-ს.')
     if (device.credentialId)
       fail('ამ ბრაუზერს დადასტურების გასაღები უკვე აქვს.')
     const policy = await readPolicy(tx)
-    await enforceClockNetwork(tx, policy, actor.id, context.ip)
+    await enforceClockNetwork(tx, policy, current, context.ip)
+    if (!policy.passkeyRequired)
+      fail('Passkey-ით გადამოწმება გამორთულია. განაახლეთ გვერდი.')
     await challengeBudget(tx, actor.id)
     const rp = relyingParty()
     const options = await generateRegistrationOptions({
@@ -346,13 +411,16 @@ export async function finishRegistration(
   requireContext(actor, context)
   const data = registrationProofSchema.parse(input)
   return db.transaction(async (tx) => {
-    await currentActor(tx, actor)
-    await enforceClockNetwork(tx, await readPolicy(tx), actor.id, context.ip)
+    const current = await currentActor(tx, actor)
+    const policy = await readPolicy(tx)
+    await enforceClockNetwork(tx, policy, current, context.ip)
+    if (!policy.passkeyRequired)
+      fail('Passkey-ით გადამოწმება გამორთულია. განაახლეთ გვერდი.')
     const device = await browser(tx, actor, context, true)
     if (
       !device ||
       device.credentialId ||
-      ['rejected', 'revoked'].includes(device.state)
+      !['pending', 'approved'].includes(device.state)
     )
       throw new AuthorizationError()
     const challenge = await consumeChallenge(
@@ -408,6 +476,20 @@ export async function finishRegistration(
     return { id: device.id }
   })
 }
+function assertClockDevice(
+  device: Awaited<ReturnType<typeof browser>>,
+  policy: { browserApprovalRequired: boolean; passkeyRequired: boolean },
+): asserts device is NonNullable<typeof device> {
+  if (
+    !device ||
+    ((policy.browserApprovalRequired || policy.passkeyRequired) &&
+      (device.state !== 'approved' ||
+        Date.now() - device.createdAt.getTime() >= 365 * 86400_000))
+  )
+    fail(
+      'ეს მოწყობილობა დასწრებისთვის არ არის დადასტურებული. დაელოდეთ HR-ის დადასტურებას.',
+    )
+}
 export async function prepareClock(
   actor: Actor,
   input: unknown,
@@ -416,7 +498,7 @@ export async function prepareClock(
   requireContext(actor, context)
   const intent = clockIntentSchema.parse(input)
   return db.transaction(async (tx) => {
-    await currentActor(
+    const current = await currentActor(
       tx,
       actor,
       intent.targetUserId ? 'attendance.clock.assist' : undefined,
@@ -427,15 +509,9 @@ export async function prepareClock(
     )
       throw new AuthorizationError()
     const device = await browser(tx, actor, context, true)
-    if (
-      device?.state !== 'approved' ||
-      Date.now() - device.createdAt.getTime() >= 365 * 86400_000
-    )
-      fail(
-        'მოწყობილობა დასადასტურებელია. გახსენით ანგარიშის უსაფრთხოება და დაუკავშირდით HR-ს.',
-      )
     const policy = await readPolicy(tx)
-    await enforceClockNetwork(tx, policy, actor.id, context.ip)
+    await enforceClockNetwork(tx, policy, current, context.ip)
+    assertClockDevice(device, policy)
     if (!policy.passkeyRequired) return { challengeId: null, options: null }
     if (!device.credentialId)
       fail('დაამატეთ დადასტურების გასაღები ანგარიშის უსაფრთხოების გვერდზე.')
@@ -475,7 +551,7 @@ export async function authorizeClockAction(
 ) {
   requireContext(actor, context)
   const proof = clockProofSchema.parse(input)
-  await currentActor(
+  const current = await currentActor(
     tx,
     actor,
     proof.intent.targetUserId ? 'attendance.clock.assist' : undefined,
@@ -486,15 +562,14 @@ export async function authorizeClockAction(
   )
     throw new AuthorizationError()
   const device = await browser(tx, actor, context, true)
-  if (
-    device?.state !== 'approved' ||
-    Date.now() - device.createdAt.getTime() >= 365 * 86400_000
-  )
-    fail(
-      'მოწყობილობა არ არის დადასტურებული ან ვადა ამოიწურა. დაუკავშირდით HR-ს.',
-    )
   const policy = await readPolicy(tx)
-  await enforceClockNetwork(tx, policy, actor.id, context.ip)
+  const networkExemption = await enforceClockNetwork(
+    tx,
+    policy,
+    current,
+    context.ip,
+  )
+  assertClockDevice(device, policy)
   let userVerified = false
   if (policy.passkeyRequired) {
     if (
@@ -545,6 +620,7 @@ export async function authorizeClockAction(
       .where(eq(attendanceDevice.id, device.id))
   }
   return {
+    networkExemption,
     deviceId: device.id,
     credentialId: userVerified ? device.credentialId : null,
     userVerified,
@@ -555,8 +631,23 @@ export async function authorizeClockAction(
 export async function recordPunch(
   tx: AttendanceTransaction,
   value: typeof attendancePunch.$inferInsert,
+  networkExemption: Awaited<ReturnType<typeof enforceClockNetwork>>,
 ) {
   await tx.insert(attendancePunch).values(value)
+  if (networkExemption)
+    await auditSecurity(
+      tx,
+      value.actorId,
+      value.sessionId,
+      'clock.ip_allowlist_exempted',
+      'დასწრების IP შეზღუდვის გამონაკლისი ადმინისტრატორის ან მფლობელის როლით.',
+      {
+        kind: value.kind,
+        subjectUserId: value.subjectUserId,
+        ip: value.ip,
+        ...networkExemption,
+      },
+    )
   if (value.source === 'hr')
     await deliverNotifications(tx, {
       eventKey: `punch:${value.sessionId}:${value.kind}`,
@@ -598,6 +689,7 @@ async function currentDeviceStatus(
   const policy = await readPolicy(tx)
   const current = await browser(tx, actor, context)
   return {
+    browserApprovalRequired: policy.browserApprovalRequired,
     passkeyRequired: policy.passkeyRequired,
     currentDevice: current
       ? {
@@ -639,9 +731,16 @@ export async function ownDevices(
 export async function reviewDevices(actor: Actor, input: unknown) {
   return db.transaction(
     async (tx) => {
-      await currentActor(tx, actor, 'attendance.devices.manage')
+      const current = await currentActor(tx, actor, 'attendance.devices.manage')
+      const policy = await readPolicy(tx)
       return {
         ...(await listDevices(tx, securityListSchema.parse(input))),
+        browserApprovalRequired: policy.browserApprovalRequired,
+        passkeyRequired: policy.passkeyRequired,
+        canApproveOwn: hasPermission(
+          current,
+          'attendance.devices.approve.self',
+        ),
         timezone: (await getCompanyWorkday(new Date(), tx)).timezone,
       }
     },
@@ -651,7 +750,7 @@ export async function reviewDevices(actor: Actor, input: unknown) {
 export async function decideDevice(actor: Actor, input: unknown) {
   const data = deviceDecisionSchema.parse(input)
   return db.transaction(async (tx) => {
-    await currentActor(tx, actor, 'attendance.devices.manage')
+    const current = await currentActor(tx, actor, 'attendance.devices.manage')
     const device = (
       await tx
         .select()
@@ -659,7 +758,14 @@ export async function decideDevice(actor: Actor, input: unknown) {
         .where(eq(attendanceDevice.id, data.id))
         .for('update')
     ).at(0)
-    if (!device || device.userId === actor.id) throw new AuthorizationError()
+    if (!device) throw new AuthorizationError()
+    const selfApproval = device.userId === actor.id
+    if (
+      selfApproval &&
+      (data.decision !== 'approved' ||
+        !hasPermission(current, 'attendance.devices.approve.self'))
+    )
+      throw new AuthorizationError()
     if (device.revision !== data.revision)
       fail('ჩანაწერი შეიცვალა. განაახლეთ გვერდი.')
     if (data.decision === 'approved' && device.state !== 'pending')
@@ -689,8 +795,15 @@ export async function decideDevice(actor: Actor, input: unknown) {
       actor.id,
       device.id,
       `device.${data.decision}`,
-      'მოწყობილობის სტატუსი შეცვლილია.',
-      { userId: device.userId, before: device.state, after: data.decision },
+      selfApproval
+        ? 'საკუთარი მოწყობილობის დადასტურება.'
+        : 'მოწყობილობის სტატუსი შეცვლილია.',
+      {
+        userId: device.userId,
+        before: device.state,
+        after: data.decision,
+        ...(selfApproval ? { selfApproval: true } : {}),
+      },
     )
     await deliverNotifications(tx, {
       eventKey: `device-decision:${device.id}:${device.revision + 1}`,
@@ -717,6 +830,10 @@ export async function saveSecuritySettings(
   context: ClockSecurityContext,
 ) {
   const data = securityPolicySchema.parse(input)
+  if (data.passkeyRequired && !data.browserApprovalRequired)
+    fail(
+      'Passkey-ის გამოყენებისთვის მოწყობილობის დადასტურებაც ჩართული უნდა იყოს.',
+    )
   return db.transaction(async (tx) => {
     await currentActor(tx, actor, 'security.configure')
     const before = await policyForUpdate(tx)
@@ -735,6 +852,7 @@ export async function saveSecuritySettings(
     if (data.ipRestrictionEnabled && !context.ip)
       fail('სერვერი ვერ ადგენს სანდო IP მისამართს. ჯერ გამართეთ პროქსი.')
     const after = {
+      browserApprovalRequired: data.browserApprovalRequired,
       ipRestrictionEnabled: data.ipRestrictionEnabled,
       passkeyRequired: data.passkeyRequired,
       allowedIps,

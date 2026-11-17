@@ -253,6 +253,20 @@
       "when": 1794834821306,
       "tag": "0035_passkey_disabled_by_default",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794837588852,
+      "tag": "0036_browser_approval_policy",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794841607347,
+      "tag": "0037_manual_device_activation",
+      "breakpoints": true
     }
   ]
 }

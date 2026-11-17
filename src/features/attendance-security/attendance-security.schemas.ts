@@ -15,6 +15,9 @@ export const exactIpSchema = z.union([z.ipv4(), z.ipv6()], {
 })
 const ips = z.array(exactIpSchema).max(100, 'მაქსიმუმ 100 მისამართი.')
 export const securityPolicySchema = z.object({
+  browserApprovalRequired: z
+    .boolean({ error: 'აირჩიეთ მოწყობილობის დადასტურების წესი.' })
+    .default(true),
   ipRestrictionEnabled: z.boolean({ error: 'აირჩიეთ ქსელის შეზღუდვა.' }),
   passkeyRequired: z.boolean({ error: 'აირჩიეთ დამატებითი დადასტურება.' }),
   allowedIps: ips,

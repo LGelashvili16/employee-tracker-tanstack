@@ -67,6 +67,9 @@ function sql() {
 
 /** A real ES256 authenticator fixture: production verification is never mocked. */
 async function enroll(actor = worker, reviewer = administrator) {
+  await sql().query(
+    'update attendance_security_policy set passkey_required=true',
+  )
   const keys = generateKeyPairSync('ec', { namedCurve: 'prime256v1' })
   const jwk = keys.publicKey.export({ format: 'jwk' })
   const credentialBytes = randomBytes(32)
@@ -221,7 +224,7 @@ describe.runIf(process.env.RUN_ATTENDANCE_SECURITY_DB_TESTS === '1')(
     }, 30000)
     beforeEach(async () => {
       await sql().query(
-        `delete from notification; delete from attendance_challenge; delete from attendance_punch; delete from attendance_audit; delete from attendance_session; delete from attendance_security_audit; delete from attendance_device; delete from attendance_employee_network; delete from attendance_security_policy; update "user" set access_state='active', permission_overrides='{"allow":[],"deny":[]}'::jsonb; insert into attendance_security_policy (id,passkey_required) values (1,false)`,
+        `delete from notification; delete from attendance_challenge; delete from attendance_punch; delete from attendance_audit; delete from attendance_session; delete from attendance_security_audit; delete from attendance_device; delete from attendance_employee_network; delete from attendance_security_policy; update "user" set roles=case id when 'worker' then 'employee' when 'hr' then 'hr_manager' else 'admin' end, access_state='active', permission_overrides='{"allow":[],"deny":[]}'::jsonb; insert into attendance_security_policy (id,passkey_required) values (1,false)`,
       )
       for (const actor of [worker, hr, administrator])
         await sql().query(
@@ -240,6 +243,198 @@ describe.runIf(process.env.RUN_ATTENDANCE_SECURITY_DB_TESTS === '1')(
         await admin.end()
       }
     })
+    it('caps the workday across clock intervals and blocks another same-day clock-in', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      try {
+        vi.setSystemTime(new Date('2031-01-10T00:00:00Z'))
+        await sql().query(
+          `update attendance_device set created_at='2031-01-10T00:00:00Z'`,
+        )
+        const first = await attendance.checkIn(worker, clockInput(), context())
+        vi.setSystemTime(new Date('2031-01-10T08:00:00Z'))
+        await attendance.checkOut(
+          worker,
+          { sessionId: first.id, confirmEarly: true },
+          context(),
+        )
+        vi.setSystemTime(new Date('2031-01-10T09:00:00Z'))
+        const second = await attendance.checkIn(
+          worker,
+          { ...clockInput(), expectedLastSessionId: first.id },
+          context(),
+        )
+        vi.setSystemTime(new Date('2031-01-10T19:00:00Z'))
+        await expect(
+          attendance.checkOut(
+            worker,
+            { sessionId: second.id, confirmEarly: true },
+            context(),
+          ),
+        ).rejects.toThrow('ავტომატური დასრულება')
+        const { runAttendanceReminders } =
+          await import('#/features/attendance/server/attendance-reminders.service.server')
+        await runAttendanceReminders(new Date())
+        const closed = (
+          await sql().query(
+            'select ended_at,auto_closed_at,original_ended_at from attendance_session where id=$1',
+            [second.id],
+          )
+        ).rows[0]
+        expect(closed.ended_at.toISOString()).toBe('2031-01-10T19:00:00.000Z')
+        expect(closed.auto_closed_at.toISOString()).toBe(
+          '2031-01-10T19:00:00.000Z',
+        )
+        expect(closed.original_ended_at).toBeNull()
+        await expect(
+          attendance.checkIn(
+            worker,
+            { ...clockInput(), expectedLastSessionId: second.id },
+            context(),
+          ),
+        ).rejects.toThrow('18-საათიანი ჯამური ზღვარი')
+        vi.setSystemTime(new Date('2031-01-11T00:00:00Z'))
+        await expect(
+          attendance.checkIn(
+            worker,
+            { ...clockInput(), expectedLastSessionId: second.id },
+            context(),
+          ),
+        ).resolves.toBeDefined()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+    it.each(['admin', 'owner', 'hr_manager'] as const)(
+      'lets %s explicitly approve their own pending browser and audits it',
+      async (role) => {
+        await sql().query(
+          `update "user" set roles=$1 where id='administrator'`,
+          [role],
+        )
+        const device = (
+          await sql().query(
+            `update attendance_device set state='pending' where user_id='administrator' returning id,revision`,
+          )
+        ).rows[0]
+        expect(
+          (await security.reviewDevices(administrator, {})).canApproveOwn,
+        ).toBe(true)
+        await security.decideDevice(administrator, {
+          ...device,
+          decision: 'approved',
+        })
+        const reviewed = (
+          await security.reviewDevices(administrator, {})
+        ).items.find((item) => item.id === device.id)
+        expect(reviewed?.reviewedByName).toBe('ადმინისტრატორი')
+        expect(reviewed?.reviewedAt).toEqual(expect.any(String))
+        expect(
+          (await security.deviceStatus(administrator, context(administrator)))
+            .currentDevice?.state,
+        ).toBe('approved')
+        expect(
+          (
+            await sql().query(
+              'select actor_id,details from attendance_security_audit where target_id=$1',
+              [device.id],
+            )
+          ).rows[0],
+        ).toMatchObject({
+          actor_id: administrator.id,
+          details: {
+            userId: administrator.id,
+            before: 'pending',
+            after: 'approved',
+            selfApproval: true,
+          },
+        })
+        await expect(
+          security.decideDevice(administrator, {
+            ...device,
+            decision: 'approved',
+          }),
+        ).rejects.toThrow()
+        await sql().query(
+          `update attendance_security_policy set ip_restriction_enabled=true,allowed_ips='["203.0.113.10"]'`,
+        )
+        const preparation = security.prepareClock(
+          administrator,
+          { kind: 'in', data: clockInput() },
+          context(administrator),
+        )
+        if (role === 'hr_manager') await expect(preparation).rejects.toThrow()
+        else
+          await expect(preparation).resolves.toEqual({
+            challengeId: null,
+            options: null,
+          })
+        await sql().query(
+          `update attendance_security_policy set ip_restriction_enabled=false,passkey_required=true`,
+        )
+        await expect(
+          security.prepareClock(
+            administrator,
+            { kind: 'in', data: clockInput() },
+            context(administrator),
+          ),
+        ).rejects.toThrow()
+        await sql().query(
+          `update "user" set roles='admin' where id='administrator'`,
+        )
+      },
+    )
+    it('does not let a delegated device reviewer self-approve without the separate permission', async () => {
+      await sql().query(
+        `update "user" set permission_overrides='{"allow":["attendance.devices.manage"],"deny":[]}'::jsonb where id='worker'`,
+      )
+      const device = (
+        await sql().query(
+          `update attendance_device set state='pending' where user_id='worker' returning id,revision`,
+        )
+      ).rows[0]
+      expect((await security.reviewDevices(worker, {})).canApproveOwn).toBe(
+        false,
+      )
+      await expect(
+        security.decideDevice(worker, { ...device, decision: 'approved' }),
+      ).rejects.toThrow()
+    })
+    it.each(['missing Passkey', 'revoked permission', 'suspended account'])(
+      'blocks privileged self-approval with %s',
+      async (condition) => {
+        const device = (
+          await sql().query(
+            `update attendance_device set state='pending' where user_id='administrator' returning id,revision`,
+          )
+        ).rows[0]
+        if (condition === 'missing Passkey')
+          await sql().query(
+            'update attendance_security_policy set passkey_required=true',
+          )
+        if (condition === 'revoked permission')
+          await sql().query(
+            `update "user" set permission_overrides='{"allow":[],"deny":["attendance.devices.approve.self"]}'::jsonb where id='administrator'`,
+          )
+        if (condition === 'suspended account')
+          await sql().query(
+            `update "user" set access_state='suspended' where id='administrator'`,
+          )
+        await expect(
+          security.decideDevice(administrator, {
+            ...device,
+            decision: 'approved',
+          }),
+        ).rejects.toThrow()
+        expect(
+          (
+            await sql().query(
+              'select state,revision from attendance_device where id=$1',
+              [device.id],
+            )
+          ).rows[0],
+        ).toEqual({ state: 'pending', revision: device.revision })
+      },
+    )
     it.each(['approved', 'rejected', 'revoked'] as const)(
       'audits a device %s decision without a manual reason',
       async (decision) => {
@@ -283,6 +478,260 @@ describe.runIf(process.env.RUN_ATTENDANCE_SECURITY_DB_TESTS === '1')(
           ).rejects.toThrow()
       },
     )
+    it('identifies a new browser without sending an HR request until the employee explicitly activates it', async () => {
+      await sql().query(`delete from attendance_device where user_id='worker'`)
+      const identified = await security.registerAutomaticDevice(
+        worker,
+        context(),
+      )
+      expect(identified.state).toBe('unrequested')
+      expect(await security.registerAutomaticDevice(worker, context())).toEqual(
+        identified,
+      )
+      expect(
+        (await security.reviewDevices(hr, {})).items.some(
+          (row) => row.id === identified.id,
+        ),
+      ).toBe(false)
+      expect(
+        (await sql().query('select count(*)::int as total from notification'))
+          .rows[0].total,
+      ).toBe(0)
+      await expect(
+        security.decideDevice(hr, {
+          id: identified.id,
+          revision: 0,
+          decision: 'approved',
+        }),
+      ).rejects.toThrow()
+      await expect(
+        security.prepareClock(
+          worker,
+          { kind: 'in', data: clockInput() },
+          context(),
+        ),
+      ).rejects.toThrow()
+      const requested = await security.requestDevice(
+        worker,
+        { name: 'ბრაუზერი' },
+        context(),
+        true,
+      )
+      expect(requested).toEqual({ id: identified.id, state: 'pending' })
+      expect(
+        (await security.reviewDevices(hr, {})).items.find(
+          (row) => row.id === identified.id,
+        ),
+      ).toMatchObject({ state: 'pending', revision: 1 })
+      const sent = (
+        await sql().query('select count(*)::int as total from notification')
+      ).rows[0].total
+      expect(sent).toBeGreaterThan(0)
+      await security.requestDevice(
+        worker,
+        { name: 'ბრაუზერი' },
+        context(),
+        true,
+      )
+      await security.registerAutomaticDevice(worker, context())
+      expect(
+        (await sql().query('select count(*)::int as total from notification'))
+          .rows[0].total,
+      ).toBe(sent)
+      expect(
+        (
+          await sql().query(
+            `select revision from attendance_device where id=$1`,
+            [identified.id],
+          )
+        ).rows[0].revision,
+      ).toBe(1)
+    })
+    it('keeps an approved browser usable while another sign-in waits for an explicit activation request', async () => {
+      const second = {
+        ...context(),
+        tokenHash: hash('unrequested-second-browser').toString('hex'),
+      }
+      const identified = await security.registerAutomaticDevice(worker, second)
+      expect(identified.state).toBe('unrequested')
+      await expect(
+        security.prepareClock(
+          worker,
+          { kind: 'in', data: clockInput() },
+          context(),
+        ),
+      ).resolves.toEqual({ challengeId: null, options: null })
+      await expect(
+        attendance.checkIn(worker, clockInput(), second),
+      ).rejects.toThrow()
+      expect(
+        (await sql().query('select count(*)::int as total from notification'))
+          .rows[0].total,
+      ).toBe(0)
+      await security.requestDevice(
+        worker,
+        { name: 'ახალი ბრაუზერი' },
+        second,
+        true,
+      )
+      expect(
+        (await security.deviceStatus(worker, second)).currentDevice?.state,
+      ).toBe('pending')
+      await expect(
+        security.prepareClock(
+          worker,
+          { kind: 'in', data: clockInput() },
+          context(),
+        ),
+      ).resolves.toEqual({ challengeId: null, options: null })
+      expect(
+        (await sql().query('select count(*)::int as total from notification'))
+          .rows[0].total,
+      ).toBeGreaterThan(0)
+    })
+    it('explains the rejection cooldown and lets the same browser request HR review again afterward', async () => {
+      await sql().query(`delete from attendance_device where user_id='worker'`)
+      const device = await security.requestDevice(
+        worker,
+        { name: 'ბრაუზერი' },
+        context(),
+        true,
+      )
+      await security.decideDevice(hr, {
+        id: device.id,
+        revision: 0,
+        decision: 'rejected',
+      })
+      await expect(
+        security.requestDevice(worker, { name: 'ბრაუზერი' }, context(), true),
+      ).rejects.toThrow('ხელახლა მოთხოვნა ერთ წუთში იქნება შესაძლებელი.')
+      expect(
+        (await security.deviceStatus(worker, context())).currentDevice?.state,
+      ).toBe('rejected')
+      await sql().query(
+        `update attendance_device set reviewed_at=now()-interval '61 seconds' where id=$1`,
+        [device.id],
+      )
+      await expect(
+        security.requestDevice(worker, { name: 'ბრაუზერი' }, context(), true),
+      ).resolves.toEqual({ id: device.id, state: 'pending' })
+      await expect(
+        security.prepareClock(
+          worker,
+          { kind: 'in', data: clockInput() },
+          context(),
+        ),
+      ).rejects.toThrow()
+      await security.decideDevice(hr, {
+        id: device.id,
+        revision: 2,
+        decision: 'approved',
+      })
+      await expect(
+        security.prepareClock(
+          worker,
+          { kind: 'in', data: clockInput() },
+          context(),
+        ),
+      ).resolves.toEqual({ challengeId: null, options: null })
+      expect(
+        (
+          await sql().query(
+            `select count(*)::int as total from attendance_device where user_id='worker'`,
+          )
+        ).rows[0].total,
+      ).toBe(1)
+    })
+    it('uses token-only verification for reactivation even when an older passkey is retained', async () => {
+      const key = await enroll()
+      await sql().query(
+        'update attendance_security_policy set passkey_required=false',
+      )
+      const device = (
+        await sql().query(
+          `select id,revision from attendance_device where user_id='worker'`,
+        )
+      ).rows[0]
+      await security.decideDevice(hr, { ...device, decision: 'revoked' })
+      await sql().query(
+        `update attendance_device set reviewed_at=now()-interval '61 seconds' where id=$1`,
+        [device.id],
+      )
+      await security.requestDevice(
+        worker,
+        { name: 'ბრაუზერი' },
+        context(),
+        true,
+      )
+      const list = await security.reviewDevices(hr, {})
+      expect(list).toMatchObject({
+        browserApprovalRequired: true,
+        passkeyRequired: false,
+      })
+      const pending = list.items.find((item) => item.id === device.id)!
+      expect(pending).toMatchObject({ state: 'pending', hasPasskey: true })
+      await expect(
+        security.prepareClock(
+          worker,
+          { kind: 'in', data: clockInput() },
+          context(),
+        ),
+      ).rejects.toThrow()
+      await security.decideDevice(hr, {
+        id: pending.id,
+        revision: pending.revision,
+        decision: 'approved',
+      })
+      await expect(
+        security.prepareClock(
+          worker,
+          { kind: 'in', data: clockInput() },
+          context(),
+        ),
+      ).resolves.toEqual({ challengeId: null, options: null })
+      expect(
+        (
+          await sql().query(
+            'select credential_id from attendance_device where id=$1',
+            [device.id],
+          )
+        ).rows[0].credential_id,
+      ).toBe(key.credentialId)
+    })
+    it('does not start or finish passkey enrollment while the active policy disables it', async () => {
+      const message = 'Passkey-ით გადამოწმება გამორთულია. განაახლეთ გვერდი.'
+      await expect(
+        security.beginRegistration(worker, context()),
+      ).rejects.toThrow(message)
+      expect(
+        (
+          await sql().query(
+            'select count(*)::int as total from attendance_challenge',
+          )
+        ).rows[0].total,
+      ).toBe(0)
+      await sql().query(
+        'update attendance_security_policy set passkey_required=true',
+      )
+      const started = await security.beginRegistration(worker, context())
+      await sql().query(
+        'update attendance_security_policy set passkey_required=false',
+      )
+      await expect(
+        security.finishRegistration(
+          worker,
+          { challengeId: started.challengeId, response: {} },
+          context(),
+        ),
+      ).rejects.toThrow(message)
+      expect(
+        (
+          await sql().query(
+            `select credential_id,state from attendance_device where user_id='worker'`,
+          )
+        ).rows[0],
+      ).toEqual({ credential_id: null, state: 'approved' })
+    })
     it('retains an existing passkey when reapplying after revocation and still requires HR review', async () => {
       await enroll()
       await sql().query(
@@ -327,6 +776,340 @@ describe.runIf(process.env.RUN_ATTENDANCE_SECURITY_DB_TESTS === '1')(
         ),
       ).rejects.toThrow()
     })
+    it('identifies a browser outside the attendance allowlist but requires an allowed IP for activation and clock actions', async () => {
+      await sql().query(
+        `delete from attendance_device where user_id='worker'; update attendance_security_policy set ip_restriction_enabled=true,allowed_ips='["203.0.113.10"]'::jsonb`,
+      )
+      const first = await security.registerAutomaticDevice(worker, context())
+      expect(first.state).toBe('unrequested')
+      expect(await security.registerAutomaticDevice(worker, context())).toEqual(
+        first,
+      )
+      expect(
+        (
+          await sql().query(
+            `select count(*)::int as total from attendance_device where user_id='worker'`,
+          )
+        ).rows[0].total,
+      ).toBe(1)
+      await expect(
+        security.requestDevice(worker, { name: 'ბრაუზერი' }, context(), true),
+      ).rejects.toThrow()
+      await security.requestDevice(
+        worker,
+        { name: 'ბრაუზერი' },
+        { ...context(), ip: '203.0.113.10' },
+        true,
+      )
+      await security.decideDevice(hr, {
+        id: first.id,
+        revision: 1,
+        decision: 'approved',
+      })
+      await expect(
+        attendance.checkIn(worker, clockInput(), context()),
+      ).rejects.toThrow()
+      await expect(
+        security.prepareClock(
+          worker,
+          { kind: 'in', data: clockInput() },
+          { ...context(), ip: '203.0.113.10' },
+        ),
+      ).resolves.toEqual({ challengeId: null, options: null })
+      await sql().query(
+        `update attendance_security_policy set blocked_ips='["192.0.2.10"]'::jsonb`,
+      )
+      await expect(
+        security.registerAutomaticDevice(worker, context()),
+      ).rejects.toThrow()
+    })
+    it('allows both HR-approved browsers and revokes one without disabling the other', async () => {
+      await sql().query(
+        `delete from attendance_device where user_id='worker'; delete from attendance_security_policy`,
+      )
+      const secondContext = {
+        ...context(),
+        tokenHash: hash('second-browser').toString('hex'),
+        sessionHash: hash('second-login').toString('hex'),
+      }
+      const first = await security.registerAutomaticDevice(worker, context())
+      const second = await security.registerAutomaticDevice(
+        worker,
+        secondContext,
+      )
+      expect(first.id).not.toBe(second.id)
+      expect(
+        (
+          await sql().query(
+            'select browser_approval_required,passkey_required from attendance_security_policy',
+          )
+        ).rows,
+      ).toEqual([{ browser_approval_required: true, passkey_required: false }])
+      await expect(
+        security.prepareClock(
+          worker,
+          { kind: 'in', data: clockInput() },
+          context(),
+        ),
+      ).rejects.toThrow()
+      await security.requestDevice(worker, { name: 'პირველი' }, context(), true)
+      await security.requestDevice(
+        worker,
+        { name: 'მეორე' },
+        secondContext,
+        true,
+      )
+      for (const device of [first, second])
+        await security.decideDevice(hr, {
+          id: device.id,
+          revision: 1,
+          decision: 'approved',
+        })
+      const opened = await attendance.checkIn(worker, clockInput(), context())
+      await attendance.checkOut(
+        worker,
+        { sessionId: opened.id, confirmEarly: true },
+        secondContext,
+      )
+      await security.decideDevice(hr, {
+        id: first.id,
+        revision: 2,
+        decision: 'revoked',
+      })
+      expect(
+        (await security.registerAutomaticDevice(worker, context())).state,
+      ).toBe('revoked')
+      const next = { ...clockInput(), expectedLastSessionId: opened.id }
+      await expect(
+        attendance.checkIn(worker, next, context()),
+      ).rejects.toThrow()
+      await expect(
+        attendance.checkIn(worker, next, secondContext),
+      ).resolves.toBeDefined()
+    })
+    it.each([true, false])(
+      'enforces company and employee IPs on both punch writes with browser approval %s',
+      async (required) => {
+        await sql().query(
+          `update attendance_security_policy set browser_approval_required=$1,ip_restriction_enabled=true,allowed_ips='["192.0.2.10"]'::jsonb`,
+          [required],
+        )
+        if (!required)
+          await sql().query(
+            `update attendance_device set state='pending' where user_id='worker'`,
+          )
+        const data = clockInput()
+        await security.prepareClock(worker, { kind: 'in', data }, context())
+        await sql().query(
+          `update attendance_security_policy set allowed_ips='["203.0.113.10"]'::jsonb`,
+        )
+        await expect(
+          attendance.checkIn(worker, data, context()),
+        ).rejects.toThrow()
+        await sql().query(
+          `update attendance_security_policy set allowed_ips='["192.0.2.10"]'::jsonb`,
+        )
+        await sql().query(
+          `insert into attendance_employee_network (user_id,allowed_ips) values ('worker','[]'::jsonb)`,
+        )
+        await expect(
+          attendance.checkIn(worker, data, context()),
+        ).rejects.toThrow()
+        await sql().query(
+          `delete from attendance_employee_network where user_id='worker'`,
+        )
+        const opened = await attendance.checkIn(worker, data, context())
+        await sql().query(
+          `update attendance_security_policy set allowed_ips='["203.0.113.10"]'::jsonb`,
+        )
+        await expect(
+          attendance.checkOut(
+            worker,
+            { sessionId: opened.id, confirmEarly: true },
+            context(),
+          ),
+        ).rejects.toThrow()
+        await sql().query(
+          `update attendance_security_policy set allowed_ips='["192.0.2.10"]'::jsonb`,
+        )
+        await expect(
+          attendance.checkOut(
+            worker,
+            { sessionId: opened.id, confirmEarly: true },
+            context(),
+          ),
+        ).resolves.toBeDefined()
+      },
+    )
+    it.each(['admin', 'owner'] as const)(
+      'exempts persisted %s roles from company and individual allowlists and audits both punches',
+      async (role) => {
+        await sql().query(`update "user" set roles=$1 where id='worker'`, [
+          role,
+        ])
+        await sql().query(
+          `update attendance_security_policy set ip_restriction_enabled=true,allowed_ips='["203.0.113.10"]'::jsonb;
+           insert into attendance_employee_network(user_id,allowed_ips) values ('worker','[]'::jsonb)`,
+        )
+        // The supplied actor still says employee; only the persisted role grants the exemption.
+        const data = clockInput()
+        await security.prepareClock(worker, { kind: 'in', data }, context())
+        const opened = await attendance.checkIn(worker, data, context())
+        await attendance.checkIn(worker, data, context())
+        const out = { sessionId: opened.id, confirmEarly: true }
+        await security.prepareClock(
+          worker,
+          { kind: 'out', data: out },
+          context(),
+        )
+        await attendance.checkOut(worker, out, context())
+        const audits = (
+          await sql().query(
+            `select actor_id,target_id,details from attendance_security_audit where action='clock.ip_allowlist_exempted' order by details->>'kind'`,
+          )
+        ).rows
+        expect(audits).toEqual(
+          ['in', 'out'].map((kind) => ({
+            actor_id: worker.id,
+            target_id: opened.id,
+            details: {
+              kind,
+              subjectUserId: worker.id,
+              ip: context().ip,
+              role,
+              policyRevision: 0,
+            },
+          })),
+        )
+        expect(
+          (await sql().query('select ip from attendance_punch')).rows,
+        ).toEqual([{ ip: context().ip }, { ip: context().ip }])
+      },
+    )
+    it.each([
+      'employee',
+      'production_specialist',
+      'supervisor',
+      'sales_manager',
+      'hr_manager',
+    ] as const)(
+      'keeps allowlists enforced for %s despite forged admin roles',
+      async (role) => {
+        await sql().query(`update "user" set roles=$1 where id='worker'`, [
+          role,
+        ])
+        await sql().query(
+          `update attendance_security_policy set ip_restriction_enabled=true,allowed_ips='["203.0.113.10"]'::jsonb`,
+        )
+        const forged: Actor = { ...worker, roles: ['admin', 'owner'] }
+        const data = clockInput()
+        await expect(
+          security.prepareClock(forged, { kind: 'in', data }, context()),
+        ).rejects.toThrow('ამ ქსელიდან')
+        await expect(
+          attendance.checkIn(forged, data, context()),
+        ).rejects.toThrow('ამ ქსელიდან')
+        await sql().query(
+          `update attendance_security_policy set allowed_ips='["192.0.2.10"]'::jsonb`,
+        )
+        const opened = await attendance.checkIn(worker, data, context())
+        await sql().query(
+          `update attendance_security_policy set allowed_ips='["203.0.113.10"]'::jsonb`,
+        )
+        const out = { sessionId: opened.id, confirmEarly: true }
+        await expect(
+          security.prepareClock(forged, { kind: 'out', data: out }, context()),
+        ).rejects.toThrow('ამ ქსელიდან')
+        await expect(
+          attendance.checkOut(forged, out, context()),
+        ).rejects.toThrow('ამ ქსელიდან')
+        expect(
+          (
+            await sql().query(
+              `select count(*)::int as total from attendance_security_audit where action='clock.ip_allowlist_exempted'`,
+            )
+          ).rows[0].total,
+        ).toBe(0)
+      },
+    )
+    it.each(['admin', 'owner'] as const)(
+      'keeps blocked IPs, browser approval, Passkey, and current-role checks enforced for %s',
+      async (role) => {
+        await sql().query(`update "user" set roles=$1 where id='worker'`, [
+          role,
+        ])
+        const actor: Actor = { ...worker, roles: [role] }
+        const key = await enroll(actor)
+        await sql().query(
+          `update attendance_security_policy set ip_restriction_enabled=true,allowed_ips='[]'::jsonb,blocked_ips='["192.0.2.10"]'::jsonb`,
+        )
+        const data = clockInput()
+        const intent = { kind: 'in' as const, data }
+        await expect(
+          security.prepareClock(actor, intent, context()),
+        ).rejects.toThrow('წვდომა აკრძალულია')
+        await expect(
+          attendance.checkIn(actor, data, context()),
+        ).rejects.toThrow('წვდომა აკრძალულია')
+        await expect(
+          attendance.checkIn(actor, data, { ...context(), ip: null }),
+        ).rejects.toThrow('წვდომა აკრძალულია')
+        await sql().query(
+          `update attendance_security_policy set blocked_ips='[]'::jsonb; update attendance_device set state='pending' where user_id='worker'`,
+        )
+        await expect(
+          security.prepareClock(actor, intent, context()),
+        ).rejects.toThrow('მოწყობილობა')
+        await expect(
+          attendance.checkIn(actor, data, context()),
+        ).rejects.toThrow('მოწყობილობა')
+        await sql().query(
+          `update attendance_device set state='approved' where user_id='worker'`,
+        )
+        await expect(
+          attendance.checkIn(actor, data, context()),
+        ).rejects.toThrow('დამატებითი დადასტურება')
+        const prepared = await security.prepareClock(actor, intent, context())
+        const opened = await attendance.checkIn(actor, data, context(), {
+          intent,
+          challengeId: prepared.challengeId!,
+          response: key.assertion(prepared.options!.challenge),
+        })
+        const out = { sessionId: opened.id, confirmEarly: true }
+        await sql().query(
+          `update attendance_security_policy set blocked_ips='["192.0.2.10"]'::jsonb`,
+        )
+        await expect(
+          attendance.checkOut(actor, out, context()),
+        ).rejects.toThrow('წვდომა აკრძალულია')
+        await sql().query(
+          `update attendance_security_policy set blocked_ips='[]'::jsonb; update "user" set roles='employee' where id='worker'`,
+        )
+        await expect(
+          security.prepareClock(actor, { kind: 'out', data: out }, context()),
+        ).rejects.toThrow('ამ ქსელიდან')
+        await expect(
+          attendance.checkOut(actor, out, context()),
+        ).rejects.toThrow('ამ ქსელიდან')
+        expect(
+          (
+            await sql().query(
+              `select count(*)::int as total from attendance_security_audit where action='clock.ip_allowlist_exempted'`,
+            )
+          ).rows[0].total,
+        ).toBe(1)
+      },
+    )
+    it('rejects disabling browser approval while passkeys remain enabled', async () => {
+      const policy = await security.securitySettings(administrator)
+      await expect(
+        security.saveSecuritySettings(
+          administrator,
+          { ...policy, browserApprovalRequired: false, passkeyRequired: true },
+          context(administrator),
+        ),
+      ).rejects.toThrow()
+    })
     it('reads only current browser status without provisioning and rejects suspended accounts', async () => {
       await sql().query(
         'update attendance_security_policy set passkey_required=true',
@@ -337,6 +1120,7 @@ describe.runIf(process.env.RUN_ATTENDANCE_SECURITY_DB_TESTS === '1')(
         )
       ).rows[0]
       expect(await security.deviceStatus(worker, context())).toEqual({
+        browserApprovalRequired: true,
         passkeyRequired: true,
         currentDevice: { ...device, state: 'approved', hasPasskey: false },
       })
@@ -345,7 +1129,11 @@ describe.runIf(process.env.RUN_ATTENDANCE_SECURITY_DB_TESTS === '1')(
           ...context(),
           tokenHash: hash('unknown-browser').toString('hex'),
         }),
-      ).toEqual({ passkeyRequired: true, currentDevice: null })
+      ).toEqual({
+        browserApprovalRequired: true,
+        passkeyRequired: true,
+        currentDevice: null,
+      })
       expect(
         (
           await sql().query(

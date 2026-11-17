@@ -21,6 +21,7 @@ import {
   formatAttendanceTime,
   formatWorkedTime,
   needsSessionReview,
+  MAX_WORKDAY_SECONDS,
 } from '../attendance.rules'
 import type { AttendanceOverview } from '../attendance.types'
 import {
@@ -49,9 +50,12 @@ export function AttendanceClock({
   const security = useQuery(deviceStatusOptions(actorId))
   const deviceStatus = security.data?.ok ? security.data.value : null
   const setupRequired = Boolean(
-    deviceStatus?.passkeyRequired &&
-    (deviceStatus.currentDevice?.state !== 'approved' ||
-      !deviceStatus.currentDevice.hasPasskey),
+    deviceStatus &&
+    ((deviceStatus.browserApprovalRequired &&
+      deviceStatus.currentDevice?.state !== 'approved') ||
+      (deviceStatus.passkeyRequired &&
+        (deviceStatus.currentDevice?.state !== 'approved' ||
+          !deviceStatus.currentDevice.hasPasskey))),
   )
   const { openModal } = useModal()
   const submitting = useRef(false)
@@ -60,6 +64,8 @@ export function AttendanceClock({
     sampleReceivedAt.current = startedAt
   }, [])
   const open = overview.openSession
+  const workdayLimitReached =
+    !open && (overview.today?.seconds ?? 0) >= MAX_WORKDAY_SECONDS
   const status = attendanceStatus(overview)
   const oldSession = open !== null && open.workDate !== overview.workday.date
   const activeDay = oldSession
@@ -170,6 +176,7 @@ export function AttendanceClock({
             )}
             disabled={
               action.pending ||
+              workdayLimitReached ||
               setupRequired ||
               (!open && overview.workday.kind === 'unconfigured')
             }
@@ -291,6 +298,18 @@ export function AttendanceClock({
             {activeDay ? <AttendanceDeviationBadges {...activeDay} /> : null}
           </div>
         </div>
+        {workdayLimitReached ? (
+          <Alert
+            className={cn(workLog && 'order-4 lg:col-span-3')}
+            variant="warning"
+            role="note"
+          >
+            <AlertDescription>
+              ამ სამუშაო დღისთვის 18-საათიანი ჯამური ზღვარი მიღწეულია. ახალი
+              შესვლა ამავე სამუშაო დღისთვის მიუწვდომელია.
+            </AlertDescription>
+          </Alert>
+        ) : null}
         {oldSession || needsReview ? (
           <Alert
             className={cn(workLog && 'order-4 lg:col-span-3')}
@@ -298,7 +317,7 @@ export function AttendanceClock({
           >
             <AlertDescription>
               {needsReview
-                ? `ჩანაწერი ღიაა სულ მცირე ${open.maxOpenHours} საათი და საჭიროებს ხელმძღვანელის გადამოწმებას. სესია ავტომატურად დასრულდება 18 საათის შემდეგ.`
+                ? `ჩანაწერი ღიაა სულ მცირე ${open.maxOpenHours} საათი და საჭიროებს ხელმძღვანელის გადამოწმებას. სამუშაო დღის ჯამური დროის 18 საათამდე მიღწევისას სესია ავტომატურად დასრულდება.`
                 : 'სამუშაო წინა დღეს დაიწყო. დრო ეკუთვნის დაწყების სამუშაო დღეს და აღრიცხვა გრძელდება დასრულებამდე.'}
             </AlertDescription>
           </Alert>

@@ -137,6 +137,7 @@ describe('role and permission boundaries', () => {
     const platformPermissions = [
       'attendance.clock.assist',
       'attendance.devices.manage',
+      'attendance.devices.approve.self',
       'complaints.review.all',
       'announcements.manage',
       'manage.access',

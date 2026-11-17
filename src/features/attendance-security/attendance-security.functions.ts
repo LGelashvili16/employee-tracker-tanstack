@@ -47,6 +47,19 @@ export const readAttendanceDeviceStatus = createServerFn({ method: 'GET' })
     ),
   )
 
+export const registerAutomaticAttendanceDevice = createServerFn({
+  method: 'POST',
+})
+  .middleware([authenticatedMiddleware])
+  .handler(({ context }) =>
+    safelySecurity(async () =>
+      service.registerAutomaticDevice(
+        context.actor,
+        issueBrowserCookie(await clockSecurityContext(context.actor, true)),
+      ),
+    ),
+  )
+
 export const readOwnDevices = createServerFn({ method: 'GET' })
   .middleware([authenticatedMiddleware])
   .validator(securityListSchema)
@@ -102,13 +115,7 @@ export const prepareAttendanceClock = createServerFn({ method: 'POST' })
       const security = issueBrowserCookie(
         await clockSecurityContext(context.actor, true),
       )
-      // Commit one pending registration before refusing an unknown browser's clock action.
       try {
-        await service.requestDevice(
-          context.actor,
-          { name: 'დასწრების ბრაუზერი' },
-          security,
-        )
         return await service.prepareClock(context.actor, data, security)
       } catch (error) {
         if (error instanceof AttendanceSecurityError)

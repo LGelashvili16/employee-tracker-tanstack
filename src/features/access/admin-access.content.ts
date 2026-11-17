@@ -2,6 +2,8 @@ import type { Permission } from '#/lib/authorization/permissions'
 
 export const permissionLabels: Record<Permission, string> = {
   'attendance.devices.manage': 'დასწრების მოწყობილობების დადასტურება',
+  'attendance.devices.approve.self':
+    'საკუთარი დასწრების მოწყობილობის დადასტურება',
   'attendance.clock.assist':
     'თანამშრომლის ნაცვლად შესვლისა და გასვლის აღრიცხვა',
   'announcements.manage': 'განცხადებების გამოქვეყნება',

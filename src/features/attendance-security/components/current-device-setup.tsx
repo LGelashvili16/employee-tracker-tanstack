@@ -6,10 +6,11 @@ import { Alert, AlertDescription } from '#/components/ui/alert'
 import { usePasskeyEnrollment } from '../hooks/use-passkey-enrollment'
 import type { readOwnDevices } from '../attendance-security.functions'
 import { DeviceState } from './security-controls'
+import { useBrowserRegistration } from '../hooks/use-browser-registration'
 
 type Status = Pick<
   Extract<Awaited<ReturnType<typeof readOwnDevices>>, { ok: true }>['value'],
-  'currentDevice' | 'passkeyRequired'
+  'currentDevice' | 'passkeyRequired' | 'browserApprovalRequired'
 >
 
 export function CurrentDeviceSetup({
@@ -24,8 +25,47 @@ export function CurrentDeviceSetup({
   const device = status.currentDevice
   const blocked = device && ['revoked', 'rejected'].includes(device.state)
   const enrollment = usePasskeyEnrollment(actorId, device)
-  const needsPasskey = status.passkeyRequired && !device?.hasPasskey && !blocked
-  const awaitingReview = device?.state === 'pending' && device.hasPasskey
+  const registration = useBrowserRegistration(actorId, device?.name)
+  const browserApprovalRequired = status.browserApprovalRequired
+  const activationNeeded = !device || device.state === 'unrequested' || blocked
+  const awaitingReview = device?.state === 'pending'
+  const needsPasskey =
+    status.passkeyRequired && !device?.hasPasskey && !activationNeeded
+  const requestButton =
+    activationNeeded || awaitingReview ? (
+      <Button
+        type="button"
+        className="relative h-auto min-h-11 w-full self-start px-8 py-2 whitespace-normal sm:w-auto"
+        disabled={registration.isPending || awaitingReview}
+        aria-busy={registration.isPending}
+        onClick={() => registration.mutate()}
+      >
+        {registration.isPending ? (
+          <Spinner className="absolute left-3" aria-hidden="true" />
+        ) : null}
+        {awaitingReview
+          ? 'მოთხოვნა გაგზავნილია'
+          : blocked
+            ? 'ხელახალი დადასტურების მოთხოვნა'
+            : 'მოწყობილობის აქტივაციის მოთხოვნა'}
+      </Button>
+    ) : null
+  if (clock && !status.passkeyRequired)
+    return (
+      <section
+        aria-label="ბრაუზერის დადასტურება"
+        className="flex flex-col items-start gap-3"
+      >
+        <Alert variant="warning" role="note">
+          <AlertDescription>
+            {awaitingReview
+              ? 'მოთხოვნა გაგზავნილია. დაელოდეთ HR-ის დადასტურებას. სხვა დადასტურებული ბრაუზერებიდან დასწრება კვლავ ხელმისაწვდომია.'
+              : 'ეს ბრაუზერი დასწრებისთვის არ არის აქტიური. მოითხოვეთ მისი აქტივაცია. სხვა დადასტურებული ბრაუზერებიდან დასწრება კვლავ ხელმისაწვდომია.'}
+          </AlertDescription>
+        </Alert>
+        {requestButton}
+      </section>
+    )
   if (clock)
     return (
       <section
@@ -37,25 +77,30 @@ export function CurrentDeviceSetup({
           <AlertDescription>
             Passkey შესვლასა და გასვლას მოწყობილობის ბიომეტრიით ან PIN კოდით
             ადასტურებს.{' '}
-            {awaitingReview
-              ? 'მოთხოვნა გაგზავნილია. დაელოდეთ HR-ის დადასტურებას.'
-              : 'დამატების შემდეგ საჭიროა HR-ის დადასტურებაც.'}
+            {activationNeeded
+              ? 'ამ ბრაუზერიდან დასწრებისთვის ჯერ მოითხოვეთ მოწყობილობის აქტივაცია.'
+              : needsPasskey
+                ? 'დაამატეთ Passkey და დაელოდეთ HR-ის დადასტურებას.'
+                : 'მოთხოვნა გაგზავნილია. დაელოდეთ HR-ის დადასტურებას.'}
           </AlertDescription>
         </Alert>
-        <Button
-          type="button"
-          className="relative min-h-10 w-full px-4 sm:w-auto sm:min-w-56"
-          disabled={enrollment.isPending || awaitingReview}
-          aria-busy={enrollment.isPending}
-          onClick={() => enrollment.mutate()}
-        >
-          {enrollment.isPending ? (
-            <Spinner aria-hidden="true" />
-          ) : (
-            <IconFingerprint data-icon="inline-start" aria-hidden="true" />
-          )}
-          Passkey-ის დამატება
-        </Button>
+        {requestButton}
+        {needsPasskey ? (
+          <Button
+            type="button"
+            className="relative min-h-10 w-full px-4 sm:w-auto sm:min-w-56"
+            disabled={enrollment.isPending}
+            aria-busy={enrollment.isPending}
+            onClick={() => enrollment.mutate()}
+          >
+            {enrollment.isPending ? (
+              <Spinner aria-hidden="true" />
+            ) : (
+              <IconFingerprint data-icon="inline-start" aria-hidden="true" />
+            )}
+            Passkey-ის დამატება
+          </Button>
+        ) : null}
       </section>
     )
   return (
@@ -77,8 +122,10 @@ export function CurrentDeviceSetup({
             </p>
           </div>
         </div>
-        {device ? (
+        {device && browserApprovalRequired ? (
           <DeviceState state={device.state} />
+        ) : device ? (
+          <Badge variant="secondary">რეგისტრირებული</Badge>
         ) : (
           <Badge variant="yellow">არარეგისტრირებული</Badge>
         )}
@@ -96,16 +143,21 @@ export function CurrentDeviceSetup({
         </Badge>
       </div>
       <p className="text-sm leading-6 text-muted-foreground">
-        {blocked
-          ? 'მოწყობილობა შეზღუდულია. მოითხოვეთ ხელახალი რეგისტრაცია და დაელოდეთ HR-ის დადასტურებას.'
-          : needsPasskey
-            ? 'დასწრებისთვის საჭიროა Passkey. დაამატეთ ამ მოწყობილობაზე, შემდეგ დაელოდეთ HR-ის დადასტურებას.'
-            : device?.state === 'pending'
-              ? 'მოთხოვნა გაგზავნილია. დაელოდეთ HR-ის დადასტურებას.'
-              : device?.state === 'approved'
-                ? 'მოწყობილობა დადასტურებულია. ქსელიდან წვდომის წესები კვლავ მოქმედებს.'
-                : 'დაარეგისტრირეთ მოწყობილობა დასწრების აღსარიცხად.'}
+        {!browserApprovalRequired && !status.passkeyRequired
+          ? 'მოწყობილობის დადასტურება არ მოითხოვება. ქსელიდან წვდომის წესები კვლავ მოქმედებს.'
+          : blocked
+            ? 'მოწყობილობა შეზღუდულია. მოითხოვეთ ხელახალი აქტივაცია და დაელოდეთ HR-ის დადასტურებას.'
+            : activationNeeded
+              ? 'მოითხოვეთ ამ ბრაუზერის აქტივაცია დასწრების აღსარიცხად.'
+              : needsPasskey
+                ? 'დასწრებისთვის საჭიროა Passkey. დაამატეთ ამ მოწყობილობაზე, შემდეგ დაელოდეთ HR-ის დადასტურებას.'
+                : device.state === 'pending'
+                  ? 'მოთხოვნა გაგზავნილია. დაელოდეთ HR-ის დადასტურებას.'
+                  : device.state === 'approved'
+                    ? 'მოწყობილობა დადასტურებულია. ქსელიდან წვდომის წესები კვლავ მოქმედებს.'
+                    : 'მოითხოვეთ მოწყობილობის აქტივაცია დასწრების აღსარიცხად.'}
       </p>
+      {browserApprovalRequired ? requestButton : null}
       {needsPasskey ? (
         <Button
           type="button"

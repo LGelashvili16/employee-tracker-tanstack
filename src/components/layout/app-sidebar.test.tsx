@@ -2,13 +2,14 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppSidebar } from './app-sidebar'
-import { SidebarProvider } from '#/components/ui/sidebar'
+import { SidebarProvider, SidebarTrigger } from '#/components/ui/sidebar'
 import { WorkspaceUserMenu } from './workspace-user-menu'
 import { AttendanceNavigation } from '#/features/attendance/components/attendance-navigation'
 import type { AnchorHTMLAttributes } from 'react'
 import type { PermissionOverrides, Role } from '#/lib/authorization/permissions'
 
-vi.mock('#/hooks/use-mobile', () => ({ useIsMobile: () => false }))
+const viewport = vi.hoisted(() => ({ mobile: false }))
+vi.mock('#/hooks/use-mobile', () => ({ useIsMobile: () => viewport.mobile }))
 const location = vi.hoisted(() => ({ pathname: '/dashboard' }))
 vi.mock('@tanstack/react-router', () => ({
   useLocation: () => location.pathname,
@@ -31,6 +32,7 @@ function renderSidebar(
 ) {
   return render(
     <SidebarProvider>
+      {viewport.mobile ? <SidebarTrigger /> : null}
       <AppSidebar
         hasUnreadAnnouncements={hasUnreadAnnouncements}
         hasUnreadComplaints={hasUnreadComplaints}
@@ -86,17 +88,19 @@ describe('workspace navigation', () => {
   })
   beforeEach(() => {
     location.pathname = '/dashboard'
+    viewport.mobile = false
   })
   it.each(['hr_manager', 'admin', 'owner'] as const)(
     'places company attendance and rules in team management for %s',
     async (role) => {
-      const user = userEvent.setup()
       renderSidebar(role, true)
-      const management = screen.getByRole('button', {
-        name: 'მართვა',
-      })
-      expect(management).toHaveAttribute('aria-expanded', 'false')
-      await user.click(management)
+      expect(screen.getByText('მართვა')).toHaveAttribute(
+        'data-slot',
+        'sidebar-group-label',
+      )
+      expect(
+        screen.queryByRole('button', { name: 'მართვა' }),
+      ).not.toBeInTheDocument()
       expect(
         screen.queryByRole('link', { name: 'გუნდები' }),
       ).not.toBeInTheDocument()
@@ -130,7 +134,7 @@ describe('workspace navigation', () => {
   )
   it('keeps personal and admin navigation together on admin routes with a real account menu', async () => {
     location.pathname = '/manage/attendance'
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
     const actor = {
       id: 'test',
       name: 'ტესტი მომხმარებელი',
@@ -158,13 +162,13 @@ describe('workspace navigation', () => {
       'data-variant',
       'inset',
     )
-    expect(screen.getByRole('button', { name: 'ჩემი სივრცე' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
+    expect(screen.getByText('ჩემი სივრცე')).toHaveAttribute(
+      'data-slot',
+      'sidebar-group-label',
     )
-    expect(screen.getByRole('button', { name: 'მართვა' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
+    expect(screen.getByText('მართვა')).toHaveAttribute(
+      'data-slot',
+      'sidebar-group-label',
     )
     expect(
       screen.queryByRole('link', { name: 'მომხმარებლები' }),
@@ -223,18 +227,18 @@ describe('workspace navigation', () => {
   })
   it('opens employee management under the management group for HR without admin links', async () => {
     location.pathname = '/manage/employees/worker-123'
-    const { container } = renderSidebar('hr_manager', true)
-    expect(screen.getByRole('button', { name: 'მართვა' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
+    renderSidebar('hr_manager', true)
+    expect(screen.getByText('მართვა')).toHaveAttribute(
+      'data-slot',
+      'sidebar-group-label',
     )
     expect(screen.getByRole('link', { name: 'თანამშრომლები' })).toHaveAttribute(
       'href',
       '/manage/employees',
     )
-    expect(
-      container.querySelector('a[href="/manage/employees"]'),
-    ).toHaveAttribute('data-active')
+    expect(screen.getByRole('link', { name: 'თანამშრომლები' })).toHaveAttribute(
+      'data-active',
+    )
     expect(
       screen.queryByRole('button', { name: 'ადმინისტრირება' }),
     ).not.toBeInTheDocument()
@@ -372,7 +376,7 @@ describe('workspace navigation', () => {
     expect(screen.getByRole('tabpanel')).toHaveTextContent(
       'დასწრების ჩანაწერები',
     )
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
     attendance.focus()
     await user.keyboard('{ArrowRight}')
     expect(screen.getByRole('tab', { name: 'სამუშაო საათები' })).toHaveFocus()
@@ -398,14 +402,16 @@ describe('workspace navigation', () => {
 })
 
 it.each(['hr_manager', 'admin'] as const)(
-  'shows the complaint unread dot to %s and on the collapsed management group',
+  'shows the complaint unread dot to %s beside the visible destination',
   (role) => {
     const { container } = renderSidebar(role, true, undefined, false, true)
     expect(
-      screen.getByRole('button', { name: /მართვა.*წაუკითხავი საჩივრები/ }),
+      screen.getByRole('link', {
+        name: /საჩივრების მართვა.*წაუკითხავი საჩივრები/,
+      }),
     ).toBeInTheDocument()
     expect(
-      container.querySelector('[data-slot="complaint-group-unread-dot"]'),
+      container.querySelector('[data-slot="complaint-unread-dot"]'),
     ).toHaveAttribute('aria-hidden', 'true')
   },
 )
@@ -430,4 +436,37 @@ it('shows a complaint dot on the management destination without granting employe
   expect(
     screen.queryByRole('link', { name: /საჩივრების მართვა/ }),
   ).not.toBeInTheDocument()
+})
+
+it('opens desktop administration on hover and closes with Escape', async () => {
+  const user = userEvent.setup({ skipHover: true })
+  renderSidebar('owner', true)
+  const trigger = screen.getByRole('button', { name: 'ადმინისტრირება' })
+  await user.hover(trigger)
+  expect(
+    await screen.findByRole('menuitem', { name: 'მომხმარებლების წვდომა' }),
+  ).toHaveAttribute('href', '/admin/access')
+  await user.keyboard('{Escape}')
+  expect(trigger).toHaveAttribute('aria-expanded', 'false')
+})
+it('keeps workspace and management titles static on mobile', async () => {
+  viewport.mobile = true
+  location.pathname = '/dashboard'
+  renderSidebar('owner', true)
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: 'მენიუს გახსნა ან დახურვა' }))
+  for (const name of ['ჩემი სივრცე', 'მართვა']) {
+    expect(screen.getByText(name)).toHaveAttribute(
+      'data-slot',
+      'sidebar-group-label',
+    )
+    expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
+  }
+  expect(screen.getByRole('link', { name: 'თანამშრომლები' })).toHaveAttribute(
+    'href',
+    '/manage/employees',
+  )
+  expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  viewport.mobile = false
 })

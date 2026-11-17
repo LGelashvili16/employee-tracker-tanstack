@@ -22,6 +22,10 @@ export const attendanceSecurityPolicy = pgTable(
   {
     /** Singleton company security policy. */
     id: integer('id').primaryKey().default(1),
+    /** Whether clock actions require this employee's HR-approved browser. */
+    browserApprovalRequired: boolean('browser_approval_required')
+      .notNull()
+      .default(true),
     /** Whether attendance requires a listed public IP address. */
     ipRestrictionEnabled: boolean('ip_restriction_enabled')
       .notNull()
@@ -40,6 +44,10 @@ export const attendanceSecurityPolicy = pgTable(
       'attendance_security_singleton',
       sql`${t.id} = 1 and ${t.revision} >= 0`,
     ),
+    check(
+      'attendance_security_passkey_requires_browser',
+      sql`not ${t.passkeyRequired} or ${t.browserApprovalRequired}`,
+    ),
   ],
 )
 
@@ -56,7 +64,7 @@ export const attendanceDevice = pgTable(
     tokenHash: text('token_hash').notNull(),
     /** Employee-supplied label for recognizing the browser. */
     name: text('name').notNull(),
-    /** Pending until another authorized reviewer approves this registration. */
+    /** Identified browsers enter pending only after an explicit activation request. */
     state: text('state').notNull().default('pending'),
     /** Public WebAuthn credential identifier, not a secret. */
     credentialId: text('credential_id'),
@@ -89,7 +97,7 @@ export const attendanceDevice = pgTable(
     index('attendance_device_queue').on(t.state, t.createdAt, t.id),
     check(
       'attendance_device_state',
-      sql`${t.state} in ('pending','approved','rejected','revoked') and ${t.revision} >= 0 and ${t.counter} >= 0`,
+      sql`${t.state} in ('unrequested','pending','approved','rejected','revoked') and ${t.revision} >= 0 and ${t.counter} >= 0`,
     ),
   ],
 )

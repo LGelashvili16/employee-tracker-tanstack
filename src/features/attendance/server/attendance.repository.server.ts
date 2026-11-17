@@ -3,11 +3,54 @@ import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm'
 import { db } from '#/db'
 import { attendanceAudit, attendanceSession, employee, user } from '#/db/schema'
 import type { AttendanceDay } from '../attendance.types'
+import type { SQL } from 'drizzle-orm'
+import { MAX_WORKDAY_SECONDS } from '../attendance.rules'
 
 export type AttendanceTransaction = Parameters<
   Parameters<typeof db.transaction>[0]
 >[0]
 export const transactAttendance = db.transaction.bind(db)
+
+const workdayLimit = sql`${MAX_WORKDAY_SECONDS} * interval '1 second'`
+
+function closedWorkdayDurationSql(employeeId: SQL, workDate: SQL) {
+  return sql`coalesce((select sum(completed.ended_at-completed.started_at)
+    from ${attendanceSession} completed where completed.employee_id=${employeeId}
+      and completed.work_date=${workDate} and completed.ended_at is not null), interval '0 seconds')`
+}
+
+/** The retained work date, rather than midnight or a new interval, owns the limit. */
+export function workdayAutomaticCutoffSql(
+  employeeId: SQL,
+  workDate: SQL,
+  startedAt: SQL,
+) {
+  return sql`${startedAt} + greatest(interval '0 seconds', ${workdayLimit}-${closedWorkdayDurationSql(employeeId, workDate)})`
+}
+
+export async function workdayLimitReached(
+  tx: AttendanceTransaction,
+  employeeId: string,
+  workDate: string,
+) {
+  const result = await tx.execute<{ reached: boolean }>(
+    sql`select ${closedWorkdayDurationSql(sql`${employeeId}`, sql`${workDate}::date`)} >= ${workdayLimit} as reached`,
+  )
+  return result.rows[0].reached
+}
+
+export async function automaticCheckoutDue(
+  tx: AttendanceTransaction,
+  employeeId: string,
+  workDate: string,
+  startedAt: Date,
+  now: Date,
+) {
+  const result = await tx.execute<{ due: boolean }>(
+    sql`select ${workdayAutomaticCutoffSql(sql`${employeeId}`, sql`${workDate}::date`, sql`${startedAt}::timestamptz`)} <= ${now}::timestamptz as due`,
+  )
+  return result.rows[0].due
+}
 
 export async function employeeDaySessions(
   tx: AttendanceTransaction,
