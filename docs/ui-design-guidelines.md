@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 66. Last updated: 2026-11-17.
+Status: required project instructions. Version: 69. Last updated: 2026-11-17.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -62,6 +62,8 @@ Place the page title outside and above a route-aware tabs wrapper when that wrap
 - Preserve dimensions during loading. Use the existing shadcn Skeleton and Spinner with Georgian accessible status, as required by `AGENTS.md`.
 
 ## Color, contrast, and iconography
+
+- The sidebar uses one small, diffuse accent halo behind the Teamwork logo, fading out before the navigation starts. Do not retain diagonal rays or a full-sidebar color wash. Extend the decorative field through the inset shell's padding so no inner rectangular edge is visible, while preserving navigation spacing. Keep it behind content, hidden from assistive technology, pointer-transparent and disabled in forced-colors mode. Derive its hue from the current sidebar primary token and reduce intensity in dark mode. Use one static radial gradient with no continuous animation, pointer tracking, canvas, blur filters or additional dependencies. This branding-only decoration does not authorize accent washes on notification chrome or other content surfaces.
 
 - Keep notification popup headers, footers, borders, header icons and idle actions neutral in both themes. Accent color identifies hover, focus, expanded/selected controls and unread icon/count state; unread-row backgrounds remain neutral. Footer links gain accent color only on hover/focus. Keep the theme selector's surrounding surface neutral and tint only its selected option. Avoid persistent decorative accent washes or shiny surfaces, especially in dark mode. Preserve body/read metadata contrast, red unread dots and existing status variants.
 
