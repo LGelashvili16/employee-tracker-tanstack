@@ -3,6 +3,8 @@ import { useForm } from '@tanstack/react-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import { toast } from 'sonner'
+import { IconInfoCircle } from '@tabler/icons-react'
+import { Alert, AlertDescription } from '#/components/ui/alert'
 import {
   Field,
   FieldError,
@@ -30,7 +32,6 @@ export function AttendanceLimitForm({
     defaultValues: {
       maxOpenHours: setting.maxOpenHours,
       revision: setting.revision,
-      reason: '',
     },
     validators: { onSubmit: attendanceLimitSchema },
     onSubmit: async ({ value }) => {
@@ -52,58 +53,55 @@ export function AttendanceLimitForm({
       }}
     >
       <FieldGroup>
-        <p className="text-sm text-muted-foreground">
-          ზღვარი მოქმედებს ახალ სესიებზე. საათების გადაჭარბება მხოლოდ
-          გაფრთხილებას აჩვენებს, დროის აღრიცხვას არ წყვეტს და გასვლას არ
-          აფიქსირებს.
-        </p>
         <form.Field name="maxOpenHours">
           {(field) => (
             <Field data-invalid={!field.state.meta.isValid}>
               <FieldLabel htmlFor="attendance-limit">
-                გადამოწმების ზღვარი საათებში
+                გადამოწმების ზღვარი (საათი)
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
               </FieldLabel>
               <Input
                 id="attendance-limit"
                 type="number"
-                value={field.state.value}
+                required
+                min={8}
+                max={72}
+                aria-describedby="attendance-limit-info attendance-limit-error"
+                value={Number.isNaN(field.state.value) ? '' : field.state.value}
                 onChange={(event) =>
                   field.handleChange(event.target.valueAsNumber)
                 }
                 onBlur={field.handleBlur}
                 aria-invalid={!field.state.meta.isValid}
               />
-              <FieldError errors={field.state.meta.errors} />
-            </Field>
-          )}
-        </form.Field>
-        <form.Field name="reason">
-          {(field) => (
-            <Field data-invalid={!field.state.meta.isValid}>
-              <FieldLabel htmlFor="attendance-limit-reason">
-                ცვლილების მიზეზი
-              </FieldLabel>
-              <Input
-                id="attendance-limit-reason"
-                value={field.state.value}
-                onChange={(event) => field.handleChange(event.target.value)}
-                onBlur={field.handleBlur}
-                aria-invalid={!field.state.meta.isValid}
+              <FieldError
+                id="attendance-limit-error"
+                errors={field.state.meta.errors}
               />
-              <FieldError errors={field.state.meta.errors} />
             </Field>
           )}
         </form.Field>
+        <Alert variant="info" role="note" id="attendance-limit-info">
+          <IconInfoCircle aria-hidden="true" />
+          <AlertDescription>
+            თანამშრომელს შეუძლია მუშაობა ნებისმიერ დროს დაასრულოს. თუ სამუშაო
+            დღის ჯამური დრო 18 საათს მიაღწევს, ღია სესია ავტომატურად დასრულდება.
+            გადამოწმების ზღვარი გაფრთხილებისთვისაა.
+          </AlertDescription>
+        </Alert>
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(pending) => (
             <Button
-              className="relative h-11 px-10"
+              className="relative min-w-40 self-end px-8"
+              depth="raised"
               disabled={pending}
               aria-busy={pending}
               type="submit"
             >
               {pending ? (
-                <Spinner className="absolute left-4" aria-hidden="true" />
+                <Spinner className="absolute left-3" aria-hidden="true" />
               ) : null}
               ზღვრის შენახვა
             </Button>

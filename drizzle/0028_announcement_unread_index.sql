@@ -1,0 +1,1 @@
+CREATE INDEX "announcement_recipient_unread" ON "announcement_recipient" USING btree ("user_id") WHERE "announcement_recipient"."read_at" is null;

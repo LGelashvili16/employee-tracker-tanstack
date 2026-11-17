@@ -1,32 +1,20 @@
 import {
   IconLayoutDashboard,
   IconClock,
-  IconHistory,
-  IconClockEdit,
   IconCalendarStats,
   IconCalendarWeek,
-  IconBriefcase,
   IconCalendarOff,
   IconBell,
+  IconSpeakerphone,
   IconUserCircle,
   IconLock,
-  IconChartBar,
-  IconClockCheck,
-  IconAlertTriangle,
-  IconClipboardCheck,
   IconCalendarCog,
-  IconListCheck,
-  IconCirclePlus,
   IconUsers,
-  IconUsersGroup,
   IconCalendarCheck,
   IconReportAnalytics,
-  IconShield,
-  IconUserCog,
   IconMailPlus,
   IconKey,
   IconBuildingCommunity,
-  IconClockCog,
   IconChecklist,
   IconCalendarPause,
   IconShieldLock,
@@ -34,10 +22,24 @@ import {
   IconMapPin,
   IconPlugConnected,
   IconFileSearch,
+  IconUserShield,
+  IconMessageReport,
 } from '@tabler/icons-react'
 import type { Permission } from '#/lib/authorization/permissions'
 
 export const navigationItems = [
+  {
+    to: '/manage/devices',
+    icon: IconShieldLock,
+    label: 'დასწრების მოწყობილობები',
+    permission: 'attendance.devices.manage',
+  },
+  {
+    to: '/admin/access',
+    icon: IconUserShield,
+    label: 'მომხმარებლების წვდომა',
+    permission: 'users.manage',
+  },
   {
     to: '/dashboard',
     icon: IconLayoutDashboard,
@@ -48,20 +50,6 @@ export const navigationItems = [
     to: '/attendance',
     icon: IconClock,
     label: 'დასწრება',
-    permission: null,
-  },
-  {
-    to: '/attendance/history',
-    secondary: true,
-    icon: IconHistory,
-    label: 'დასწრების ისტორია',
-    permission: null,
-  },
-  {
-    to: '/attendance/corrections',
-    secondary: true,
-    icon: IconClockEdit,
-    label: 'დროის შესწორებები',
     permission: null,
   },
   {
@@ -79,14 +67,27 @@ export const navigationItems = [
   },
   {
     to: '/jobs',
-    icon: IconBriefcase,
-    label: 'ჩემი სამუშაოები',
+    icon: IconMapPin,
+    label: 'სამუშაოების რუკა',
     permission: null,
   },
   {
     to: '/leave',
     icon: IconCalendarOff,
-    label: 'შვებულება და გაცდენა',
+    label: 'არყოფნა',
+    permission: null,
+  },
+
+  {
+    to: '/announcements',
+    icon: IconSpeakerphone,
+    label: 'განცხადებები',
+    permission: null,
+  },
+  {
+    to: '/complaints',
+    icon: IconMessageReport,
+    label: 'საჩივრები',
     permission: null,
   },
   {
@@ -111,84 +112,41 @@ export const navigationItems = [
     permission: null,
   },
   {
-    to: '/manage',
-    icon: IconChartBar,
-    label: 'მართვის მიმოხილვა',
-    permission: 'manage.access',
-  },
-  {
-    to: '/manage/attendance',
-    icon: IconClockCheck,
-    label: 'გუნდის დასწრება',
-    permission: 'attendance.read.team',
-  },
-  {
-    to: '/manage/attendance/exceptions',
-    secondary: true,
-    icon: IconAlertTriangle,
-    label: 'დასწრების გამონაკლისები',
-    permission: 'attendance.review.team',
-  },
-  {
-    to: '/manage/timesheets',
-    icon: IconClipboardCheck,
-    label: 'საათების განხილვა',
-    permission: 'timesheets.review.team',
-  },
-  {
     to: '/manage/schedule',
     icon: IconCalendarCog,
-    label: 'განრიგის მართვა',
-    permission: 'schedule.manage',
-  },
-  {
-    to: '/manage/jobs',
-    icon: IconListCheck,
-    label: 'სამუშაოების მართვა',
-    permission: 'jobs.manage',
-  },
-  {
-    to: '/manage/jobs/new',
-    secondary: true,
-    icon: IconCirclePlus,
-    label: 'ახალი სამუშაო',
-    permission: 'jobs.manage',
+    label: 'სამუშაო განრიგი',
+    permission: 'attendance.configure',
   },
   {
     to: '/manage/employees',
     icon: IconUsers,
     label: 'თანამშრომლები',
-    permission: 'employees.read',
-  },
-  {
-    to: '/manage/teams',
-    icon: IconUsersGroup,
-    label: 'გუნდები',
-    permission: 'teams.manage',
+    permission: 'employees.manage',
   },
   {
     to: '/manage/leave',
     icon: IconCalendarCheck,
-    label: 'შვებულების განხილვა',
+    label: 'არყოფნები',
     permission: 'leave.review',
+  },
+
+  {
+    to: '/manage/announcements',
+    icon: IconSpeakerphone,
+    label: 'განცხადებების მართვა',
+    permission: 'announcements.manage',
+  },
+  {
+    to: '/manage/complaints',
+    icon: IconMessageReport,
+    label: 'საჩივრების მართვა',
+    permission: ['complaints.review.all', 'complaints.review.assigned'],
   },
   {
     to: '/manage/reports',
     icon: IconReportAnalytics,
-    label: 'ანგარიშები',
+    label: 'რეპორტები',
     permission: 'reports.read',
-  },
-  {
-    to: '/admin/dashboard',
-    icon: IconShield,
-    label: 'ადმინისტრირების მიმოხილვა',
-    permission: 'admin.access',
-  },
-  {
-    to: '/admin/users',
-    icon: IconUserCog,
-    label: 'მომხმარებლები',
-    permission: 'users.manage',
   },
   {
     to: '/admin/invitations',
@@ -209,10 +167,14 @@ export const navigationItems = [
     permission: 'company.configure',
   },
   {
-    to: '/admin/settings/attendance',
-    icon: IconClockCog,
-    label: 'დასწრების წესები',
-    permission: 'attendance.configure',
+    to: '/manage/attendance',
+    icon: IconClock,
+    label: 'დასწრებები',
+    permission: [
+      'attendance.read.all',
+      'attendance.read.team',
+      'timesheets.review.team',
+    ],
   },
   {
     to: '/admin/settings/approvals',
@@ -260,7 +222,7 @@ export const navigationItems = [
   to: string
   label: string
   icon: typeof IconLayoutDashboard
-  permission: Permission | null
+  permission: Permission | ReadonlyArray<Permission> | null
   secondary?: boolean
 }>
 
@@ -274,7 +236,10 @@ export function isNavigationItemActive(pathname: string, destination: string) {
       path.startsWith('/timesheets/')
     )
   }
-  if (destination === '/manage/attendance' || destination === '/manage/jobs') {
+  if (
+    destination === '/manage/employees' ||
+    destination === '/manage/attendance'
+  ) {
     return path === destination || path.startsWith(`${destination}/`)
   }
   return path === destination

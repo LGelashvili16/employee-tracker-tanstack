@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { IconEye, IconEyeOff, IconLock } from '@tabler/icons-react'
+import { IconEye, IconEyeOff } from '@tabler/icons-react'
 import { Spinner } from '#/components/ui/spinner'
 import { Link, useRouter } from '@tanstack/react-router'
 import { Button } from '#/components/ui/button'
@@ -81,14 +81,14 @@ export function LoginPage() {
               {(field) => (
                 <Field data-invalid={!field.state.meta.isValid}>
                   <FieldLabel htmlFor="identifier">
-                    მომხმარებლის სახელი
+                    მომხმარებლის სახელი ან ელფოსტა
                   </FieldLabel>
                   <Input
                     id="identifier"
                     name={field.name}
                     type="text"
                     className="h-10"
-                    placeholder="თანამშრომლის კოდი"
+                    placeholder="მომხმარებლის სახელი"
                     autoComplete="username"
                     autoCapitalize="none"
                     spellCheck={false}
@@ -188,10 +188,10 @@ export function LoginPage() {
             ანგარიშის გააქტიურება
           </Link>
         </p>
-        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+        {/* <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <IconLock className="size-3.5" aria-hidden="true" />
           ანგარიშს ქმნის კომპანიის ადმინისტრატორი.
-        </p>
+        </p> */}
       </CardFooter>
     </Card>
   )

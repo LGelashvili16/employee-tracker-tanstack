@@ -1,0 +1,167 @@
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '#/components/ui/tabs'
+import { DayOffSettingsCard } from '#/features/leave/components/day-off-allowance-card'
+import { useState } from 'react'
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from '@tanstack/react-query'
+import {
+  IconCalendarWeek,
+  IconCalendarOff,
+  IconChecklist,
+  IconRefresh,
+} from '@tabler/icons-react'
+import { toast } from 'sonner'
+import { Alert, AlertDescription } from '#/components/ui/alert'
+import { Button } from '#/components/ui/button'
+import { Skeleton } from '#/components/ui/skeleton'
+import { Spinner } from '#/components/ui/spinner'
+import { scheduleSettingsOptions } from '#/features/scheduling/scheduling.queries'
+import { ScheduleVersionForm } from '#/features/scheduling/components/schedule-version-form'
+import { schedulingContent } from '../scheduling.content'
+import { AttendanceConfiguration } from '#/features/attendance/components/attendance-configuration'
+
+export function WorkSchedulePage({
+  actorId,
+  canConfigureLeave = false,
+}: {
+  actorId: string
+  canConfigureLeave?: boolean
+}) {
+  // Match the existing private feature cache ownership; remount on identity changes.
+  const [client] = useState(() => new QueryClient())
+  return (
+    <QueryClientProvider client={client}>
+      <SettingsContent
+        actorId={actorId}
+        canConfigureLeave={canConfigureLeave}
+      />
+    </QueryClientProvider>
+  )
+}
+
+function SettingsContent({
+  actorId,
+  canConfigureLeave = false,
+}: {
+  actorId: string
+  canConfigureLeave?: boolean
+}) {
+  const query = useQuery(scheduleSettingsOptions(actorId))
+  const result = query.data
+  async function refreshSettings() {
+    const response = await query.refetch().catch(() => null)
+    if (response && !response.isError && response.data?.ok) {
+      toast.success('მონაცემები განახლებულია.')
+    } else {
+      toast.error(
+        response?.data && !response.data.ok
+          ? response.data.message
+          : 'მონაცემების განახლება ვერ მოხერხდა. სცადეთ ხელახლა.',
+      )
+    }
+  }
+  return (
+    <section className="flex w-full min-w-0 flex-col gap-6 pb-6">
+      <header className="flex flex-wrap items-start justify-between gap-5">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {schedulingContent.manageSchedule.title}
+        </h1>
+        {query.isError || result?.ok === false ? (
+          <Button
+            variant="outline"
+            depth="raised"
+            className="min-h-10"
+            disabled={query.isFetching}
+            aria-busy={query.isFetching}
+            onClick={() => void refreshSettings()}
+          >
+            {query.isFetching ? (
+              <Spinner aria-hidden="true" />
+            ) : (
+              <IconRefresh aria-hidden="true" />
+            )}
+            მონაცემების განახლება
+          </Button>
+        ) : null}
+      </header>
+      <Tabs defaultValue="schedule" className="min-w-0 gap-6">
+        <div className="max-w-full overflow-x-auto">
+          <TabsList
+            aria-label="სამუშაო პარამეტრები"
+            className="w-max gap-1 rounded-xl border p-0.5 group-data-horizontal/tabs:h-auto"
+          >
+            <TabsTrigger value="schedule" className="min-h-10 px-4">
+              <IconCalendarWeek aria-hidden="true" />
+              განრიგი
+            </TabsTrigger>
+            <TabsTrigger value="leave" className="min-h-10 px-4">
+              <IconCalendarOff aria-hidden="true" />
+              დასვენება და შვებულება
+            </TabsTrigger>
+            <TabsTrigger value="attendance" className="min-h-10 px-4">
+              <IconChecklist aria-hidden="true" />
+              დასწრების წესები
+            </TabsTrigger>
+          </TabsList>
+        </div>
+        <TabsContent
+          value="schedule"
+          keepMounted
+          className="data-[hidden]:hidden"
+        >
+          {query.isPending ? (
+            <div role="status" aria-busy="true" aria-label="განრიგი იტვირთება">
+              <div
+                aria-hidden="true"
+                className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]"
+              >
+                <Skeleton className="h-[38rem] w-full" />
+                <div className="flex flex-col gap-6">
+                  <Skeleton className="h-64 w-full" />
+                  <Skeleton className="h-80 w-full" />
+                </div>
+              </div>
+            </div>
+          ) : query.isError || !result?.ok ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {result && !result.ok
+                  ? result.message
+                  : 'განრიგის ჩატვირთვა ვერ მოხერხდა. გადაამოწმეთ თქვენი წვდომა.'}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              {!result.value.current ? (
+                <p className="text-sm text-muted-foreground">
+                  ამ დღისთვის მოქმედი განრიგი ჯერ არ არის განსაზღვრული.
+                </p>
+              ) : null}
+              <ScheduleVersionForm
+                key={`${result.value.latest?.effectiveFrom ?? 'new'}:${result.value.minimumEffectiveFrom}`}
+                settings={result.value}
+                actorId={actorId}
+              />
+            </>
+          )}
+        </TabsContent>
+        <TabsContent
+          value="leave"
+          keepMounted
+          className="max-w-4xl data-[hidden]:hidden"
+        >
+          <DayOffSettingsCard canEdit={canConfigureLeave} />
+        </TabsContent>
+        <TabsContent
+          value="attendance"
+          keepMounted
+          className="data-[hidden]:hidden"
+        >
+          <AttendanceConfiguration actorId={actorId} />
+        </TabsContent>
+      </Tabs>
+    </section>
+  )
+}

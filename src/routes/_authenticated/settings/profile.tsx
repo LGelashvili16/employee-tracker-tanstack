@@ -5,6 +5,9 @@ import { pageHead } from '#/lib/page-head'
 
 export const Route = createFileRoute('/_authenticated/settings/profile')({
   head: () =>
-    pageHead(accountContent.profile.title, accountContent.profile.description),
+    pageHead(
+      accountContent.profile.title,
+      'თქვენი პირადი ინფორმაცია და საკონტაქტო მონაცემები.',
+    ),
   component: ProfilePage,
 })

@@ -8,23 +8,25 @@ import { MotionConfig, motion, useReducedMotion } from 'motion/react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Button } from '#/components/ui/button'
-import { Skeleton } from '#/components/ui/skeleton'
 import { Spinner } from '#/components/ui/spinner'
 import { attendanceOptions } from '../attendance.queries'
 import { AttendanceClock } from './attendance-clock'
-import { AttendanceDayWidgets } from './attendance-day-widgets'
 import { RecentAttendance } from './recent-attendance'
+import { useBusinessNotificationRefresh } from '#/hooks/use-business-notification-refresh'
 import { CurrentDayWidget } from './current-day-widget'
 import { DailyGoalWidget } from './daily-goal-widget'
 import { cn } from '#/lib/utils'
 import { TimeGreeting } from '#/components/common/time-greeting'
 import { AttendanceScheduleWidget } from './attendance-schedule-widget'
 import { AttendanceWeeklyWidget } from './attendance-weekly-widget'
+import { ApprovedLeaveNotice } from './approved-leave-notice'
 
-// Share row heights across the compact widgets, with the clock spanning both rows.
-const dashboardGrid = 'sm:grid-cols-2 xl:auto-rows-fr xl:grid-cols-4'
-const dashboardClock = 'sm:col-span-2 xl:row-span-2'
-const dashboardSummary = 'min-w-0'
+import {
+  AttendanceOverviewSkeleton,
+  dashboardGrid,
+  dashboardClock,
+  dashboardSummary,
+} from './attendance-overview-skeleton'
 
 export function AttendanceOverview({
   actorId,
@@ -58,6 +60,7 @@ function OverviewContent({
   greetingName?: string
 }) {
   const query = useQuery(attendanceOptions(actorId))
+  useBusinessNotificationRefresh(actorId)
   const reducedMotion = useReducedMotion()
   const heading =
     greetingName === undefined ? null : (
@@ -75,42 +78,10 @@ function OverviewContent({
     )
   if (query.isPending)
     return (
-      <div role="status" aria-busy="true" aria-label="დასწრება იტვირთება">
-        {heading ? <div className="mb-6">{heading}</div> : null}
-        <div aria-hidden="true" className="flex flex-col gap-4">
-          <div
-            className={cn(
-              'grid gap-4',
-              dashboardLayout ? dashboardGrid : 'xl:grid-cols-3',
-            )}
-          >
-            <Skeleton
-              className={cn(
-                'h-96 rounded-2xl xl:h-full',
-                dashboardLayout ? dashboardClock : 'xl:col-span-2',
-              )}
-            />
-            {dashboardLayout ? (
-              <>
-                <Skeleton className="h-64 rounded-2xl" />
-                <Skeleton className="h-64 rounded-2xl" />
-                <Skeleton
-                  className={cn('h-64 rounded-2xl', dashboardSummary)}
-                />
-                <Skeleton
-                  className={cn('h-64 rounded-2xl', dashboardSummary)}
-                />
-              </>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                <Skeleton className="h-56 rounded-2xl" />
-                <Skeleton className="h-60 rounded-2xl" />
-              </div>
-            )}
-          </div>
-          <Skeleton className="h-52 rounded-2xl" />
-        </div>
-      </div>
+      <AttendanceOverviewSkeleton
+        dashboardLayout={dashboardLayout}
+        heading={heading}
+      />
     )
   const result = query.data
   async function refresh() {
@@ -149,25 +120,19 @@ function OverviewContent({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: reducedMotion ? 0 : 0.2 }}
-        className="flex flex-col gap-4"
+        className={cn('flex flex-col', dashboardLayout ? 'gap-4' : 'gap-6')}
       >
         {heading ? <div className="mb-2">{heading}</div> : null}
-        <div
-          className={cn(
-            'grid gap-4',
-            dashboardLayout ? dashboardGrid : 'xl:grid-cols-3',
-          )}
-        >
-          <div
-            className={cn(
-              'min-w-0',
-              dashboardLayout ? dashboardClock : 'xl:col-span-2',
-            )}
-          >
+        {result.value.approvedLeave ? (
+          <ApprovedLeaveNotice leave={result.value.approvedLeave} />
+        ) : null}
+        <div className={cn('grid gap-4', dashboardLayout ? dashboardGrid : '')}>
+          <div className={cn('min-w-0', dashboardLayout ? dashboardClock : '')}>
             <AttendanceClock
               overview={result.value}
               actorId={actorId}
               compact={dashboardLayout}
+              workLog={!dashboardLayout}
             />
           </div>
           {dashboardLayout ? (
@@ -181,6 +146,7 @@ function OverviewContent({
               <div className="min-w-0">
                 <AttendanceScheduleWidget
                   workday={result.value.workday}
+                  approvedLeave={result.value.approvedLeave}
                   compact
                 />
               </div>
@@ -198,13 +164,9 @@ function OverviewContent({
                 />
               </div>
             </>
-          ) : (
-            <div className="min-w-0">
-              <AttendanceDayWidgets overview={result.value} />
-            </div>
-          )}
+          ) : null}
         </div>
-        <RecentAttendance overview={result.value} />
+        <RecentAttendance overview={result.value} workLog={!dashboardLayout} />
       </motion.div>
     </MotionConfig>
   )

@@ -1,23 +1,19 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { TeamAttendancePage } from '#/features/attendance/pages/team-attendance-page'
-import { attendanceContent } from '#/features/attendance/attendance.content'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { CompanyAttendancePage } from '#/features/attendance/pages/company-attendance-page'
+import { companyAttendanceSearchSchema } from '#/features/attendance/company-attendance.schemas'
 import { pageHead } from '#/lib/page-head'
-import { requirePagePermission } from '#/lib/auth/auth.functions'
 
 export const Route = createFileRoute('/_authenticated/manage/attendance/')({
-  beforeLoad: () =>
-    requirePagePermission({ data: { permission: 'attendance.read.team' } }),
+  validateSearch: companyAttendanceSearchSchema,
+  beforeLoad: ({ search }) => {
+    if (search.userId)
+      throw redirect({
+        to: '/manage/attendance/$userId',
+        params: { userId: search.userId },
+        search: {},
+      })
+  },
   head: () =>
-    pageHead(
-      attendanceContent.teamAttendance.title,
-      attendanceContent.teamAttendance.description,
-    ),
-  component: TeamAttendanceRoute,
+    pageHead('დასწრებები', 'თანამშრომლები და მათი დასწრების ისტორია.'),
+  component: CompanyAttendancePage,
 })
-
-function TeamAttendanceRoute() {
-  const { actor } = Route.useRouteContext()
-  return (
-    <TeamAttendancePage key={actor.id} roles={actor.roles} actorId={actor.id} />
-  )
-}

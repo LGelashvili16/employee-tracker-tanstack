@@ -1,12 +1,12 @@
 import { Skeleton } from '#/components/ui/skeleton'
 
 /** A shared layout fallback; data-heavy features should supply a skeleton matching their own layout. */
-export function PageSkeleton() {
+export function PageSkeleton({ announce = true }: { announce?: boolean }) {
   return (
     <div
-      role="status"
-      aria-busy="true"
-      aria-label="გვერდი იტვირთება"
+      role={announce ? 'status' : undefined}
+      aria-busy={announce || undefined}
+      aria-label={announce ? 'გვერდი იტვირთება' : undefined}
       className="flex flex-col gap-6 p-4"
     >
       <span className="sr-only">გვერდი იტვირთება…</span>

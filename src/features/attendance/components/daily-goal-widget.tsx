@@ -39,7 +39,16 @@ export function DailyGoalWidget({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-3">
-        {overview.workday.kind !== 'scheduled' ? (
+        {overview.approvedLeave ? (
+          <p className="text-sm text-muted-foreground">
+            {overview.approvedLeave.kind === 'sick_leave'
+              ? 'დღეს ბიულეტენზე ხართ.'
+              : overview.approvedLeave.kind === 'vacation'
+                ? 'დღეს შვებულებაში ხართ.'
+                : 'დღეს დასვენების დღე გაქვთ.'}{' '}
+            სამუშაო მიზანი არ არის განსაზღვრული.
+          </p>
+        ) : overview.workday.kind !== 'scheduled' ? (
           <p className="text-sm text-muted-foreground">
             {overview.workday.kind === 'day_off'
               ? 'დღეს დასვენების დღეა.'

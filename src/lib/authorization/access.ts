@@ -4,7 +4,7 @@ import type { Actor } from './actor'
 import type { Permission } from './permissions'
 
 export function assertPermission(actor: Actor, permission: Permission) {
-  if (!hasPermission(actor.roles, permission)) throw new AuthorizationError()
+  if (!hasPermission(actor, permission)) throw new AuthorizationError()
   return actor
 }
 
@@ -13,7 +13,6 @@ export function assertPermissions(
   actor: Actor,
   permissions: ReadonlyArray<Permission>,
 ) {
-  if (!hasEveryPermission(actor.roles, permissions))
-    throw new AuthorizationError()
+  if (!hasEveryPermission(actor, permissions)) throw new AuthorizationError()
   return actor
 }

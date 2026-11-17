@@ -1,0 +1,2 @@
+ALTER TABLE "attendance_device" DROP CONSTRAINT "attendance_device_state";--> statement-breakpoint
+ALTER TABLE "attendance_device" ADD CONSTRAINT "attendance_device_state" CHECK ("attendance_device"."state" in ('unrequested','pending','approved','rejected','revoked') and "attendance_device"."revision" >= 0 and "attendance_device"."counter" >= 0);

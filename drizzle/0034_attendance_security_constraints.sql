@@ -1,0 +1,2 @@
+ALTER TABLE "attendance_device" ALTER COLUMN "counter" SET DATA TYPE bigint;--> statement-breakpoint
+ALTER TABLE "attendance_punch" ADD CONSTRAINT "attendance_punch_employee_id_employee_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employee"("id") ON DELETE restrict ON UPDATE no action;

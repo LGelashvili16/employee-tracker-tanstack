@@ -57,6 +57,223 @@
       "when": 1793823889290,
       "tag": "0007_attendance_review",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793869920361,
+      "tag": "0008_clear_argent",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793907040500,
+      "tag": "0009_notification_inbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793958156236,
+      "tag": "0010_employee_username",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793959801346,
+      "tag": "0011_keen_charles_xavier",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793976058546,
+      "tag": "0012_happy_wallflower",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793984907205,
+      "tag": "0013_optional_job_coordinates",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793992711520,
+      "tag": "0014_generic_job_kind",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1794002338472,
+      "tag": "0015_job_deadline",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794210342851,
+      "tag": "0016_user_permission_overrides",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794214861386,
+      "tag": "0017_retire_teams_permission",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794223138195,
+      "tag": "0018_nonworking_day_attendance",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794224889996,
+      "tag": "0019_leave_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794226923653,
+      "tag": "0020_leave_cancellation",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794227399799,
+      "tag": "0021_optional_leave_description",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794229937491,
+      "tag": "0022_day_off_allowances",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794231657570,
+      "tag": "0023_vacation_terminology",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794233454531,
+      "tag": "0024_paid_vacation_allowances",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794234886367,
+      "tag": "0025_sick_leave_and_leave_naming",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794235000000,
+      "tag": "0026_consolidate_employee_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1794308291140,
+      "tag": "0027_announcements",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794313995044,
+      "tag": "0028_announcement_unread_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794391502789,
+      "tag": "0029_employee_complaints",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794405095204,
+      "tag": "0030_notification_delivery",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794406927548,
+      "tag": "0031_attendance_digest_receipt",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794816788621,
+      "tag": "0032_superb_scarlet_spider",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794830171764,
+      "tag": "0033_attendance_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794830947679,
+      "tag": "0034_attendance_security_constraints",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794834821306,
+      "tag": "0035_passkey_disabled_by_default",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794837588852,
+      "tag": "0036_browser_approval_policy",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794841607347,
+      "tag": "0037_manual_device_activation",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794907997665,
+      "tag": "0038_optional_attendance_notes",
+      "breakpoints": true
     }
   ]
 }

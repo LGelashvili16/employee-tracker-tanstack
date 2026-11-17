@@ -16,7 +16,11 @@ export function AttendanceDayWidgets({
         compact ? 'contents' : 'grid gap-4 sm:grid-cols-2 xl:grid-cols-1',
       )}
     >
-      <AttendanceScheduleWidget workday={overview.workday} compact={compact} />
+      <AttendanceScheduleWidget
+        workday={overview.workday}
+        approvedLeave={overview.approvedLeave}
+        compact={compact}
+      />
       <AttendanceWeeklyWidget
         key={overview.serverNow}
         overview={overview}

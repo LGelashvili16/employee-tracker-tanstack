@@ -27,7 +27,7 @@ export function workDurationStatus(seconds: number) {
 
 export function attendanceStatus(overview: AttendanceOverview): {
   label: string
-  variant: 'green' | 'red' | 'yellow' | 'orange' | 'secondary'
+  variant: 'green' | 'red' | 'yellow' | 'orange' | 'secondary' | 'blue'
 } {
   if (overview.openSession) {
     return needsSessionReview(
@@ -49,6 +49,13 @@ export function attendanceStatus(overview: AttendanceOverview): {
           ? 'yellow'
           : 'green',
     }
+  }
+  if (overview.approvedLeave) {
+    return overview.approvedLeave.kind === 'sick_leave'
+      ? { label: 'ბიულეტენი', variant: 'blue' }
+      : overview.approvedLeave.kind === 'vacation'
+        ? { label: 'შვებულება', variant: 'blue' }
+        : { label: 'დასვენების დღე', variant: 'secondary' }
   }
   if (overview.workday.kind === 'unconfigured') {
     return { label: 'განრიგი არ არის', variant: 'orange' }

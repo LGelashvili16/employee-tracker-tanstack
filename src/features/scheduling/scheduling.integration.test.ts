@@ -212,7 +212,7 @@ describe.runIf(enabled)('company schedule PostgreSQL integrity', () => {
         `UPDATE "user" SET access_state = 'active' WHERE id = 'schedule-admin'`,
       )
       await database().query(
-        `INSERT INTO employee (code, user_id, full_name, status) VALUES ('schedule-admin', 'schedule-admin', 'ადმინისტრატორი', 'inactive')`,
+        `INSERT INTO employee (username, user_id, full_name, status) VALUES ('schedule-admin', 'schedule-admin', 'ადმინისტრატორი', 'inactive')`,
       )
       try {
         await expect(

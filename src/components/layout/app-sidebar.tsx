@@ -1,17 +1,19 @@
 import { APP_NAME } from '#/lib/app'
 import { Link, useLocation } from '@tanstack/react-router'
+import { IconChevronRight, IconSettings } from '@tabler/icons-react'
 import {
-  IconLayoutDashboard,
-  IconChevronRight,
-  IconUsers,
-  IconSettings,
-} from '@tabler/icons-react'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '#/components/ui/collapsible'
+  Accordion,
+  AccordionItem,
+  AccordionContent,
+  AccordionTrigger,
+} from '#/components/ui/accordion'
 import type { ReactNode } from 'react'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '#/components/ui/dropdown-menu'
 import {
   Sidebar,
   SidebarContent,
@@ -33,13 +35,17 @@ export function AppSidebar({
   actor,
   inset = false,
   footer,
+  hasUnreadAnnouncements = false,
+  hasUnreadComplaints = false,
 }: {
   actor: Actor
   inset?: boolean
   footer?: ReactNode
+  hasUnreadAnnouncements?: boolean
+  hasUnreadComplaints?: boolean
 }) {
   const pathname = useLocation({ select: (location) => location.pathname })
-  const { setOpenMobile } = useSidebar()
+  const { setOpenMobile, isMobile } = useSidebar()
   const groups = [
     {
       label: 'ჩემი სივრცე',
@@ -51,7 +57,7 @@ export function AppSidebar({
       ),
     },
     {
-      label: 'გუნდის მართვა',
+      label: 'მართვა',
       items: navigationItems.filter(
         (item) =>
           item.to.startsWith('/manage') &&
@@ -60,11 +66,16 @@ export function AppSidebar({
     },
     {
       label: 'ადმინისტრირება',
-      // Surface working admin workflows as they ship; keep unfinished routes out of navigation.
-      items: navigationItems.filter(
-        (item) =>
-          item.to === '/admin/users' ||
-          item.to === '/admin/settings/attendance',
+      items: navigationItems.filter((item) =>
+        [
+          '/admin/access',
+          '/admin/roles',
+          '/admin/audit-log',
+          '/admin/settings/security',
+          '/admin/settings/company',
+          '/admin/settings/notifications',
+          '/admin/integrations',
+        ].includes(item.to),
       ),
     },
   ]
@@ -95,36 +106,94 @@ export function AppSidebar({
       <SidebarContent>
         {groups.map((group) => {
           if (
+            group.label === 'მართვა' &&
+            !hasPermission(actor, 'manage.access')
+          )
+            return null
+          if (
             group.label === 'ადმინისტრირება' &&
-            !hasPermission(actor.roles, 'admin.access')
+            !hasPermission(actor, 'admin.access')
           )
             return null
           const items = group.items.filter(
             (item) =>
-              !item.permission || hasPermission(actor.roles, item.permission),
+              !item.permission ||
+              (typeof item.permission === 'string'
+                ? hasPermission(actor, item.permission)
+                : item.permission.some((permission) =>
+                    hasPermission(actor, permission),
+                  )),
           )
           if (!items.length) return null
+          const popup = inset && !isMobile && group.label === 'ადმინისტრირება'
+          const Item = popup ? DropdownMenuItem : SidebarMenuButton
           const content = (
             <SidebarGroupContent>
               <SidebarMenu>
                 {items.map((item) => (
                   <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton
+                    <Item
                       render={
                         <Link
                           to={item.to}
                           onClick={() => setOpenMobile(false)}
                         />
                       }
-                      isActive={isNavigationItemActive(pathname, item.to)}
+                      {...(popup
+                        ? {
+                            'data-active':
+                              isNavigationItemActive(pathname, item.to) ||
+                              undefined,
+                            className:
+                              'data-active:bg-accent data-active:font-medium',
+                          }
+                        : {
+                            isActive: isNavigationItemActive(pathname, item.to),
+                          })}
                     >
                       <item.icon aria-hidden="true" />
                       <span>{item.label}</span>
-                    </SidebarMenuButton>
+                      {item.to === '/manage/complaints' &&
+                      hasUnreadComplaints ? (
+                        <>
+                          <span
+                            aria-hidden="true"
+                            data-slot="complaint-unread-dot"
+                            className="ml-auto size-2 shrink-0 rounded-full bg-destructive"
+                          />
+                          <span className="sr-only">
+                            , წაუკითხავი საჩივრები
+                          </span>
+                        </>
+                      ) : null}
+                      {item.to === '/announcements' &&
+                      hasUnreadAnnouncements ? (
+                        <>
+                          <span
+                            aria-hidden="true"
+                            data-slot="announcement-unread-dot"
+                            className="ml-auto size-2 shrink-0 rounded-full bg-destructive"
+                          />
+                          <span className="sr-only">
+                            , წაუკითხავი განცხადებები
+                          </span>
+                        </>
+                      ) : null}
+                    </Item>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
+          )
+          const triggerContent = (
+            <>
+              <IconSettings aria-hidden="true" />
+              <span>{group.label}</span>
+              <IconChevronRight
+                className="ml-auto transition-transform motion-reduce:transition-none group-aria-expanded/accordion-trigger:rotate-90"
+                aria-hidden="true"
+              />
+            </>
           )
           return (
             <SidebarGroup
@@ -133,39 +202,54 @@ export function AppSidebar({
                 group.label === 'ადმინისტრირება' ? 'mt-auto' : undefined
               }
             >
-              {inset ? (
-                <Collapsible
+              {popup ? (
+                <DropdownMenu key={`${group.label}-${pathname}`} modal={false}>
+                  <DropdownMenuTrigger
+                    openOnHover
+                    delay={100}
+                    closeDelay={150}
+                    render={
+                      <SidebarMenuButton
+                        isActive={items.some((item) =>
+                          isNavigationItemActive(pathname, item.to),
+                        )}
+                      />
+                    }
+                  >
+                    {triggerContent}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    side="right"
+                    align="start"
+                    sideOffset={8}
+                    className="w-64 motion-reduce:animate-none"
+                  >
+                    {content}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : inset && group.label === 'ადმინისტრირება' ? (
+                <Accordion
                   key={`${group.label}-${pathname.split('/')[1]}`}
-                  defaultOpen={
-                    group.label === 'ჩემი სივრცე' ||
+                  defaultValue={
                     items.some((item) =>
                       isNavigationItemActive(pathname, item.to),
                     )
+                      ? [group.label]
+                      : []
                   }
-                  className="group/navigation"
                 >
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger render={<SidebarMenuButton />}>
-                        {group.label === 'ჩემი სივრცე' ? (
-                          <IconLayoutDashboard aria-hidden="true" />
-                        ) : group.label === 'გუნდის მართვა' ? (
-                          <IconUsers aria-hidden="true" />
-                        ) : (
-                          <IconSettings aria-hidden="true" />
-                        )}
-                        <span>{group.label}</span>
-                        <IconChevronRight
-                          className="ml-auto transition-transform group-data-[open]/navigation:rotate-90"
-                          aria-hidden="true"
-                        />
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="ml-3 border-l pl-2">
-                        {content}
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </Collapsible>
+                  <AccordionItem value={group.label}>
+                    <AccordionTrigger
+                      render={<SidebarMenuButton />}
+                      className="items-center py-0 hover:no-underline [&>[data-slot=accordion-trigger-icon]]:hidden"
+                    >
+                      {triggerContent}
+                    </AccordionTrigger>
+                    <AccordionContent className="ml-3 border-l pb-0 pl-2 [&_a]:no-underline">
+                      {content}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               ) : (
                 <>
                   <SidebarGroupLabel>{group.label}</SidebarGroupLabel>

@@ -1,25 +1,87 @@
-import { Link } from '@tanstack/react-router'
-import { IconArrowLeft } from '@tabler/icons-react'
+import { Link, useLocation } from '@tanstack/react-router'
+import {
+  IconAlertTriangle,
+  IconArrowLeft,
+  IconRefresh,
+} from '@tabler/icons-react'
 import { Button } from '#/components/ui/button'
+import { Card, CardContent } from '#/components/ui/card'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+} from '#/components/ui/empty'
 import { APP_NAME } from '#/lib/app'
 import { PageSkeleton } from './page-skeleton'
-import { FeaturePage } from './feature-page'
 
 export function RouteError() {
+  const href = useLocation({ select: (location) => location.href })
   return (
-    <FeaturePage
-      title="გვერდის გახსნა ვერ მოხერხდა"
-      description="შეამოწმეთ თქვენი წვდომა ან სცადეთ მოგვიანებით."
-    >
-      <Button
-        nativeButton={false}
-        role="link"
-        variant="outline"
-        render={<Link to="/dashboard" />}
+    <main className="flex min-h-svh flex-col bg-background px-5 text-foreground sm:px-10">
+      <header className="mx-auto flex w-full max-w-6xl items-center py-6 sm:py-8">
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center gap-3 rounded-lg font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <img src="/favicon.svg" alt="" className="size-8" />
+          {APP_NAME}
+        </Link>
+      </header>
+      <section
+        aria-labelledby="route-error-title"
+        className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center gap-6 py-12"
       >
-        მთავარ გვერდზე დაბრუნება
-      </Button>
-    </FeaturePage>
+        <Card className="w-full">
+          <CardContent>
+            <Empty className="px-2 py-8 sm:px-6 sm:py-10">
+              <EmptyMedia>
+                <IconAlertTriangle aria-hidden="true" />
+              </EmptyMedia>
+              <EmptyHeader className="max-w-md gap-3">
+                <h1
+                  id="route-error-title"
+                  className="text-xl leading-relaxed font-semibold tracking-tight sm:text-2xl"
+                >
+                  გვერდის გახსნა ვერ მოხერხდა
+                </h1>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  გვერდი დროებით მიუწვდომელია. სცადეთ ხელახლა ან დაბრუნდით
+                  მთავარ გვერდზე.
+                </p>
+              </EmptyHeader>
+              <EmptyContent className="max-w-md sm:flex-row sm:justify-center">
+                <Button
+                  nativeButton={false}
+                  role="link"
+                  size="lg"
+                  className="min-h-11 w-full px-4 sm:w-auto"
+                  render={<a href={href} />}
+                >
+                  <IconRefresh data-icon="inline-start" aria-hidden="true" />
+                  ხელახლა ცდა
+                </Button>
+                <Button
+                  nativeButton={false}
+                  role="link"
+                  variant="outline"
+                  depth="raised"
+                  size="lg"
+                  className="min-h-11 w-full px-4 sm:w-auto"
+                  render={<Link to="/dashboard" />}
+                >
+                  <IconArrowLeft data-icon="inline-start" aria-hidden="true" />
+                  მთავარ გვერდზე დაბრუნება
+                </Button>
+              </EmptyContent>
+            </Empty>
+          </CardContent>
+        </Card>
+        <p className="text-center text-xs leading-6 text-muted-foreground">
+          თუ პრობლემა განმეორდება, დაუკავშირდით ადმინისტრატორს.
+        </p>
+      </section>
+    </main>
   )
 }
 export function RouteNotFound() {

@@ -1,5 +1,8 @@
 import { useCallback, useRef } from 'react'
-import { IconClock, IconLogin, IconLogout } from '@tabler/icons-react'
+import { useQuery } from '@tanstack/react-query'
+import { deviceStatusOptions } from '#/features/attendance-security/attendance-security.queries'
+import { CurrentDeviceSetup } from '#/features/attendance-security/components/current-device-setup'
+import { IconCirclePause, IconCirclePlay, IconClock } from '@tabler/icons-react'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -7,7 +10,9 @@ import { Spinner } from '#/components/ui/spinner'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import { AttendanceDeviationBadges } from './attendance-deviation-badges'
 import { useModal } from '#/hooks/use-modal'
+import { formatGeorgianDate } from '#/lib/date-format'
 import { FinishWorkConfirmation } from './finish-work-confirmation'
+import { StartNonworkingDayConfirmation } from './start-nonworking-day-confirmation'
 import { ChartStatFlow } from '#/components/charts/chart-stat-flow'
 import { useAttendanceActions } from '../hooks/use-attendance-actions'
 import { useElapsedSeconds } from '../hooks/use-elapsed-seconds'
@@ -16,14 +21,17 @@ import {
   formatAttendanceTime,
   formatWorkedTime,
   needsSessionReview,
+  MAX_WORKDAY_SECONDS,
 } from '../attendance.rules'
 import type { AttendanceOverview } from '../attendance.types'
 import {
   attendanceStatus,
+  formatAttendanceDate,
   workDurationStatus,
 } from '../attendance.presentation'
 import { cn } from '#/lib/utils'
 import { AttendanceClockPattern } from './attendance-clock-pattern'
+import { WorkCurrent } from './work-current'
 
 const digitFormat = { minimumIntegerDigits: 2, maximumFractionDigits: 0 }
 
@@ -31,12 +39,24 @@ export function AttendanceClock({
   overview,
   actorId,
   compact = false,
+  workLog = false,
 }: {
   overview: AttendanceOverview
   actorId: string
   compact?: boolean
+  workLog?: boolean
 }) {
   const action = useAttendanceActions(actorId, overview)
+  const security = useQuery(deviceStatusOptions(actorId))
+  const deviceStatus = security.data?.ok ? security.data.value : null
+  const setupRequired = Boolean(
+    deviceStatus &&
+    ((deviceStatus.browserApprovalRequired &&
+      deviceStatus.currentDevice?.state !== 'approved') ||
+      (deviceStatus.passkeyRequired &&
+        (deviceStatus.currentDevice?.state !== 'approved' ||
+          !deviceStatus.currentDevice.hasPasskey))),
+  )
   const { openModal } = useModal()
   const submitting = useRef(false)
   const sampleReceivedAt = useRef<number | null>(null)
@@ -44,6 +64,8 @@ export function AttendanceClock({
     sampleReceivedAt.current = startedAt
   }, [])
   const open = overview.openSession
+  const workdayLimitReached =
+    !open && (overview.today?.seconds ?? 0) >= MAX_WORKDAY_SECONDS
   const status = attendanceStatus(overview)
   const oldSession = open !== null && open.workDate !== overview.workday.date
   const activeDay = oldSession
@@ -66,22 +88,75 @@ export function AttendanceClock({
     >
       <CardHeader className="flex flex-wrap items-center justify-between gap-3">
         <CardTitle className="flex items-center gap-2">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+          <span
+            className={cn(
+              'flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground',
+              workLog && 'hidden',
+            )}
+          >
             <IconClock className="size-5" aria-hidden="true" />
           </span>
           {oldSession
-            ? `${open.workDate} დღის აღრიცხული დრო`
+            ? `${formatGeorgianDate(open.workDate)} დღის აღრიცხული დრო`
             : 'დღეს ნამუშევარი'}
         </CardTitle>
-        <Badge variant={status.variant}>{status.label}</Badge>
+        <div className="flex flex-wrap items-center gap-3">
+          {workLog ? (
+            <time
+              dateTime={overview.workday.date}
+              className="text-sm text-muted-foreground"
+            >
+              {formatAttendanceDate(overview.workday.date)}
+            </time>
+          ) : null}
+          <Badge variant={status.variant}>{status.label}</Badge>
+        </div>
       </CardHeader>
       <CardContent
-        className={cn('flex flex-1 flex-col', compact ? 'gap-4' : 'gap-6')}
+        className={cn(
+          workLog
+            ? 'grid items-center gap-6 lg:grid-cols-[auto_1fr_auto]'
+            : 'flex flex-1 flex-col',
+          compact ? 'gap-4' : 'gap-6',
+        )}
       >
+        {setupRequired && deviceStatus ? (
+          <div className="w-full lg:col-span-full">
+            <CurrentDeviceSetup actorId={actorId} status={deviceStatus} clock />
+          </div>
+        ) : null}
+        {security.isError || security.data?.ok === false ? (
+          <Alert variant="warning" className="lg:col-span-full">
+            <AlertDescription>
+              მოწყობილობის სტატუსი ვერ შემოწმდა. განაახლეთ გვერდი ან
+              დაუკავშირდით HR-ს.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {action.errorMessage ? (
+          <Alert
+            variant="warning"
+            className="flex flex-col items-start gap-3 lg:col-span-full"
+          >
+            <AlertDescription>{action.errorMessage}</AlertDescription>
+            <Button
+              nativeButton={false}
+              role="link"
+              variant="outline"
+              depth="raised"
+              size="sm"
+              render={<a href="/settings/security" />}
+            >
+              მოწყობილობის გამართვა
+            </Button>
+          </Alert>
+        ) : null}
         <div
           className={cn(
-            '@container/clock relative flex flex-1 items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-muted/30 px-3',
-            compact ? 'min-h-48 py-5 sm:py-6' : 'py-7 sm:py-10',
+            workLog
+              ? 'contents'
+              : '@container/clock relative flex flex-1 flex-col items-center justify-center gap-6 overflow-hidden rounded-xl border border-border/60 bg-muted/30 px-3',
+            !workLog && (compact ? 'min-h-48 py-5 sm:py-6' : 'py-7 sm:py-10'),
           )}
         >
           {compact ? <AttendanceClockPattern /> : null}
@@ -91,80 +166,162 @@ export function AttendanceClock({
             running={open !== null}
             onStart={recordClockStart}
             compact={compact}
+            workLog={workLog}
+            showWorkTarget={!overview.approvedLeave}
           />
-        </div>
-        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-          <span>
-            შესვლა:{' '}
-            {firstIn
-              ? formatAttendanceTime(
-                  firstIn,
-                  open?.timezone ?? overview.workday.timezone,
+          <Button
+            className={cn(
+              'work-current-button relative h-11 w-full sm:w-auto sm:min-w-52',
+              workLog && 'order-3 lg:justify-self-end',
+            )}
+            disabled={
+              action.pending ||
+              workdayLimitReached ||
+              setupRequired ||
+              (!open && overview.workday.kind === 'unconfigured')
+            }
+            aria-busy={action.pending}
+            onClick={() => {
+              if (
+                !open &&
+                (overview.workday.kind === 'day_off' || overview.approvedLeave)
+              ) {
+                openModal(
+                  <StartNonworkingDayConfirmation
+                    start={() => action.start(true)}
+                    submitting={submitting}
+                    leaveKind={overview.approvedLeave?.kind}
+                  />,
+                  {
+                    title:
+                      overview.approvedLeave?.kind === 'sick_leave'
+                        ? 'ბიულეტენის დროს მუშაობა'
+                        : overview.approvedLeave?.kind === 'vacation'
+                          ? 'შვებულების დროს მუშაობა'
+                          : overview.approvedLeave?.kind === 'day_off'
+                            ? 'დასვენების დღეს მუშაობა'
+                            : 'არასამუშაო დღეს მუშაობა',
+                    canClose: () => !submitting.current,
+                  },
                 )
-              : 'ჯერ არ დაფიქსირებულა'}
-          </span>
-          {overview.today?.lastOut ? (
-            <span>
-              გასვლა:{' '}
-              {formatAttendanceTime(
-                overview.today.lastOut,
-                overview.today.timezone,
+              } else if (!open) void action.start()
+              else {
+                openModal(
+                  <FinishWorkConfirmation
+                    oldSession={oldSession}
+                    needsReview={needsReview}
+                    workDate={open.workDate}
+                    workedSeconds={initialSeconds}
+                    clockStartedAt={
+                      sampleReceivedAt.current ?? performance.now()
+                    }
+                    remainingSeconds={elapsedSeconds(
+                      overview.serverNow,
+                      open.expectedEndAt,
+                    )}
+                    finish={() => action.finish(true)}
+                    submitting={submitting}
+                  />,
+                  {
+                    title: 'სამუშაოს დასრულება',
+                    canClose: () => !submitting.current,
+                  },
+                )
+              }
+            }}
+          >
+            {open ? <WorkCurrent /> : null}
+            <span className="relative flex size-4 items-center justify-center">
+              {action.pending ? (
+                <Spinner aria-hidden="true" />
+              ) : open ? (
+                <IconCirclePause aria-hidden="true" />
+              ) : (
+                <IconCirclePlay aria-hidden="true" />
               )}
             </span>
+            <span className="relative">
+              {open ? 'სამუშაოს დასრულება' : 'სამუშაოს დაწყება'}
+            </span>
+          </Button>
+          {!workLog && overview.workday.kind === 'day_off' ? (
+            <Badge variant="secondary" className="relative">
+              არასამუშაო დღე
+            </Badge>
           ) : null}
-          {activeDay ? <AttendanceDeviationBadges {...activeDay} /> : null}
         </div>
+        <div
+          className={cn(
+            'flex flex-wrap gap-4 text-sm text-muted-foreground',
+            workLog && 'order-2 flex-col lg:border-l lg:pl-6',
+          )}
+        >
+          {workLog ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span>დღევანდელი განრიგი</span>
+              <span className="font-medium text-foreground tabular-nums">
+                {overview.approvedLeave
+                  ? 'სამუშაო მიზანი არ არის განსაზღვრული'
+                  : overview.workday.kind === 'scheduled'
+                    ? `${overview.workday.start} - ${overview.workday.end}`
+                    : overview.workday.kind === 'day_off'
+                      ? 'არასამუშაო დღე'
+                      : 'განრიგი არ არის განსაზღვრული'}
+              </span>
+            </div>
+          ) : null}
+          <div
+            className={cn(
+              workLog
+                ? 'flex flex-wrap items-center gap-x-4 gap-y-2'
+                : 'contents',
+            )}
+          >
+            <span>
+              შესვლა:{' '}
+              {firstIn
+                ? formatAttendanceTime(
+                    firstIn,
+                    open?.timezone ?? overview.workday.timezone,
+                  )
+                : 'ჯერ არ დაფიქსირებულა'}
+            </span>
+            {overview.today?.lastOut ? (
+              <span>
+                გასვლა:{' '}
+                {formatAttendanceTime(
+                  overview.today.lastOut,
+                  overview.today.timezone,
+                )}
+              </span>
+            ) : null}
+            {activeDay ? <AttendanceDeviationBadges {...activeDay} /> : null}
+          </div>
+        </div>
+        {workdayLimitReached ? (
+          <Alert
+            className={cn(workLog && 'order-4 lg:col-span-3')}
+            variant="warning"
+            role="note"
+          >
+            <AlertDescription>
+              ამ სამუშაო დღისთვის 18-საათიანი ჯამური ზღვარი მიღწეულია. ახალი
+              შესვლა ამავე სამუშაო დღისთვის მიუწვდომელია.
+            </AlertDescription>
+          </Alert>
+        ) : null}
         {oldSession || needsReview ? (
-          <Alert variant={needsReview ? 'destructive' : 'default'}>
+          <Alert
+            className={cn(workLog && 'order-4 lg:col-span-3')}
+            variant={needsReview ? 'destructive' : 'default'}
+          >
             <AlertDescription>
               {needsReview
-                ? `ჩანაწერი ღიაა სულ მცირე ${open.maxOpenHours} საათი და საჭიროებს ხელმძღვანელის გადამოწმებას. დროის აღრიცხვა გრძელდება.`
+                ? `ჩანაწერი ღიაა სულ მცირე ${open.maxOpenHours} საათი და საჭიროებს ხელმძღვანელის გადამოწმებას. სამუშაო დღის ჯამური დროის 18 საათამდე მიღწევისას სესია ავტომატურად დასრულდება.`
                 : 'სამუშაო წინა დღეს დაიწყო. დრო ეკუთვნის დაწყების სამუშაო დღეს და აღრიცხვა გრძელდება დასრულებამდე.'}
             </AlertDescription>
           </Alert>
         ) : null}
-        <Button
-          className="h-11 w-full sm:w-auto sm:self-start"
-          disabled={
-            action.pending || (!open && overview.workday.kind !== 'scheduled')
-          }
-          aria-busy={action.pending}
-          onClick={() => {
-            if (!open) void action.start()
-            else {
-              openModal(
-                <FinishWorkConfirmation
-                  oldSession={oldSession}
-                  needsReview={needsReview}
-                  workDate={open.workDate}
-                  workedSeconds={initialSeconds}
-                  clockStartedAt={sampleReceivedAt.current ?? performance.now()}
-                  remainingSeconds={elapsedSeconds(
-                    overview.serverNow,
-                    open.expectedEndAt,
-                  )}
-                  finish={() => action.finish(true)}
-                  submitting={submitting}
-                />,
-                {
-                  title: 'სამუშაოს დასრულება',
-                  canClose: () => !submitting.current,
-                },
-              )
-            }
-          }}
-        >
-          <span className="flex size-4 items-center justify-center">
-            {action.pending ? (
-              <Spinner aria-hidden="true" />
-            ) : open ? (
-              <IconLogout aria-hidden="true" />
-            ) : (
-              <IconLogin aria-hidden="true" />
-            )}
-          </span>
-          {open ? 'სამუშაოს დასრულება' : 'სამუშაოს დაწყება'}
-        </Button>
       </CardContent>
     </Card>
   )
@@ -175,11 +332,15 @@ export function ClockTimer({
   running,
   onStart,
   compact = false,
+  workLog = false,
+  showWorkTarget = true,
 }: {
   seconds: number
   running: boolean
   onStart?: (startedAt: number) => void
   compact?: boolean
+  workLog?: boolean
+  showWorkTarget?: boolean
 }) {
   const total = seconds + useElapsedSeconds(running, undefined, onStart)
   const durationStatus = workDurationStatus(total)
@@ -188,6 +349,26 @@ export function ClockTimer({
     Math.floor(total / 60) % 60,
     total % 60,
   ]
+  if (workLog)
+    return (
+      <div
+        role="timer"
+        aria-live="off"
+        aria-label="ნამუშევარი დრო"
+        className="flex flex-col items-start gap-2"
+      >
+        <span className="sr-only">{formatWorkedTime(total)}</span>
+        <span
+          aria-hidden="true"
+          className="text-4xl font-semibold tracking-tight tabular-nums sm:text-5xl"
+        >
+          {values.map((value) => String(value).padStart(2, '0')).join(':')}
+        </span>
+        {showWorkTarget ? (
+          <Badge variant={durationStatus.variant}>{durationStatus.label}</Badge>
+        ) : null}
+      </div>
+    )
   return (
     <div
       className={cn(
@@ -230,10 +411,9 @@ export function ClockTimer({
           </div>
         ))}
       </div>
-      <Badge variant={durationStatus.variant}>{durationStatus.label}</Badge>
-      <p className="text-center text-xs text-muted-foreground">
-        მიზანი: 8 სთ მუშაობა + 1 სთ შესვენება
-      </p>
+      {showWorkTarget ? (
+        <Badge variant={durationStatus.variant}>{durationStatus.label}</Badge>
+      ) : null}
     </div>
   )
 }

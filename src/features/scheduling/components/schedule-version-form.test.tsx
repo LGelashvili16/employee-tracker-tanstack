@@ -133,7 +133,7 @@ describe('company schedule form', () => {
     await waitFor(() =>
       expect(notifications.success).toHaveBeenCalledExactlyOnceWith(
         'განრიგი შენახულია.',
-        { description: 'ძალაში შესვლის თარიღი: 2026-11-04.' },
+        { description: 'ძალაში შესვლის თარიღი: 4 ნოემბერი, 2026.' },
       ),
     )
     expect(notifications.error).not.toHaveBeenCalled()

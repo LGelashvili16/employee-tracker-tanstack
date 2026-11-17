@@ -1,0 +1,2 @@
+ALTER TABLE "attendance_audit" DROP CONSTRAINT "attendance_audit_reason_valid";--> statement-breakpoint
+ALTER TABLE "attendance_audit" ADD CONSTRAINT "attendance_audit_reason_valid" CHECK (length(trim("attendance_audit"."reason")) <= 500 and ("attendance_audit"."action" in ('attendance.corrected', 'attendance.created') or length(trim("attendance_audit"."reason")) >= 5));

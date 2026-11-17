@@ -63,6 +63,10 @@ retention to suit your workload before using it heavily.
 
 ## Production on a VPS
 
+For automatic deployments from `main` with two application slots and graceful
+Caddy switching, use the [GitHub Actions VPS setup](deploy/README.md). The command
+below is the simpler single-container setup and can interrupt traffic on updates.
+
 Set `APP_DOMAIN` to your domain and `APP_URL` to its HTTPS URL in `.env.docker`.
 Point DNS at the VPS, allow HTTP/HTTPS ports 80/443, and configure real
 transactional SMTP settings. Start the app, database, proxy, and backups:

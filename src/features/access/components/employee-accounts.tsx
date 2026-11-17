@@ -1,180 +1,146 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
+import { IconUsers, IconUserPlus } from '@tabler/icons-react'
 import { Button } from '#/components/ui/button'
-import { Card, CardContent } from '#/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
+import { DataPagination } from '#/components/common/data-pagination'
 import { Badge } from '#/components/ui/badge'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import {
-  hasPermission,
-  parseRoles,
-  roleLabels,
-} from '#/lib/authorization/permissions'
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '#/components/ui/sheet'
+import { hasPermission } from '#/lib/authorization/permissions'
 import { listAccounts } from '../access.functions'
 import { ProvisionAccountForm } from './provision-account-form'
 import { AccountCodeDialog } from './account-code-dialog'
-import {
-  AccountActionDialog,
-  accountActionLabels,
-} from './account-action-dialog'
-import type { EmployeeAccountRecord, IssuedAccountCode } from '../access.types'
+import { EmployeeAccountsTable } from './employee-accounts-table'
+import type { IssuedAccountCode } from '../access.types'
 import type { Actor } from '#/lib/authorization/actor'
-
-type Action = keyof typeof accountActionLabels
-const stateLabels: Record<string, string> = {
-  invited: 'გასააქტიურებელი',
-  active: 'აქტიური',
-  suspended: 'შეჩერებული',
-}
 
 export function EmployeeAccounts({
   page,
-  onPageChange,
   actor,
 }: {
   page: number
-  onPageChange: (page: number) => void
   actor: Actor
 }) {
   const query = useQuery({
-    queryKey: ['employee-accounts', page],
+    queryKey: ['employee-accounts', 'list', page],
     queryFn: () => listAccounts({ data: { page } }),
     retry: false,
     staleTime: 0,
   })
   const [issuedCode, setIssuedCode] = useState<IssuedAccountCode | null>(null)
-  const [selected, setSelected] = useState<{
-    target: EmployeeAccountRecord
-    action: Action
-  } | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [creatingBusy, setCreatingBusy] = useState(false)
   const data = query.data?.ok ? query.data.value : null
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">თანამშრომლების ანგარიშები</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          ადმინისტრატორი ქმნის ანგარიშს. თანამშრომელი თავად ირჩევს პაროლს.
-          აღდგენა იყენებს არსებულ ანგარიშს.
-        </p>
-      </header>
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
-        <section
-          aria-label="თანამშრომლების ანგარიშების სია"
-          className="min-w-0 space-y-3"
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">თანამშრომლები</h1>
+        <Sheet
+          open={creating}
+          onOpenChange={(open) => {
+            if (!creatingBusy) setCreating(open)
+          }}
         >
-          {query.isPending ? (
-            <div
-              role="status"
-              aria-busy="true"
-              aria-label="ანგარიშები იტვირთება"
-            >
-              <div aria-hidden="true" className="space-y-3">
-                {[1, 2, 3].map((key) => (
-                  <Skeleton key={key} className="h-32 w-full" />
-                ))}
-              </div>
+          <SheetTrigger render={<Button />}>
+            <IconUserPlus data-icon="inline-start" aria-hidden="true" />
+            თანამშრომლის დამატება
+          </SheetTrigger>
+          <SheetContent
+            side="right"
+            className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
+            showCloseButton={!creatingBusy}
+          >
+            <SheetHeader className="border-b">
+              <SheetTitle>ახალი თანამშრომელი</SheetTitle>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <ProvisionAccountForm
+                framed={false}
+                onCode={(value) => {
+                  setCreating(false)
+                  setIssuedCode(value)
+                }}
+                onPendingChange={setCreatingBusy}
+                canAssignRoles={hasPermission(actor, 'roles.manage')}
+                canConfigureSchedule={hasPermission(
+                  actor,
+                  'attendance.configure',
+                )}
+              />
             </div>
-          ) : query.isError || !data ? (
-            <Alert>
-              <AlertDescription>
-                {query.data && !query.data.ok
-                  ? query.data.message
-                  : 'ანგარიშების ჩატვირთვა ვერ მოხერხდა. გადაამოწმეთ თქვენი წვდომა.'}
-              </AlertDescription>
-            </Alert>
-          ) : !data.records.length ? (
-            <Card>
-              <CardContent className="py-8 text-sm text-muted-foreground">
-                ამ გვერდზე თანამშრომლის ანგარიშები არ არის.
-              </CardContent>
-            </Card>
-          ) : (
-            data.records.map((record) => {
-              const actions: Array<Action> =
-                record.state === 'suspended'
-                  ? ['restore']
-                  : record.state === 'invited'
-                    ? ['issue_activation', 'suspend']
-                    : ['issue_reset', 'suspend']
-              const permittedActions =
-                record.employmentStatus === 'active'
-                  ? actions
-                  : actions.filter((action) => action === 'suspend')
-              const targetRoles = parseRoles(record.roles)
-              const canManage =
-                record.userId !== actor.id &&
-                (!targetRoles.some(
-                  (role) => role === 'admin' || role === 'owner',
-                ) ||
-                  actor.roles.includes('owner'))
-              return (
-                <Card key={record.userId}>
-                  <CardContent className="space-y-3 py-5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h2 className="font-semibold">{record.name}</h2>
-                      <Badge variant="outline">
-                        {record.employmentStatus !== 'active'
-                          ? 'დასაქმება შეჩერებულია'
-                          : (stateLabels[record.state] ?? 'მიუწვდომელი')}
-                      </Badge>
-                    </div>
-                    <p className="break-all text-sm text-muted-foreground">
-                      {record.code} ·{' '}
-                      {targetRoles.map((role) => roleLabels[role]).join(', ')}
-                      {record.contactEmail ? ` · ${record.contactEmail}` : ''}
-                    </p>
-                    {canManage && permittedActions.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {permittedActions.map((action) => (
-                          <Button
-                            key={action}
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setSelected({ target: record, action })
-                            }
-                          >
-                            {accountActionLabels[action]}
-                          </Button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              )
-            })
-          )}
-          <div className="flex items-center justify-between gap-3">
-            <Button
-              variant="outline"
-              disabled={page === 1 || query.isFetching}
-              onClick={() => onPageChange(page - 1)}
-            >
-              წინა
-            </Button>
-            <span className="text-sm">გვერდი {page}</span>
-            <Button
-              variant="outline"
-              disabled={!data || page * 20 >= data.total || query.isFetching}
-              onClick={() => onPageChange(page + 1)}
-            >
-              შემდეგი
-            </Button>
-          </div>
-        </section>
-        <ProvisionAccountForm
-          onCode={setIssuedCode}
-          canAssignRoles={hasPermission(actor.roles, 'roles.manage')}
-        />
+          </SheetContent>
+        </Sheet>
+      </header>
+      <div className="min-w-0">
+        <Card
+          aria-label="თანამშრომლების ანგარიშების სია"
+          className="min-w-0 gap-0 rounded-xl border pb-0 ring-0"
+        >
+          <CardHeader className="flex flex-row items-center justify-between gap-3 border-b pb-4">
+            <CardTitle className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                <IconUsers className="size-5" aria-hidden="true" />
+              </span>
+              <h2>ანგარიშები</h2>
+            </CardTitle>
+            {data ? <Badge variant="secondary">სულ {data.total}</Badge> : null}
+          </CardHeader>
+          <CardContent className="px-0">
+            {query.isPending ? (
+              <div
+                role="status"
+                aria-busy="true"
+                aria-label="ანგარიშები იტვირთება"
+              >
+                <div aria-hidden="true" className="flex flex-col gap-3 p-5">
+                  {[1, 2, 3].map((key) => (
+                    <Skeleton key={key} className="h-12 w-full rounded-xl" />
+                  ))}
+                </div>
+              </div>
+            ) : query.isError || !data ? (
+              <Alert className="mx-5 my-5 w-auto">
+                <AlertDescription>
+                  {query.data && !query.data.ok
+                    ? query.data.message
+                    : 'ანგარიშების ჩატვირთვა ვერ მოხერხდა. გადაამოწმეთ თქვენი წვდომა.'}
+                </AlertDescription>
+              </Alert>
+            ) : !data.records.length ? (
+              <div className="flex flex-col items-center gap-3 px-5 py-12 text-center text-sm text-muted-foreground">
+                <IconUsers className="size-8" aria-hidden="true" />
+                <p>ამ გვერდზე თანამშრომლის ანგარიშები არ არის.</p>
+              </div>
+            ) : (
+              <EmployeeAccountsTable
+                records={data.records}
+                actorId={actor.id}
+              />
+            )}
+          </CardContent>
+          {data ? (
+            <div className="border-t px-4 py-3">
+              <DataPagination
+                page={page}
+                total={data.total}
+                pageSize={20}
+                renderLink={(nextPage) => (
+                  <Link to="/manage/employees" search={{ page: nextPage }} />
+                )}
+              />
+            </div>
+          ) : null}
+        </Card>
       </div>
-      {selected ? (
-        <AccountActionDialog
-          target={selected.target}
-          action={selected.action}
-          onClose={() => setSelected(null)}
-          onCode={setIssuedCode}
-        />
-      ) : null}
       {issuedCode ? (
         <AccountCodeDialog
           value={issuedCode}

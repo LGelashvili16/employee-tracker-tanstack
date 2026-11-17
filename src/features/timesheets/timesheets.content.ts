@@ -7,12 +7,4 @@ export const timesheetsContent = {
     title: 'საათების დეტალები',
     description: 'სამუშაო საათების ჩანაწერები და დადასტურების სტატუსი.',
   },
-  teamTimesheets: {
-    title: 'საათების განხილვა',
-    description: 'გუნდის სამუშაო საათების შემოწმება და დადასტურება.',
-  },
-  reviewTimesheet: {
-    title: 'საათების განხილვის დეტალები',
-    description: 'თანამშრომლის საათების შემოწმება და განხილვის ისტორია.',
-  },
 } as const

@@ -11,6 +11,8 @@ if (!databaseUrl) {
 
 const pool = new Pool({
   connectionString: databaseUrl,
+  // Bound acquisition for requests and deployment readiness probes.
+  connectionTimeoutMillis: 3000,
 })
 
 pool.on('error', (error) => {

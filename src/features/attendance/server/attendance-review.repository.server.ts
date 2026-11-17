@@ -20,11 +20,14 @@ export async function reviewRows(
   page: number,
   exceptionsOnly: boolean,
   now: Date,
+  userId?: string,
+  scope: 'team' | 'company' = 'team',
 ) {
   return tx
     .select({
       session: attendanceSession,
       employeeName: employee.fullName,
+      subjectUserId: employee.userId,
       isFirstOfDay: sql<boolean>`not exists (select 1 from attendance_session other where other.employee_id = ${attendanceSession.employeeId} and other.work_date = ${attendanceSession.workDate} and (other.started_at, other.id) < (${attendanceSession.startedAt}, ${attendanceSession.id}))`,
       isLastOfDay: sql<boolean>`not exists (select 1 from attendance_session other where other.employee_id = ${attendanceSession.employeeId} and other.work_date = ${attendanceSession.workDate} and (other.started_at, other.id) > (${attendanceSession.startedAt}, ${attendanceSession.id}))`,
     })
@@ -32,8 +35,9 @@ export async function reviewRows(
     .innerJoin(employee, eq(employee.id, attendanceSession.employeeId))
     .where(
       and(
-        reviewerScope(reviewerId),
-        ne(employee.userId, reviewerId),
+        scope === 'team' ? reviewerScope(reviewerId) : undefined,
+        scope === 'team' ? ne(employee.userId, reviewerId) : undefined,
+        userId ? eq(employee.userId, userId) : undefined,
         exceptionsOnly
           ? sql`${attendanceSession.reviewState} = 'pending' and (${attendanceSession.endedAt} is not null or ${now}::timestamptz - ${attendanceSession.startedAt} >= ${attendanceSession.maxOpenHours} * interval '1 hour')`
           : undefined,
@@ -48,30 +52,41 @@ export async function lockReviewSubject(
   tx: AttendanceTransaction,
   reviewerId: string,
   sessionId: string,
+  scope: 'team' | 'company' | 'self' = 'team',
 ) {
   const target = (
     await tx
       .select({ employeeId: attendanceSession.employeeId })
       .from(attendanceSession)
       .where(
-        and(eq(attendanceSession.id, sessionId), reviewerScope(reviewerId)),
+        and(
+          eq(attendanceSession.id, sessionId),
+          scope === 'team'
+            ? reviewerScope(reviewerId)
+            : scope === 'self'
+              ? sql`${attendanceSession.employeeId} in (select ${employee.id} from ${employee} where ${employee.userId} = ${reviewerId})`
+              : undefined,
+        ),
       )
       .limit(1)
   ).at(0)
   if (!target) return null
   // Share-lock the assignment so revocation cannot race an authorized review.
-  const assignment = (
-    await tx
-      .select()
-      .from(attendanceReviewer)
-      .where(
-        and(
-          eq(attendanceReviewer.reviewerId, reviewerId),
-          eq(attendanceReviewer.employeeId, target.employeeId),
-        ),
-      )
-      .for('share')
-  ).at(0)
+  const assignment =
+    scope === 'team'
+      ? (
+          await tx
+            .select()
+            .from(attendanceReviewer)
+            .where(
+              and(
+                eq(attendanceReviewer.reviewerId, reviewerId),
+                eq(attendanceReviewer.employeeId, target.employeeId),
+              ),
+            )
+            .for('share')
+        ).at(0)
+      : true
   if (!assignment) return null
   const person = (
     await tx
@@ -80,7 +95,13 @@ export async function lockReviewSubject(
       .where(eq(employee.id, target.employeeId))
       .for('update')
   ).at(0)
-  if (!person || person.userId === reviewerId) return null
+  if (
+    !person ||
+    (scope === 'self'
+      ? person.userId !== reviewerId
+      : person.userId === reviewerId)
+  )
+    return null
   const record = (
     await tx
       .select()
@@ -97,7 +118,11 @@ export async function attendanceActor(
 ) {
   const identity = (
     await tx
-      .select({ roles: user.roles, state: user.accessState })
+      .select({
+        roles: user.roles,
+        permissionOverrides: user.permissionOverrides,
+        state: user.accessState,
+      })
       .from(user)
       .where(eq(user.id, actorId))
       .for('share')
@@ -164,4 +189,16 @@ export function hasOverlappingSession(
       ),
     )
     .limit(1)
+}
+
+export async function notificationSubject(
+  tx: AttendanceTransaction,
+  employeeId: string,
+) {
+  return (
+    await tx
+      .select({ userId: employee.userId })
+      .from(employee)
+      .where(eq(employee.id, employeeId))
+  ).at(0)?.userId
 }

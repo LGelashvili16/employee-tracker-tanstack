@@ -1,19 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from '#/components/ui/skeleton'
+import { cn } from '#/lib/utils'
 import { readAttendanceReviewHistory } from '../attendance.functions'
-import { formatAttendanceLocalInput } from '../attendance.rules'
+import { formatAttendanceDateTime } from '../attendance.rules'
 
 const actions: Record<string, string> = {
   'attendance.approved': 'დადასტურება',
   'attendance.rejected': 'უარყოფა',
+  'attendance.created': 'ხელით აღრიცხვა',
   'attendance.corrected': 'დროის შესწორება',
 }
 export function AttendanceReviewHistory({
   sessionId,
   timezone,
+  embedded = false,
 }: {
   sessionId: string
   timezone: string
+  embedded?: boolean
 }) {
   const query = useQuery({
     queryKey: ['team-attendance', 'history', sessionId],
@@ -38,8 +42,10 @@ export function AttendanceReviewHistory({
       </p>
     )
   return (
-    <section className="flex flex-col gap-2 border-t pt-4">
-      <h3 className="font-medium">ცვლილებების ისტორია</h3>
+    <section
+      className={cn('flex flex-col gap-2', !embedded && 'border-t pt-4')}
+    >
+      {!embedded ? <h3 className="font-medium">ცვლილებების ისტორია</h3> : null}
       {!result.value.items.length ? (
         <p className="text-sm text-muted-foreground">ცვლილებები ჯერ არ არის.</p>
       ) : (
@@ -48,13 +54,11 @@ export function AttendanceReviewHistory({
             <li key={item.id} className="flex flex-col gap-1 text-sm">
               <span>
                 {actions[item.action] ?? 'დასწრების ცვლილება'}: {item.actorName}
-                ,{' '}
-                {formatAttendanceLocalInput(item.createdAt, timezone).replace(
-                  'T',
-                  ' ',
-                )}
+                , {formatAttendanceDateTime(item.createdAt, timezone)}
               </span>
-              <span className="text-muted-foreground">{item.reason}</span>
+              {item.reason ? (
+                <span className="text-muted-foreground">{item.reason}</span>
+              ) : null}
             </li>
           ))}
         </ul>

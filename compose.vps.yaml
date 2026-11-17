@@ -1,0 +1,86 @@
+# Use with compose.yaml. This is separate from the single-container local preview.
+x-web: &web
+  restart: unless-stopped
+  init: true
+  environment: &app-env
+    NODE_ENV: production
+    HOST: 0.0.0.0
+    PORT: '3000'
+    DATABASE_URL: postgresql://${POSTGRES_USER:-employee_tracking}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5433}/${POSTGRES_DB:-employee_tracking}
+    BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET}
+    BETTER_AUTH_URL: ${APP_URL:?Set APP_URL to the HTTPS production URL}
+    REDIS_URL: ${REDIS_URL:-}
+    SMTP_HOST: ${SMTP_HOST:-}
+    SMTP_PORT: ${SMTP_PORT:-587}
+    SMTP_SECURE: ${SMTP_SECURE:-false}
+    SMTP_USER: ${SMTP_USER:-}
+    SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+    EMAIL_FROM: ${EMAIL_FROM:-}
+  healthcheck:
+    test:
+      [
+        CMD,
+        node,
+        -e,
+        "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(5000)}).then(r=>{if(r.status!==200)process.exit(1)}).catch(()=>process.exit(1))",
+      ]
+    interval: 5s
+    timeout: 6s
+    retries: 12
+    start_period: 15s
+  stop_grace_period: 60s
+  networks: [backend]
+  logging: &logging
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: '3'
+
+services:
+  blue:
+    <<: *web
+    image: ${BLUE_IMAGE:?Deploy through docker/deploy/release.sh}
+    profiles: [release]
+
+  green:
+    <<: *web
+    image: ${GREEN_IMAGE:?Deploy through docker/deploy/release.sh}
+    profiles: [release]
+
+  migrate:
+    image: ${MIGRATION_IMAGE:?Deploy through docker/deploy/release.sh}
+    profiles: [release]
+    environment: *app-env
+    networks: [backend]
+    restart: 'no'
+    logging: *logging
+
+  edge:
+    image: caddy:2.10-alpine
+    profiles: [release]
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      # Mount the directory so atomic config replacements survive container restarts.
+      - ./.deploy/caddy:/etc/caddy:ro
+      - ./.deploy/public:/srv/public:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [backend]
+    logging: *logging
+
+  backup:
+    extends:
+      file: compose.prod.yaml
+      service: backup
+    volumes:
+      - ./.deploy/backup.sh:/scripts/backup.sh:ro
+
+volumes:
+  caddy_data:
+  caddy_config:

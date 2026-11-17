@@ -1,11 +1,14 @@
 import '@tanstack/react-start/server-only'
-import { and, asc, count, eq, gt, sql } from 'drizzle-orm'
+import { and, asc, desc, count, eq, gt, ne, or, ilike, sql } from 'drizzle-orm'
 import { db } from '#/db'
+import type { AdminAccountList } from '../admin-access.schemas'
+import { parsePermissionOverrides } from '#/lib/authorization/permissions'
 import {
   account,
   user,
   session,
   employee,
+  employeeWorkSchedule,
   accountSetup,
   accessAudit,
 } from '#/db/schema'
@@ -41,31 +44,52 @@ export async function lockedAccount(tx: AccessTransaction, userId: string) {
     .then((rows) => rows.at(0))
   return { identity, person }
 }
+const accountSummaryColumns = {
+  userId: user.id,
+  name: employee.fullName,
+  code: employee.username,
+  jobTitle: employee.jobTitle,
+  roles: user.roles,
+  state: user.accessState,
+  employmentStatus: employee.status,
+}
+/** Lean list rows: contact details and the working week are read on the single-account page only. */
 export async function queryAccounts(page: number) {
   const [records, totals] = await Promise.all([
     db
-      .select({
-        userId: user.id,
-        name: employee.fullName,
-        code: employee.code,
-        contactEmail: employee.contactEmail,
-        roles: user.roles,
-        state: user.accessState,
-        employmentStatus: employee.status,
-      })
+      .select(accountSummaryColumns)
       .from(employee)
       .innerJoin(user, eq(employee.userId, user.id))
-      .orderBy(asc(employee.code))
+      .orderBy(asc(employee.username))
       .limit(20)
       .offset((page - 1) * 20),
     db.select({ count: count() }).from(employee),
   ])
   return { records, total: totals.at(0)?.count ?? 0 }
 }
+export async function queryAccount(userId: string) {
+  return db
+    .select({
+      ...accountSummaryColumns,
+      contactEmail: employee.contactEmail,
+      phone: employee.phone,
+      workingWeek: employeeWorkSchedule.days,
+    })
+    .from(employee)
+    .innerJoin(user, eq(employee.userId, user.id))
+    .leftJoin(
+      employeeWorkSchedule,
+      eq(employeeWorkSchedule.employeeId, employee.id),
+    )
+    .where(eq(user.id, userId))
+    .limit(1)
+    .then((rows) => rows.at(0) ?? null)
+}
 export async function readAccountAccess(userId: string) {
   const result = await db
     .select({
       state: user.accessState,
+      permissionOverrides: user.permissionOverrides,
       employment: employee.status,
       contactEmail: employee.contactEmail,
     })
@@ -74,6 +98,7 @@ export async function readAccountAccess(userId: string) {
     .where(eq(user.id, userId))
     .then((rows) => rows.at(0))
   return {
+    permissionOverrides: result?.permissionOverrides,
     allowed:
       result?.state === 'active' &&
       (!result.employment || result.employment === 'active'),
@@ -84,7 +109,9 @@ export async function insertEmployee(
   tx: AccessTransaction,
   values: typeof employee.$inferInsert,
 ) {
-  await tx.insert(employee).values(values)
+  return (
+    await tx.insert(employee).values(values).returning({ id: employee.id })
+  ).at(0)
 }
 export async function updateIdentity(
   tx: AccessTransaction,
@@ -180,4 +207,118 @@ export async function auditAccess(
   values: typeof accessAudit.$inferInsert,
 ) {
   await tx.insert(accessAudit).values(values)
+}
+export async function emailInUse(
+  tx: AccessTransaction,
+  email: string,
+  exceptUserId: string,
+) {
+  const rows = await tx
+    .select({ id: user.id })
+    .from(user)
+    .where(and(eq(user.email, email), ne(user.id, exceptUserId)))
+    .limit(1)
+  return rows.length > 0
+}
+export async function updateEmployeeDetails(
+  tx: AccessTransaction,
+  userId: string,
+  values: {
+    name: string
+    contactEmail: string
+    jobTitle: string
+    phone: string
+    /** Set only when the account's login email must follow the contact email. */
+    loginEmail: string | null
+  },
+) {
+  await tx
+    .update(employee)
+    .set({
+      fullName: values.name,
+      contactEmail: values.contactEmail || null,
+      jobTitle: values.jobTitle || null,
+      phone: values.phone || null,
+    })
+    .where(eq(employee.userId, userId))
+  await tx
+    .update(user)
+    .set({
+      name: values.name,
+      ...(values.loginEmail ? { email: values.loginEmail } : {}),
+    })
+    .where(eq(user.id, userId))
+}
+export async function readOwnProfile(userId: string) {
+  return db
+    .select({
+      code: employee.username,
+      jobTitle: employee.jobTitle,
+      phone: employee.phone,
+    })
+    .from(employee)
+    .where(eq(employee.userId, userId))
+    .then((rows) => rows.at(0) ?? null)
+}
+/** Conditional on active employment so a concurrent termination cannot be overwritten. */
+export async function updateOwnPhone(userId: string, phone: string | null) {
+  const updated = await db
+    .update(employee)
+    .set({ phone })
+    .where(and(eq(employee.userId, userId), eq(employee.status, 'active')))
+    .returning({ id: employee.id })
+  return updated.length === 1
+}
+
+/** Every login identity is included, even accounts without an employee profile. Results and counts share one filtered snapshot. */
+export async function queryAdminAccounts(search: AdminAccountList) {
+  const q = search.q.replace(
+    /[\\%_]/g,
+    (value) => String.fromCharCode(92) + value,
+  )
+  const where = and(
+    q
+      ? or(ilike(user.name, '%' + q + '%'), ilike(user.username, '%' + q + '%'))
+      : undefined,
+    search.state && search.state !== 'all'
+      ? eq(user.accessState, search.state)
+      : undefined,
+  )
+  const column = search.sort.startsWith('name') ? user.name : user.username
+  return db.transaction(
+    async (tx) => {
+      const [items, totals] = await Promise.all([
+        tx
+          .select({
+            userId: user.id,
+            name: user.name,
+            username: user.username,
+            roles: user.roles,
+            permissionOverrides: user.permissionOverrides,
+            state: user.accessState,
+            employmentStatus: employee.status,
+          })
+          .from(user)
+          .leftJoin(employee, eq(employee.userId, user.id))
+          .where(where)
+          .orderBy(
+            search.sort.endsWith('desc') ? desc(column) : asc(column),
+            asc(user.id),
+          )
+          .limit(20)
+          .offset((search.page - 1) * 20),
+        tx.select({ total: count() }).from(user).where(where),
+      ])
+      return {
+        items: items.map((item) => ({
+          ...item,
+          permissionOverrides: parsePermissionOverrides(
+            item.permissionOverrides,
+          ),
+        })),
+        total: totals[0]?.total ?? 0,
+      }
+    },
+    { isolationLevel: 'repeatable read' },
+  )
 }

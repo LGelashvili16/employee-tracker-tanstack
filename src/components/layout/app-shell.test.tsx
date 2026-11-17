@@ -4,12 +4,28 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import type { AnchorHTMLAttributes } from 'react'
 import { AppShell } from './app-shell'
 
+vi.mock('#/hooks/use-business-notification-refresh', () => ({
+  useBusinessNotificationRefresh: () => undefined,
+}))
+
 const mocks = vi.hoisted(() => ({
-  path: '/admin/settings/attendance',
+  path: '/manage/schedule',
   signOut: vi.fn(),
   router: { clearCache: vi.fn(), navigate: vi.fn(), invalidate: vi.fn() },
   success: vi.fn(),
   error: vi.fn(),
+}))
+vi.mock('#/features/announcements/components/login-announcement', () => ({
+  LoginAnnouncement: () => null,
+}))
+vi.mock('#/features/announcements/hooks/use-announcement-realtime', () => ({
+  useAnnouncementRealtime: () => ({ hasUnreadAnnouncements: false }),
+}))
+vi.mock('#/features/complaints/hooks/use-complaint-realtime', () => ({
+  useComplaintRealtime: () => ({ hasUnreadComplaints: false }),
+}))
+vi.mock('#/features/notifications/hooks/use-notification-realtime', () => ({
+  useNotificationRealtime: () => undefined,
 }))
 vi.mock('#/hooks/use-mobile', () => ({ useIsMobile: () => false }))
 vi.mock('#/components/ThemeToggle', () => ({ default: () => null }))
@@ -36,7 +52,15 @@ vi.mock('@tanstack/react-router', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.path = '/manage/schedule'
   mocks.signOut.mockResolvedValue({})
+})
+it('uses the attendance section breadcrumb on an employee detail page', () => {
+  mocks.path = '/manage/attendance/worker'
+  render(<AppShell actor={actor} />)
+  expect(
+    screen.getByRole('navigation', { name: 'გვერდის მდებარეობა' }),
+  ).toHaveTextContent('დასწრებები')
 })
 const actor = {
   id: 'admin',
@@ -46,7 +70,7 @@ const actor = {
   roles: ['admin'] as Array<'admin'>,
 }
 
-it('uses the shared navigation, breadcrumb, and account menu on admin pages', () => {
+it('uses management navigation, the breadcrumb, and the account menu on attendance rules', () => {
   const { container } = render(<AppShell actor={actor} />)
   expect(container.querySelector('[data-slot="sidebar"]')).toHaveAttribute(
     'data-variant',
@@ -60,18 +84,19 @@ it('uses the shared navigation, breadcrumb, and account menu on admin pages', ()
     within(
       container.querySelector<HTMLElement>('[data-slot="sidebar"]') ??
         container,
-    ).getByRole('link', { name: 'დასწრების წესები' }),
+    ).getByRole('link', { name: 'სამუშაო განრიგი' }),
   ).toHaveAttribute('data-active')
   expect(
     screen.getByRole('navigation', { name: 'გვერდის მდებარეობა' }),
-  ).toHaveTextContent('დასწრების წესები')
+  ).toHaveTextContent('სამუშაო განრიგი')
   expect(
     screen.getByRole('button', { name: 'ანგარიშის მენიუ' }),
   ).toBeInTheDocument()
   expect(
     screen.queryByRole('link', { name: 'სამუშაო სივრცეში დაბრუნება' }),
   ).not.toBeInTheDocument()
-  expect(screen.queryByText('გუნდის მართვა')).not.toBeInTheDocument()
+  expect(screen.getByText('მართვა')).toBeInTheDocument()
+  expect(screen.getByText('ადმინისტრირება')).toBeInTheDocument()
   expect(
     screen.queryByRole('button', {
       name: 'ანგარიშიდან გამოსვლა',

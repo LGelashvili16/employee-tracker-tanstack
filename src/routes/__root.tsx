@@ -1,3 +1,4 @@
+import { AppPending } from '#/routes/-app-pending'
 import {
   HeadContent,
   Outlet,
@@ -6,11 +7,7 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import {
-  RouteError,
-  RouteNotFound,
-  RoutePending,
-} from '#/components/common/route-feedback'
+import { RouteError, RouteNotFound } from '#/components/common/route-feedback'
 
 import { APP_NAME } from '#/lib/app'
 import { pageHead } from '#/lib/page-head'
@@ -59,7 +56,7 @@ export const Route = createRootRoute({
   component: Outlet,
   errorComponent: RouteError,
   notFoundComponent: RouteNotFound,
-  pendingComponent: RoutePending,
+  pendingComponent: AppPending,
   shellComponent: RootDocument,
 })
 

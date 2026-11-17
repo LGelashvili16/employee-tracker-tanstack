@@ -6,13 +6,17 @@ import {
   employee,
   user,
 } from '#/db/schema'
-import { hasPermission, parseRoles } from '#/lib/authorization/permissions'
+import {
+  hasPermission,
+  currentAuthorization,
+} from '#/lib/authorization/permissions'
 import type { Actor } from '#/lib/authorization/actor'
 import {
   attendanceAssignmentSchema,
   attendanceLimitSchema,
 } from '../attendance.schemas'
 import { AttendanceWorkflowError } from './attendance.service.server'
+import { clearAssignmentReceipts } from './attendance-reminder.repository.server'
 import { transactAttendance } from './attendance.repository.server'
 import { authorizeAttendance } from './attendance-review.policy.server'
 import * as repository from './attendance-review.repository.server'
@@ -29,6 +33,7 @@ export async function readAttendanceConfiguration(actor: Actor | null) {
         name: employee.fullName,
         userId: user.id,
         roles: user.roles,
+        permissionOverrides: user.permissionOverrides,
         employmentStatus: employee.status,
         accessState: user.accessState,
       })
@@ -57,7 +62,10 @@ export async function readAttendanceConfiguration(actor: Actor | null) {
         .slice(0, 500)
         .filter(
           (person) =>
-            hasPermission(parseRoles(person.roles), 'attendance.review.team') ||
+            hasPermission(
+              currentAuthorization(person),
+              'attendance.review.team',
+            ) ||
             assignments.some(
               (assignment) => assignment.reviewerId === person.userId,
             ),
@@ -102,7 +110,7 @@ export async function saveAttendanceLimit(actor: Actor | null, input: unknown) {
       current.id,
       'attendance-setting',
       'attendance.limit_changed',
-      data.reason,
+      'დასწრების გადამოწმების ზღვრის ცვლილება',
       before,
       after,
     )
@@ -140,7 +148,7 @@ export async function assignAttendanceReviewer(
         reviewer.identity.state !== 'active' ||
         reviewer.person?.status !== 'active' ||
         !hasPermission(
-          parseRoles(reviewer.identity.roles),
+          currentAuthorization(reviewer.identity),
           'attendance.review.team',
         ))
     )
@@ -152,8 +160,10 @@ export async function assignAttendanceReviewer(
       eq(attendanceReviewer.reviewerId, data.reviewerId),
     )
     const before = await tx.select().from(attendanceReviewer).where(where)
-    if (data.revoke) await tx.delete(attendanceReviewer).where(where)
-    else
+    if (data.revoke) {
+      await tx.delete(attendanceReviewer).where(where)
+      await clearAssignmentReceipts(tx, data.reviewerId, data.employeeId)
+    } else
       await tx
         .insert(attendanceReviewer)
         .values({ employeeId: data.employeeId, reviewerId: data.reviewerId })
@@ -163,7 +173,7 @@ export async function assignAttendanceReviewer(
       current.id,
       data.employeeId,
       'attendance.reviewer_changed',
-      data.reason,
+      data.revoke ? 'განმხილველის მინიჭების გაუქმება' : 'განმხილველის მინიჭება',
       before.map((row) => ({ reviewerId: row.reviewerId })),
       data.revoke ? [] : [{ reviewerId: data.reviewerId }],
     )

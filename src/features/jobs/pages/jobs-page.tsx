@@ -1,6 +1,10 @@
-import { FeaturePage } from '#/components/common/feature-page'
-import { jobsContent } from '../jobs.content'
+import { useJobsRealtime } from '../hooks/use-jobs-realtime'
+import { getRouteApi } from '@tanstack/react-router'
+import { JobsWorkspace } from '../components/jobs-workspace'
 
+const route = getRouteApi('/_authenticated/jobs/')
 export function JobsPage() {
-  return <FeaturePage {...jobsContent.jobs} />
+  const { actor } = route.useRouteContext()
+  useJobsRealtime(actor.id)
+  return <JobsWorkspace actor={actor} search={route.useSearch()} />
 }

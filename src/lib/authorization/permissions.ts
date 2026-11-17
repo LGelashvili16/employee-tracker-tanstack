@@ -5,13 +5,21 @@ export const permissionSchema = z.enum(
   [
     'manage.access',
     'attendance.read.team',
+    'attendance.read.all',
     'attendance.review.team',
+    'attendance.correct.all',
+    'attendance.correct.self',
+    'attendance.record.manage',
     'timesheets.review.team',
     'schedule.manage',
     'jobs.manage',
+    'jobs.claim',
+    'announcements.manage',
+    'complaints.review.all',
+    'complaints.review.assigned',
+    'complaints.read.confidential',
     'employees.read',
     'employees.manage',
-    'teams.manage',
     'leave.review',
     'reports.read',
     'admin.access',
@@ -20,6 +28,9 @@ export const permissionSchema = z.enum(
     'roles.manage',
     'company.configure',
     'attendance.configure',
+    'attendance.devices.manage',
+    'attendance.devices.approve.self',
+    'attendance.clock.assist',
     'approvals.configure',
     'leave.configure',
     'security.configure',
@@ -31,20 +42,76 @@ export const permissionSchema = z.enum(
   { error: 'წვდომის მოთხოვნა არასწორია.' },
 )
 export type Permission = z.infer<typeof permissionSchema>
-export const roleSchema = z.enum(
+export const employeeRoleSchema = z.enum(
   [
     'employee',
+    'production_specialist',
     'supervisor',
-    'operations_manager',
+    'sales_manager',
     'hr_manager',
-    'admin',
-    'owner',
   ],
+  { error: 'თანამშრომლის როლი არასწორია.' },
+)
+export const roleSchema = z.enum(
+  [...employeeRoleSchema.options, 'admin', 'owner'],
   { error: 'როლი არასწორია.' },
 )
 export type Role = z.infer<typeof roleSchema>
 
+export const permissionOverridesSchema = z
+  .object(
+    {
+      allow: z
+        .array(permissionSchema, { error: 'მიუთითეთ დასაშვები უფლებების სია.' })
+        .max(permissionSchema.options.length, 'უფლებების რაოდენობა არასწორია.'),
+      deny: z
+        .array(permissionSchema, { error: 'მიუთითეთ აკრძალული უფლებების სია.' })
+        .max(permissionSchema.options.length, 'უფლებების რაოდენობა არასწორია.'),
+    },
+    { error: 'ინდივიდუალური უფლებები არასწორია.' },
+  )
+  .refine(
+    (value) =>
+      !value.allow.some((permission) => value.deny.includes(permission)),
+    { message: 'უფლება ერთდროულად დაშვებული და აკრძალული ვერ იქნება.' },
+  )
+export type PermissionOverrides = z.infer<typeof permissionOverridesSchema>
+export type PermissionSubject =
+  | ReadonlyArray<Role>
+  | { roles: ReadonlyArray<Role>; permissionOverrides?: PermissionOverrides }
+
+/** Invalid persisted exceptions deny every privileged operation rather than silently restoring role grants. */
+export function parsePermissionOverrides(value: unknown): PermissionOverrides {
+  if (value === undefined || value === null) return { allow: [], deny: [] }
+  const parsed = permissionOverridesSchema.safeParse(value)
+  return parsed.success
+    ? parsed.data
+    : { allow: [], deny: [...permissionSchema.options] }
+}
+
+export function currentAuthorization(value: {
+  roles: string
+  permissionOverrides?: unknown
+}) {
+  return {
+    roles: parseRoles(value.roles),
+    permissionOverrides: parsePermissionOverrides(value.permissionOverrides),
+  }
+}
+
 const administrationPermissions = [
+  'attendance.record.manage',
+  'attendance.correct.self',
+  'attendance.devices.manage',
+  'attendance.devices.approve.self',
+  'attendance.clock.assist',
+  'complaints.review.all',
+  'announcements.manage',
+  'manage.access',
+  'employees.read',
+  'employees.manage',
+  'jobs.claim',
+  'attendance.read.all',
   'admin.access',
   'users.manage',
   'invitations.manage',
@@ -53,6 +120,7 @@ const administrationPermissions = [
   'attendance.configure',
   'approvals.configure',
   'leave.configure',
+  'leave.review',
   'security.configure',
   'notifications.configure',
   'locations.manage',
@@ -61,44 +129,46 @@ const administrationPermissions = [
 ] as const satisfies ReadonlyArray<Permission>
 
 const managementPermissions: Record<
-  'supervisor' | 'operations_manager' | 'hr_manager',
+  'supervisor' | 'hr_manager',
   ReadonlyArray<Permission>
 > = {
   supervisor: [
+    'complaints.review.assigned',
     'manage.access',
     'attendance.read.team',
     'attendance.review.team',
     'timesheets.review.team',
     'jobs.manage',
     'employees.read',
-    'leave.review',
-  ],
-  operations_manager: [
-    'manage.access',
-    'attendance.read.team',
-    'schedule.manage',
-    'jobs.manage',
-    'employees.read',
-    'teams.manage',
-    'reports.read',
   ],
   hr_manager: [
+    'attendance.record.manage',
+    'attendance.devices.manage',
+    'attendance.devices.approve.self',
+    'attendance.clock.assist',
+    'attendance.correct.all',
+    'complaints.review.all',
+    'complaints.read.confidential',
+    'announcements.manage',
     'manage.access',
+    'attendance.read.all',
+    'attendance.configure',
     'attendance.read.team',
     'attendance.review.team',
     'timesheets.review.team',
     'employees.read',
     'employees.manage',
-    'teams.manage',
     'leave.review',
+    'leave.configure',
     'reports.read',
   ],
 }
 export const roleLabels: Record<Role, string> = {
   employee: 'თანამშრომელი',
-  supervisor: 'ჯგუფის ხელმძღვანელი',
-  operations_manager: 'ოპერაციების მენეჯერი',
-  hr_manager: 'პერსონალის მენეჯერი',
+  production_specialist: 'წარმოების სპეციალისტი',
+  supervisor: 'წარმოების უფროსი',
+  sales_manager: 'გაყიდვების მენეჯერი',
+  hr_manager: 'HR',
   admin: 'ადმინისტრატორი',
   owner: 'კომპანიის მფლობელი',
 }
@@ -118,26 +188,33 @@ export const accessControl = createAccessControl({
 })
 export const roles = {
   employee: accessControl.newRole({ teamwork: [] }),
+  production_specialist: accessControl.newRole({ teamwork: ['jobs.claim'] }),
   supervisor: accessControl.newRole({
     teamwork: managementPermissions.supervisor,
   }),
-  operations_manager: accessControl.newRole({
-    teamwork: managementPermissions.operations_manager,
+  sales_manager: accessControl.newRole({
+    teamwork: ['manage.access', 'jobs.manage'],
   }),
   hr_manager: accessControl.newRole({
     teamwork: managementPermissions.hr_manager,
   }),
-  // Platform administration does not imply authority over daily team operations.
+  // Employee account management is explicit; attendance review and job management remain separate.
   admin: accessControl.newRole({ teamwork: administrationPermissions }),
   owner: accessControl.newRole({ teamwork: permissionSchema.options }),
 } satisfies Record<Role, unknown>
 
 export function hasPermission(
-  actorRoles: ReadonlyArray<Role>,
+  subject: PermissionSubject,
   permission: Permission,
 ) {
   // Also deny malformed runtime values from legacy/imported records.
   if (!permissionSchema.safeParse(permission).success) return false
+  const actorRoles = 'roles' in subject ? subject.roles : subject
+  if ('roles' in subject && subject.permissionOverrides) {
+    const overrides = parsePermissionOverrides(subject.permissionOverrides)
+    if (overrides.deny.includes(permission)) return false
+    if (overrides.allow.includes(permission)) return true
+  }
   return actorRoles.some(
     (role) =>
       roleSchema.safeParse(role).success &&
@@ -146,7 +223,7 @@ export function hasPermission(
 }
 
 export function hasEveryPermission(
-  actorRoles: ReadonlyArray<Role>,
+  actorRoles: PermissionSubject,
   permissions: ReadonlyArray<Permission>,
 ) {
   return (
@@ -156,7 +233,7 @@ export function hasEveryPermission(
 }
 
 export function hasAnyPermission(
-  actorRoles: ReadonlyArray<Role>,
+  actorRoles: PermissionSubject,
   permissions: ReadonlyArray<Permission>,
 ) {
   return permissions.some((permission) => hasPermission(actorRoles, permission))

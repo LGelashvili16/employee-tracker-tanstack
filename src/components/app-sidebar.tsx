@@ -1,11 +1,11 @@
-"use client"
+'use client'
 
-import * as React from "react"
+import * as React from 'react'
 
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from '@/components/nav-main'
+import { NavProjects } from '@/components/nav-projects'
+import { NavSecondary } from '@/components/nav-secondary'
+import { NavUser } from '@/components/nav-user'
 import {
   Sidebar,
   SidebarContent,
@@ -14,156 +14,140 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { IconTerminal2, IconRobot, IconBook, IconSettings, IconLifebuoy, IconSend, IconFrame, IconChartPie, IconMap, IconCommand } from "@tabler/icons-react"
+} from '@/components/ui/sidebar'
+import {
+  IconTerminal2,
+  IconRobot,
+  IconBook,
+  IconSettings,
+  IconLifebuoy,
+  IconSend,
+  IconFrame,
+  IconChartPie,
+  IconMap,
+  IconCommand,
+} from '@tabler/icons-react'
 
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: 'shadcn',
+    email: 'm@example.com',
+    avatar: '/avatars/shadcn.jpg',
   },
   navMain: [
     {
-      title: "Playground",
-      url: "#",
-      icon: (
-        <IconTerminal2
-        />
-      ),
+      title: 'Playground',
+      url: '#',
+      icon: <IconTerminal2 />,
       isActive: true,
       items: [
         {
-          title: "History",
-          url: "#",
+          title: 'History',
+          url: '#',
         },
         {
-          title: "Starred",
-          url: "#",
+          title: 'Starred',
+          url: '#',
         },
         {
-          title: "Settings",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Models",
-      url: "#",
-      icon: (
-        <IconRobot
-        />
-      ),
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
+          title: 'Settings',
+          url: '#',
         },
       ],
     },
     {
-      title: "Documentation",
-      url: "#",
-      icon: (
-        <IconBook
-        />
-      ),
+      title: 'Models',
+      url: '#',
+      icon: <IconRobot />,
       items: [
         {
-          title: "Introduction",
-          url: "#",
+          title: 'Genesis',
+          url: '#',
         },
         {
-          title: "Get Started",
-          url: "#",
+          title: 'Explorer',
+          url: '#',
         },
         {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
+          title: 'Quantum',
+          url: '#',
         },
       ],
     },
     {
-      title: "Settings",
-      url: "#",
-      icon: (
-        <IconSettings
-        />
-      ),
+      title: 'Documentation',
+      url: '#',
+      icon: <IconBook />,
       items: [
         {
-          title: "General",
-          url: "#",
+          title: 'Introduction',
+          url: '#',
         },
         {
-          title: "Team",
-          url: "#",
+          title: 'Get Started',
+          url: '#',
         },
         {
-          title: "Billing",
-          url: "#",
+          title: 'Tutorials',
+          url: '#',
         },
         {
-          title: "Limits",
-          url: "#",
+          title: 'Changelog',
+          url: '#',
+        },
+      ],
+    },
+    {
+      title: 'Settings',
+      url: '#',
+      icon: <IconSettings />,
+      items: [
+        {
+          title: 'General',
+          url: '#',
+        },
+        {
+          title: 'Team',
+          url: '#',
+        },
+        {
+          title: 'Billing',
+          url: '#',
+        },
+        {
+          title: 'Limits',
+          url: '#',
         },
       ],
     },
   ],
   navSecondary: [
     {
-      title: "Support",
-      url: "#",
-      icon: (
-        <IconLifebuoy
-        />
-      ),
+      title: 'Support',
+      url: '#',
+      icon: <IconLifebuoy />,
     },
     {
-      title: "Feedback",
-      url: "#",
-      icon: (
-        <IconSend
-        />
-      ),
+      title: 'Feedback',
+      url: '#',
+      icon: <IconSend />,
     },
   ],
   projects: [
     {
-      name: "Design Engineering",
-      url: "#",
-      icon: (
-        <IconFrame
-        />
-      ),
+      name: 'Design Engineering',
+      url: '#',
+      icon: <IconFrame />,
     },
     {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: (
-        <IconChartPie
-        />
-      ),
+      name: 'Sales & Marketing',
+      url: '#',
+      icon: <IconChartPie />,
     },
     {
-      name: "Travel",
-      url: "#",
-      icon: (
-        <IconMap
-        />
-      ),
+      name: 'Travel',
+      url: '#',
+      icon: <IconMap />,
     },
   ],
 }

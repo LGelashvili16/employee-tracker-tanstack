@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "permission_overrides" jsonb DEFAULT '{"allow":[],"deny":[]}'::jsonb NOT NULL;

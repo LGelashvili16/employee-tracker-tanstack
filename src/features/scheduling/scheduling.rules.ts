@@ -22,3 +22,69 @@ export function earliestScheduleDate(today: string, latest: string | null) {
   if (!latest) return today
   return followingDate(latest > today ? latest : today)
 }
+
+type WeekDays = Array<{
+  weekday: number
+  hours: { start: string; end: string } | null
+}>
+
+const minutesOfDay = (time: string) =>
+  Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5))
+
+/** A shared three-hour scale keeps shifts comparable, including early and late schedules. */
+export function weeklyTimeline(week: WeekDays) {
+  const shifts = week.flatMap((day) => (day.hours ? [day.hours] : []))
+  const start = shifts.length
+    ? Math.floor(
+        Math.min(...shifts.map((hours) => minutesOfDay(hours.start))) / 180,
+      ) * 180
+    : 0
+  const end = shifts.length
+    ? Math.ceil(
+        Math.max(...shifts.map((hours) => minutesOfDay(hours.end))) / 180,
+      ) * 180
+    : 1440
+  return {
+    start,
+    end,
+    ticks: Array.from(
+      { length: (end - start) / 180 + 1 },
+      (_, index) => start + index * 180,
+    ),
+    position: (time: string) =>
+      ((minutesOfDay(time) - start) / (end - start)) * 100,
+  }
+}
+
+export function shiftMinutes(hours: { start: string; end: string }) {
+  return minutesOfDay(hours.end) - minutesOfDay(hours.start)
+}
+
+export function weeklyMinutes(week: WeekDays) {
+  return week.reduce(
+    (total, day) => total + (day.hours ? shiftMinutes(day.hours) : 0),
+    0,
+  )
+}
+
+export function formatDuration(minutes: number) {
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return rest ? `${hours} სთ ${rest} წთ` : `${hours} სთ`
+}
+
+/** ISO weekday (1 = Monday) of a calendar date string; noon UTC avoids any timezone shift. */
+export function isoWeekday(date: string) {
+  return new Date(`${date}T12:00:00Z`).getUTCDay() || 7
+}
+
+/** Compares by meaning, since stored JSON may reorder keys and days. */
+export function sameWorkingWeek(first: WeekDays, second: WeekDays) {
+  const canonical = (days: WeekDays) =>
+    JSON.stringify(
+      [...days]
+        .sort((a, b) => a.weekday - b.weekday)
+        .map((day) => [day.weekday, day.hours?.start, day.hours?.end]),
+    )
+  return canonical(first) === canonical(second)
+}

@@ -100,9 +100,12 @@ describe('actual attendance and schedule deviations', () => {
       attendanceLimitSchema.safeParse({
         maxOpenHours: 7,
         revision: 0,
-        reason: 'ცვლილება',
       }).success,
     ).toBe(false)
+    expect(
+      attendanceLimitSchema.safeParse({ maxOpenHours: 16, revision: 0 })
+        .success,
+    ).toBe(true)
     expect(attendanceListSchema.safeParse({ page: -1 }).success).toBe(false)
   })
 })

@@ -8,6 +8,7 @@ import {
   integer,
   bigint,
   uniqueIndex,
+  jsonb,
 } from 'drizzle-orm/pg-core'
 
 /** One login identity per person; employment records remain a separate domain. */
@@ -18,7 +19,7 @@ export const user = pgTable('user', {
   name: text('name').notNull(),
   /** Auth protocol identifier. Provisioned employees use a reserved .invalid address; real optional email belongs to their employee record. */
   email: text('email').notNull().unique(),
-  /** Immutable normalized login name, equal to the company employee code; null for legacy email accounts. */
+  /** Immutable normalized login name, equal to the company employee username; null for legacy email accounts. */
   username: text('username').unique(),
   /** Server-controlled account lifecycle: invited, active, or suspended. Existing accounts remain active. */
   accessState: text('access_state').notNull().default('active'),
@@ -28,6 +29,11 @@ export const user = pgTable('user', {
   emailVerified: boolean('email_verified').default(false).notNull(),
   /** Comma-separated server-provisioned roles; default grants only employee access. Client input is disabled. */
   roles: text('roles').default('employee').notNull(),
+  /** Explicit permission exceptions for this account. Empty allow/deny lists inherit its roles; denials take precedence. Changed only by access administrators. */
+  permissionOverrides: jsonb('permission_overrides')
+    .$type<{ allow: Array<string>; deny: Array<string> }>()
+    .notNull()
+    .default({ allow: [], deny: [] }),
   /** Optional account avatar URL; null when no avatar is provided. */
   image: text('image'),
   /** Time this record was created, managed by the authentication system. */

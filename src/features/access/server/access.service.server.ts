@@ -1,18 +1,38 @@
 import '@tanstack/react-start/server-only'
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, randomInt } from 'node:crypto'
 import { sql } from 'drizzle-orm'
 import { user } from '#/db/schema'
 import { assertPermissions } from '#/lib/authorization/access'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
-import { parseRoles } from '#/lib/authorization/permissions'
+import {
+  parseRoles,
+  currentAuthorization,
+  hasEveryPermission,
+} from '#/lib/authorization/permissions'
 import { provisionIdentity } from '#/lib/auth/provisioning.server'
+import { initializeEmployeeDayOffBalance } from '#/features/leave/server/day-off-allowance.service.server'
+import {
+  assignInitialEmployeeWeek,
+  readCompanyWeek,
+  replaceEmployeeWeek,
+  ScheduleWorkflowError,
+} from '#/features/scheduling/server/scheduling.service.server'
 import {
   accountActionSchema,
   accountListSchema,
+  accountLookupSchema,
   completeAccountSchema,
+  employeeDetailsSchema,
+  ownPhoneSchema,
   provisionAccountSchema,
   ownerRecoverySchema,
 } from '../access.schemas'
+import {
+  isSyntheticAuthEmail,
+  setupCodeAlphabet,
+  setupCodeLength,
+  setupCodeLifetimeMinutes,
+} from '../access.rules'
 import * as repository from './access.repository.server'
 import type { Actor } from '#/lib/authorization/actor'
 import type { z } from 'zod'
@@ -25,7 +45,14 @@ export const hashSetupCode = (code: string) =>
   createHash('sha256').update(code).digest('hex')
 export const getLoginAccess = repository.readAccountAccess
 
-async function currentAdministrator(
+// randomInt is unbiased, unlike mapping raw random bytes onto a 32-symbol alphabet by modulo.
+const generateSetupCode = () =>
+  Array.from(
+    { length: setupCodeLength },
+    () => setupCodeAlphabet[randomInt(setupCodeAlphabet.length)],
+  ).join('')
+
+async function currentEmployeeManager(
   tx: repository.AccessTransaction,
   actor: Actor,
 ) {
@@ -36,16 +63,17 @@ async function currentAdministrator(
     (record.person && record.person.status !== 'active')
   )
     throw new AuthorizationError()
-  const current = { ...actor, roles: parseRoles(record.identity.roles) }
-  assertPermissions(current, ['admin.access', 'users.manage'])
+  const current = { ...actor, ...currentAuthorization(record.identity) }
+  assertPermissions(current, ['manage.access', 'employees.manage'])
   return current
 }
 
 function checkTarget(actor: Actor, id: string, roles: Array<Role>) {
   if (actor.id === id) throw new AuthorizationError()
   if (
-    roles.some((role) => role === 'admin' || role === 'owner') &&
-    !actor.roles.includes('owner')
+    (roles.includes('owner') && !actor.roles.includes('owner')) ||
+    (roles.includes('admin') &&
+      !hasEveryPermission(actor, ['admin.access', 'users.manage']))
   )
     throw new AuthorizationError()
 }
@@ -56,9 +84,9 @@ async function issueChallenge(
   issuer: string | null,
   purpose: 'activation' | 'reset',
 ) {
-  const code = randomBytes(32).toString('base64url')
+  const code = generateSetupCode()
   const expiresAt = new Date(
-    Date.now() + (purpose === 'activation' ? 24 * 60 : 15) * 60_000,
+    Date.now() + setupCodeLifetimeMinutes[purpose] * 60_000,
   )
   await repository.storeChallenge(tx, {
     userId,
@@ -76,13 +104,36 @@ async function createEmployee(
   actorId: string | null,
   role: Role,
 ) {
-  const userId = await provisionIdentity(tx, input.name, input.code)
-  await repository.insertEmployee(tx, {
-    code: input.code,
+  const userId = await provisionIdentity(
+    tx,
+    input.name,
+    input.code,
+    input.contactEmail,
+  )
+  const person = await repository.insertEmployee(tx, {
+    username: input.code,
     userId,
     fullName: input.name,
     contactEmail: input.contactEmail || null,
+    jobTitle: input.jobTitle || null,
+    phone: input.phone || null,
   })
+  await initializeEmployeeDayOffBalance(
+    tx,
+    userId,
+    input.dayOffAllowance,
+    actorId,
+  )
+  if (input.workingWeek !== null) {
+    if (!person || !actorId) throw new AuthorizationError()
+    try {
+      await assignInitialEmployeeWeek(person.id, input.workingWeek, actorId, tx)
+    } catch (error) {
+      if (error instanceof ScheduleWorkflowError)
+        throw new AccountWorkflowError(error.message)
+      throw error
+    }
+  }
   await tx
     .update(user)
     .set({ roles: role })
@@ -93,21 +144,23 @@ async function createEmployee(
     actorId,
     targetId: userId,
     action: `account.provisioned.${role}`,
-    reason: input.reason,
+    reason:
+      role === 'owner'
+        ? 'კომპანიის პირველი მფლობელის პირველადი შექმნა.'
+        : 'თანამშრომლის ანგარიშის შექმნა.',
   })
   return challenge
 }
 
 export async function provisionEmployee(
   actor: Actor,
-  untrusted: z.infer<typeof provisionAccountSchema>,
+  untrusted: z.input<typeof provisionAccountSchema>,
 ) {
   const input = provisionAccountSchema.parse(untrusted)
   return repository.transactAccounts(async (tx) => {
-    const administrator = await currentAdministrator(tx, actor)
-    if (input.role !== 'employee')
-      assertPermissions(administrator, ['roles.manage'])
-    return createEmployee(tx, input, administrator.id, input.role)
+    const manager = await currentEmployeeManager(tx, actor)
+    if (input.role !== 'employee') assertPermissions(manager, ['roles.manage'])
+    return createEmployee(tx, input, manager.id, input.role)
   })
 }
 
@@ -115,9 +168,24 @@ export async function listEmployeeAccounts(
   actor: Actor,
   untrusted: z.infer<typeof accountListSchema>,
 ) {
-  assertPermissions(actor, ['admin.access', 'users.manage'])
+  assertPermissions(actor, ['manage.access', 'employees.manage'])
   const { page } = accountListSchema.parse(untrusted)
   return repository.queryAccounts(page)
+}
+
+export async function readEmployeeAccount(
+  actor: Actor,
+  untrusted: z.input<typeof accountLookupSchema>,
+) {
+  assertPermissions(actor, ['manage.access', 'employees.manage'])
+  const { userId } = accountLookupSchema.parse(untrusted)
+  const record = await repository.queryAccount(userId)
+  if (!record) return null
+  return {
+    record,
+    // Only needed (and only fetched) when the employee inherits the company week.
+    companyWeek: record.workingWeek ? null : await readCompanyWeek(),
+  }
 }
 
 export async function manageEmployeeAccount(
@@ -126,11 +194,11 @@ export async function manageEmployeeAccount(
 ) {
   const input = accountActionSchema.parse(untrusted)
   return repository.transactAccounts(async (tx) => {
-    const administrator = await currentAdministrator(tx, actor)
+    const manager = await currentEmployeeManager(tx, actor)
     const target = await repository.lockedAccount(tx, input.userId)
     if (!target?.person)
       throw new AccountWorkflowError('თანამშრომლის ანგარიში ვერ მოიძებნა.')
-    checkTarget(administrator, input.userId, parseRoles(target.identity.roles))
+    checkTarget(manager, input.userId, parseRoles(target.identity.roles))
     let challenge: Awaited<ReturnType<typeof issueChallenge>> | null = null
     if (input.action === 'issue_activation' || input.action === 'issue_reset') {
       const activation = input.action === 'issue_activation'
@@ -145,7 +213,7 @@ export async function manageEmployeeAccount(
       challenge = await issueChallenge(
         tx,
         input.userId,
-        administrator.id,
+        manager.id,
         activation ? 'activation' : 'reset',
       )
     } else if (input.action === 'suspend') {
@@ -166,13 +234,89 @@ export async function manageEmployeeAccount(
       )
     }
     await repository.auditAccess(tx, {
-      actorId: administrator.id,
+      actorId: manager.id,
       targetId: input.userId,
       action: `account.${input.action}`,
       reason: input.reason,
     })
     return challenge
   })
+}
+
+export async function editEmployeeDetails(
+  actor: Actor,
+  untrusted: z.input<typeof employeeDetailsSchema>,
+) {
+  const input = employeeDetailsSchema.parse(untrusted)
+  return repository.transactAccounts(async (tx) => {
+    const manager = await currentEmployeeManager(tx, actor)
+    const target = await repository.lockedAccount(tx, input.userId)
+    if (!target?.person)
+      throw new AccountWorkflowError('თანამშრომლის ანგარიში ვერ მოიძებნა.')
+    checkTarget(manager, input.userId, parseRoles(target.identity.roles))
+    // An email-based account signs in with this address, so it follows the contact email;
+    // contact-only addresses of email-less accounts never become login identities.
+    const usesLoginEmail = !isSyntheticAuthEmail(target.identity.email)
+    if (usesLoginEmail && !input.contactEmail)
+      throw new AccountWorkflowError(
+        'ამ ანგარიშში ელფოსტა შესვლის მონაცემია და მისი წაშლა შეუძლებელია.',
+      )
+    if (
+      input.contactEmail &&
+      (await repository.emailInUse(tx, input.contactEmail, input.userId))
+    )
+      throw new AccountWorkflowError('ეს ელფოსტა სხვა ანგარიშს უკვე უკავია.')
+    await repository.updateEmployeeDetails(tx, input.userId, {
+      name: input.name,
+      contactEmail: input.contactEmail,
+      jobTitle: input.jobTitle,
+      phone: input.phone,
+      loginEmail: usesLoginEmail ? input.contactEmail : null,
+    })
+    await repository.auditAccess(tx, {
+      actorId: manager.id,
+      targetId: input.userId,
+      action: 'account.details_updated',
+      reason: 'თანამშრომლის მონაცემების განახლება.',
+    })
+    if (input.workingWeek === undefined) return
+    // Schedule rights are separate from account management; replaceEmployeeWeek rechecks them against the database.
+    assertPermissions(manager, ['attendance.configure'])
+    try {
+      const changed = await replaceEmployeeWeek(
+        target.person.id,
+        input.workingWeek,
+        manager.id,
+        tx,
+      )
+      if (changed)
+        await repository.auditAccess(tx, {
+          actorId: manager.id,
+          targetId: input.userId,
+          action: 'account.schedule_updated',
+          reason: 'თანამშრომლის სამუშაო განრიგის განახლება.',
+        })
+    } catch (error) {
+      if (error instanceof ScheduleWorkflowError)
+        throw new AccountWorkflowError(error.message)
+      throw error
+    }
+  })
+}
+
+export async function readOwnProfile(actor: Actor) {
+  return repository.readOwnProfile(actor.id)
+}
+
+/** The subject is always the authenticated actor; no employee identifier is accepted from the client. */
+export async function updateOwnPhone(
+  actor: Actor,
+  untrusted: z.input<typeof ownPhoneSchema>,
+) {
+  const { phone } = ownPhoneSchema.parse(untrusted)
+  if (!(await repository.updateOwnPhone(actor.id, phone || null)))
+    throw new AccountWorkflowError('თანამშრომლის პროფილი ვერ მოიძებნა.')
+  return { phone }
 }
 
 /** Called by a Better Auth endpoint; hashing uses its configured password implementation. */
@@ -229,7 +373,6 @@ export async function bootstrapOwner(
   const input = provisionAccountSchema.parse({
     ...untrusted,
     role: 'employee',
-    reason: 'კომპანიის პირველი მფლობელის პირველადი შექმნა.',
   })
   return repository.transactAccounts(async (tx) => {
     await tx.execute(

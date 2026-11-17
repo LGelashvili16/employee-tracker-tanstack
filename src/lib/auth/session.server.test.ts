@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { readActor } from './session.server'
+import { readActor, readActorFromHeaders } from './session.server'
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -34,6 +34,16 @@ describe('trusted actor projection', () => {
       'private, no-store',
     )
   })
+  it('checks a stream session without refreshing it or writing response headers', async () => {
+    mocks.getSession.mockResolvedValue(null)
+    const headers = new Headers()
+    expect(await readActorFromHeaders(headers, true)).toBeNull()
+    expect(mocks.getSession).toHaveBeenCalledWith({
+      headers,
+      query: { disableCookieCache: true, disableRefresh: true },
+    })
+    expect(mocks.header).not.toHaveBeenCalled()
+  })
   it('projects safe fields and denies malformed persisted grants', async () => {
     mocks.getSession.mockResolvedValue({
       session: { token: 'private-test-value' },
@@ -52,6 +62,7 @@ describe('trusted actor projection', () => {
       email: 'test@example.com',
       emailVerified: true,
       roles: [],
+      permissionOverrides: { allow: [], deny: [] },
     })
   })
   it('rejects an existing session when account or employment access is suspended', async () => {
@@ -70,5 +81,26 @@ describe('trusted actor projection', () => {
       },
     })
     expect((await readActor())?.email).toBeNull()
+  })
+  it('uses current persisted permission exceptions rather than values carried by the auth response', async () => {
+    mocks.getSession.mockResolvedValue({
+      user: {
+        id: 'user',
+        name: 'ტესტი',
+        email: 'test@example.com',
+        emailVerified: true,
+        roles: 'employee',
+        permissionOverrides: { allow: ['admin.access'], deny: [] },
+      },
+    })
+    mocks.loginAccess.mockResolvedValue({
+      allowed: true,
+      contactEmail: null,
+      permissionOverrides: { allow: ['jobs.manage'], deny: ['admin.access'] },
+    })
+    expect((await readActor())?.permissionOverrides).toEqual({
+      allow: ['jobs.manage'],
+      deny: ['admin.access'],
+    })
   })
 })

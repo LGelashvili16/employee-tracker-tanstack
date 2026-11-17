@@ -1,13 +1,24 @@
 import { AttendanceOverview } from '../components/attendance-overview'
-import { attendanceContent } from '../attendance.content'
+import { AttendanceCorrections } from '../components/attendance-corrections'
 
-export function AttendancePage({ actorId }: { actorId: string }) {
+export function AttendancePage({
+  actorId,
+  correctionsPage,
+  onCorrectionsPageChange,
+}: {
+  actorId: string
+  correctionsPage: number
+  onCorrectionsPageChange: (page: number) => void
+}) {
   return (
     <section className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        {attendanceContent.attendance.title}
-      </h1>
       <AttendanceOverview key={actorId} actorId={actorId} />
+      <AttendanceCorrections
+        key={actorId}
+        actorId={actorId}
+        page={correctionsPage}
+        onPageChange={onCorrectionsPageChange}
+      />
     </section>
   )
 }

@@ -1,4 +1,5 @@
 import type { CompanyWorkday } from '#/features/scheduling/scheduling.types'
+import type { ApprovedLeave } from '#/features/leave/leave.types'
 
 export type WorkingSession = {
   id: string
@@ -38,11 +39,24 @@ export type ReviewSession = WorkingSession & {
   approvedOutsideSeconds: number
   originalStartedAt: string | null
   originalEndedAt: string | null
+  autoClosedAt: string | null
   canReview: boolean
+  canCorrect: boolean
+}
+export type AttendanceCorrection = {
+  id: string
+  actorName: string
+  reason: string
+  createdAt: string
+  workDate: string
+  timezone: string
+  before: { startedAt: string; endedAt: string | null }
+  after: { startedAt: string; endedAt: string | null }
 }
 export type AttendanceOverview = {
   serverNow: string
   workday: CompanyWorkday
+  approvedLeave: ApprovedLeave | null
   openSession: WorkingSession | null
   lastSessionId: string | null
   today: AttendanceDay | null

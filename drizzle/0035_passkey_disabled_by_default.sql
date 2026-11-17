@@ -1,0 +1,1 @@
+ALTER TABLE "attendance_security_policy" ALTER COLUMN "passkey_required" SET DEFAULT false;

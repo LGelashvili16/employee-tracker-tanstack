@@ -13,6 +13,7 @@ import {
 } from '../attendance.presentation'
 import type { AttendanceOverview as Overview } from '../attendance.types'
 import type { ReactNode } from 'react'
+import { ClockVerificationError } from '#/features/attendance-security/verify-clock'
 
 const calls = vi.hoisted(() => ({
   read: vi.fn(),
@@ -20,6 +21,25 @@ const calls = vi.hoisted(() => ({
   finish: vi.fn(),
   success: vi.fn(),
   error: vi.fn(),
+  verify: vi.fn(),
+  deviceStatus: vi.fn(),
+  requestDevice: vi.fn(),
+  automatic: vi.fn(),
+  register: vi.fn(),
+  enroll: vi.fn(),
+  finishEnrollment: vi.fn(),
+}))
+vi.mock('#/features/attendance-security/attendance-security.functions', () => ({
+  readAttendanceDeviceStatus: calls.deviceStatus,
+  registerAutomaticAttendanceDevice: calls.automatic,
+  requestAttendanceDevice: calls.requestDevice,
+  registerAttendancePasskey: calls.register,
+  verifyAttendanceRegistration: calls.finishEnrollment,
+}))
+vi.mock('@simplewebauthn/browser', () => ({ startRegistration: calls.enroll }))
+vi.mock('#/features/attendance-security/verify-clock', () => ({
+  verifyClockIntent: calls.verify,
+  ClockVerificationError: class extends Error {},
 }))
 vi.mock('../attendance.functions', () => ({
   readMyAttendance: calls.read,
@@ -27,6 +47,9 @@ vi.mock('../attendance.functions', () => ({
   finishMyWork: calls.finish,
 }))
 vi.mock('@tanstack/react-start', () => ({ useServerFn: (fn: unknown) => fn }))
+vi.mock('#/hooks/use-business-notification-refresh', () => ({
+  useBusinessNotificationRefresh: vi.fn(),
+}))
 vi.mock('sonner', () => ({
   toast: { success: calls.success, error: calls.error },
 }))
@@ -51,6 +74,7 @@ const sessionId = '019a4fb0-1234-7000-8000-123456789012'
 function overview(): Overview {
   return {
     serverNow: '2026-11-04T07:00:00.000Z',
+    approvedLeave: null,
     workday: {
       date: '2026-11-04',
       timezone: 'Asia/Tbilisi',
@@ -112,6 +136,27 @@ function working(): Overview {
 }
 beforeEach(() => {
   vi.clearAllMocks()
+  calls.deviceStatus.mockReset().mockResolvedValue({
+    ok: true,
+    value: {
+      browserApprovalRequired: false,
+      passkeyRequired: false,
+      currentDevice: null,
+    },
+  })
+  calls.requestDevice.mockReset().mockResolvedValue({ ok: true, value: {} })
+  calls.register.mockReset().mockResolvedValue({
+    ok: true,
+    value: {
+      challengeId: sessionId,
+      options: { challenge: 'registration-challenge' },
+    },
+  })
+  calls.enroll.mockReset().mockResolvedValue({ id: 'credential' })
+  calls.finishEnrollment.mockReset().mockResolvedValue({ ok: true, value: {} })
+  calls.verify
+    .mockReset()
+    .mockImplementation(async (intent: unknown) => ({ intent }))
 })
 afterEach(() => {
   vi.useRealTimers()
@@ -119,6 +164,513 @@ afterEach(() => {
 })
 
 describe('persisted attendance dashboard', () => {
+  it('disables another clock-in once the current workday has 18 combined hours', async () => {
+    const state = working()
+    state.openSession = null
+    state.today!.seconds = 18 * 3600
+    calls.read.mockResolvedValue({ ok: true, value: state })
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    expect(
+      await screen.findByRole('button', { name: 'სამუშაოს დაწყება' }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText(
+        /ამ სამუშაო დღისთვის 18-საათიანი ჯამური ზღვარი მიღწეულია/,
+      ),
+    ).toBeVisible()
+    expect(calls.start).not.toHaveBeenCalled()
+  })
+  it.each([false, true])(
+    'waits for explicit activation on a newly identified browser with Passkey=%s',
+    async (passkeyRequired) => {
+      calls.read.mockResolvedValue({ ok: true, value: overview() })
+      const device = {
+        id: sessionId,
+        name: 'დასწრების ბრაუზერი',
+        state: 'unrequested',
+        hasPasskey: false,
+      }
+      const policy = { browserApprovalRequired: true, passkeyRequired }
+      calls.deviceStatus.mockResolvedValue({
+        ok: true,
+        value: { ...policy, currentDevice: device },
+      })
+      calls.requestDevice.mockImplementation(async () => {
+        calls.deviceStatus.mockResolvedValue({
+          ok: true,
+          value: { ...policy, currentDevice: { ...device, state: 'pending' } },
+        })
+        return { ok: true, value: {} }
+      })
+      render(
+        <ModalProvider>
+          <AttendanceOverview actorId="employee" />
+        </ModalProvider>,
+      )
+      const activate = await screen.findByRole('button', {
+        name: 'მოწყობილობის აქტივაციის მოთხოვნა',
+      })
+      expect(calls.requestDevice).not.toHaveBeenCalled()
+      expect(
+        screen.queryByRole('button', { name: 'Passkey-ის დამატება' }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'სამუშაოს დაწყება' }),
+      ).toBeDisabled()
+      await userEvent.setup().click(activate)
+      const pending = await screen.findByRole('button', {
+        name: 'მოთხოვნა გაგზავნილია',
+      })
+      expect(pending).toBeDisabled()
+      await userEvent.setup().click(pending)
+      expect(calls.requestDevice).toHaveBeenCalledExactlyOnceWith({
+        data: { name: device.name },
+      })
+      expect(calls.enroll).not.toHaveBeenCalled()
+      expect(calls.start).not.toHaveBeenCalled()
+    },
+  )
+  it('requires manual activation before offering passkey enrollment and waits for HR without recording attendance', async () => {
+    calls.read.mockResolvedValue({ ok: true, value: overview() })
+    calls.deviceStatus.mockResolvedValue({
+      ok: true,
+      value: { passkeyRequired: true, currentDevice: null },
+    })
+    calls.requestDevice.mockImplementation(async () => {
+      calls.deviceStatus.mockResolvedValue({
+        ok: true,
+        value: {
+          browserApprovalRequired: true,
+          passkeyRequired: true,
+          currentDevice: {
+            id: sessionId,
+            name: 'დასწრების ბრაუზერი',
+            state: 'pending',
+            hasPasskey: false,
+          },
+        },
+      })
+      return { ok: true, value: {} }
+    })
+    calls.finishEnrollment.mockImplementation(async () => {
+      calls.deviceStatus.mockResolvedValue({
+        ok: true,
+        value: {
+          passkeyRequired: true,
+          currentDevice: {
+            id: sessionId,
+            name: 'დასწრების ბრაუზერი',
+            state: 'pending',
+            hasPasskey: true,
+          },
+        },
+      })
+      return { ok: true, value: {} }
+    })
+    const user = userEvent.setup()
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    expect(calls.requestDevice).not.toHaveBeenCalled()
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'მოწყობილობის აქტივაციის მოთხოვნა',
+      }),
+    )
+    expect(
+      await screen.findByRole('button', { name: 'მოთხოვნა გაგზავნილია' }),
+    ).toBeDisabled()
+    const enroll = await screen.findByRole('button', {
+      name: 'Passkey-ის დამატება',
+    })
+    expect(
+      screen.getByRole('button', { name: 'სამუშაოს დაწყება' }),
+    ).toBeDisabled()
+    await user.click(enroll)
+    expect(calls.requestDevice).toHaveBeenCalledExactlyOnceWith({
+      data: { name: 'დასწრების ბრაუზერი' },
+    })
+    expect(calls.enroll).toHaveBeenCalledWith({
+      optionsJSON: { challenge: 'registration-challenge' },
+    })
+    await waitFor(() =>
+      expect(calls.finishEnrollment).toHaveBeenCalledWith({
+        data: { challengeId: sessionId, response: { id: 'credential' } },
+      }),
+    )
+    expect(
+      await screen.findByText(
+        /მოთხოვნა გაგზავნილია\. დაელოდეთ HR-ის დადასტურებას\./,
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'სამუშაოს დაწყება' }),
+    ).toBeDisabled()
+    expect(calls.start).not.toHaveBeenCalled()
+    expect(calls.verify).not.toHaveBeenCalled()
+  })
+  it('keeps cancelled enrollment retryable without approving the device or clocking in', async () => {
+    calls.read.mockResolvedValue({ ok: true, value: overview() })
+    calls.deviceStatus.mockResolvedValue({
+      ok: true,
+      value: {
+        passkeyRequired: true,
+        currentDevice: {
+          id: sessionId,
+          name: 'ბრაუზერი',
+          state: 'approved',
+          hasPasskey: false,
+        },
+      },
+    })
+    calls.enroll.mockRejectedValue(new Error('cancelled'))
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: 'Passkey-ის დამატება' }))
+    await waitFor(() =>
+      expect(calls.error).toHaveBeenCalledExactlyOnceWith(
+        'Passkey ვერ დაემატა. სცადეთ ხელახლა ან დაუკავშირდით HR-ს.',
+      ),
+    )
+    expect(calls.requestDevice).not.toHaveBeenCalled()
+    expect(calls.finishEnrollment).not.toHaveBeenCalled()
+    expect(calls.start).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole('button', { name: 'Passkey-ის დამატება' }),
+    ).toBeEnabled()
+  })
+  it('explicitly requests activation again for a revoked browser and retains the existing passkey', async () => {
+    calls.read.mockResolvedValue({ ok: true, value: overview() })
+    const device = {
+      id: sessionId,
+      name: 'ბრაუზერი',
+      state: 'revoked',
+      hasPasskey: true,
+    }
+    calls.deviceStatus.mockResolvedValue({
+      ok: true,
+      value: { passkeyRequired: true, currentDevice: device },
+    })
+    calls.requestDevice.mockImplementation(async () => {
+      calls.deviceStatus.mockResolvedValue({
+        ok: true,
+        value: {
+          passkeyRequired: true,
+          currentDevice: { ...device, state: 'pending' },
+        },
+      })
+      return { ok: true, value: {} }
+    })
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    const button = await screen.findByRole('button', {
+      name: 'ხელახალი დადასტურების მოთხოვნა',
+    })
+    const prompt = screen.getByRole('region', { name: 'Passkey-ის დამატება' })
+    expect(within(prompt).getByRole('note')).toHaveTextContent(
+      'ბიომეტრიით ან PIN კოდით',
+    )
+    expect(within(prompt).queryByText('გაუქმებული')).not.toBeInTheDocument()
+    expect(
+      within(prompt).queryByText('Passkey დამატებულია'),
+    ).not.toBeInTheDocument()
+    expect(within(prompt).queryByText('ბრაუზერი')).not.toBeInTheDocument()
+    expect(within(prompt).queryByRole('link')).not.toBeInTheDocument()
+    await userEvent.setup().click(button)
+    await waitFor(() =>
+      expect(calls.requestDevice).toHaveBeenCalledWith({
+        data: { name: 'ბრაუზერი' },
+      }),
+    )
+    expect(
+      await screen.findByRole('button', { name: 'მოთხოვნა გაგზავნილია' }),
+    ).toBeDisabled()
+    expect(calls.register).not.toHaveBeenCalled()
+    expect(calls.enroll).not.toHaveBeenCalled()
+    expect(calls.start).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole('button', { name: 'სამუშაოს დაწყება' }),
+    ).toBeDisabled()
+  })
+  it('does not prompt for passkeys when the admin disabled the extra check', async () => {
+    calls.read.mockResolvedValue({ ok: true, value: overview() })
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    await screen.findByRole('button', { name: 'სამუშაოს დაწყება' })
+    expect(
+      screen.queryByRole('button', { name: 'Passkey-ის დამატება' }),
+    ).not.toBeInTheDocument()
+    expect(calls.enroll).not.toHaveBeenCalled()
+  })
+  it.each([
+    [
+      'cooldown',
+      { ok: false, message: 'ხელახლა მოთხოვნა ერთ წუთში იქნება შესაძლებელი.' },
+      'ხელახლა მოთხოვნა ერთ წუთში იქნება შესაძლებელი.',
+    ],
+    [
+      'network restriction',
+      { ok: false, message: 'ამ ქსელიდან წვდომა აკრძალულია.' },
+      'ამ ქსელიდან წვდომა აკრძალულია.',
+    ],
+    [
+      'unexpected failure',
+      new Error('Private network diagnostic'),
+      'აქტივაცია ვერ დასრულდა. სცადეთ მოგვიანებით ან დაუკავშირდით HR-ს.',
+    ],
+  ])(
+    'explains %s when retrying a rejected automatic browser request',
+    async (_kind, result, message) => {
+      calls.read.mockResolvedValue({ ok: true, value: overview() })
+      calls.deviceStatus.mockResolvedValue({
+        ok: true,
+        value: {
+          browserApprovalRequired: true,
+          passkeyRequired: false,
+          currentDevice: {
+            id: sessionId,
+            name: 'ბრაუზერი',
+            state: 'rejected',
+            hasPasskey: false,
+          },
+        },
+      })
+      if (result instanceof Error) calls.requestDevice.mockRejectedValue(result)
+      else calls.requestDevice.mockResolvedValue(result)
+      render(
+        <ModalProvider>
+          <AttendanceOverview actorId="employee" />
+        </ModalProvider>,
+      )
+      await userEvent.setup().click(
+        await screen.findByRole('button', {
+          name: 'ხელახალი დადასტურების მოთხოვნა',
+        }),
+      )
+      await waitFor(() => expect(calls.error).toHaveBeenCalledWith(message))
+      expect(calls.success).not.toHaveBeenCalled()
+      expect(calls.start).not.toHaveBeenCalled()
+      expect(
+        screen.getByRole('button', { name: 'სამუშაოს დაწყება' }),
+      ).toBeDisabled()
+    },
+  )
+  it.each([false, true])(
+    'requests token-only reactivation with retained passkey=%s without starting enrollment',
+    async (hasPasskey) => {
+      calls.read.mockResolvedValue({ ok: true, value: overview() })
+      const device = {
+        id: sessionId,
+        name: 'ბრაუზერი',
+        state: 'rejected',
+        hasPasskey,
+      }
+      const status = { browserApprovalRequired: true, passkeyRequired: false }
+      calls.deviceStatus.mockResolvedValue({
+        ok: true,
+        value: { ...status, currentDevice: device },
+      })
+      calls.requestDevice.mockImplementation(async () => {
+        calls.deviceStatus.mockResolvedValue({
+          ok: true,
+          value: { ...status, currentDevice: { ...device, state: 'pending' } },
+        })
+        return { ok: true, value: {} }
+      })
+      render(
+        <ModalProvider>
+          <AttendanceOverview actorId="employee" />
+        </ModalProvider>,
+      )
+      await userEvent.setup().click(
+        await screen.findByRole('button', {
+          name: 'ხელახალი დადასტურების მოთხოვნა',
+        }),
+      )
+      await waitFor(() =>
+        expect(calls.success).toHaveBeenCalledExactlyOnceWith(
+          'მოწყობილობის მოთხოვნა გაგზავნილია.',
+        ),
+      )
+      expect(calls.requestDevice).toHaveBeenCalledExactlyOnceWith({
+        data: { name: 'ბრაუზერი' },
+      })
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('button', {
+            name: 'ხელახალი დადასტურების მოთხოვნა',
+          }),
+        ).not.toBeInTheDocument(),
+      )
+      expect(calls.register).not.toHaveBeenCalled()
+      expect(calls.enroll).not.toHaveBeenCalled()
+      expect(calls.finishEnrollment).not.toHaveBeenCalled()
+      expect(calls.start).not.toHaveBeenCalled()
+      expect(
+        screen.getByRole('button', { name: 'სამუშაოს დაწყება' }),
+      ).toBeDisabled()
+    },
+  )
+  it('does not open a native passkey dialog when the server policy changed since the page loaded', async () => {
+    calls.read.mockResolvedValue({ ok: true, value: overview() })
+    calls.deviceStatus.mockResolvedValue({
+      ok: true,
+      value: {
+        browserApprovalRequired: true,
+        passkeyRequired: true,
+        currentDevice: {
+          id: sessionId,
+          name: 'ბრაუზერი',
+          state: 'pending',
+          hasPasskey: false,
+        },
+      },
+    })
+    const message = 'Passkey-ით გადამოწმება გამორთულია. განაახლეთ გვერდი.'
+    calls.register.mockResolvedValue({ ok: false, message })
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: 'Passkey-ის დამატება' }))
+    await waitFor(() => expect(calls.error).toHaveBeenCalledWith(message))
+    expect(calls.enroll).not.toHaveBeenCalled()
+    expect(calls.finishEnrollment).not.toHaveBeenCalled()
+    expect(calls.start).not.toHaveBeenCalled()
+  })
+  it('shows HR approval information without manual keys in automatic browser mode', async () => {
+    calls.read.mockResolvedValue({ ok: true, value: overview() })
+    calls.deviceStatus.mockResolvedValue({
+      ok: true,
+      value: {
+        browserApprovalRequired: true,
+        passkeyRequired: false,
+        currentDevice: {
+          id: sessionId,
+          name: 'ბრაუზერი',
+          state: 'pending',
+          hasPasskey: false,
+        },
+      },
+    })
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    expect(
+      await screen.findByRole('region', { name: 'ბრაუზერის დადასტურება' }),
+    ).toHaveTextContent('დაელოდეთ HR-ის დადასტურებას')
+    expect(
+      screen.queryByRole('button', { name: 'Passkey-ის დამატება' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByLabelText('მოწყობილობის სახელი'),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'სამუშაოს დაწყება' }),
+    ).toBeDisabled()
+    expect(calls.enroll).not.toHaveBeenCalled()
+  })
+  it.each(['day_off', 'vacation', 'sick_leave'] as const)(
+    'shows approved %s instead of ordinary schedule and work-goal prompts',
+    async (kind) => {
+      const state = overview()
+      state.approvedLeave = {
+        kind,
+        startDate: '2026-11-04',
+        endDate:
+          kind === 'sick_leave'
+            ? null
+            : kind === 'vacation'
+              ? '2026-11-06'
+              : '2026-11-04',
+      }
+      calls.read.mockResolvedValue({ ok: true, value: state })
+      render(
+        <ModalProvider>
+          <AttendanceOverview actorId="employee" dashboardLayout />
+        </ModalProvider>,
+      )
+      expect(
+        await screen.findByText(
+          kind === 'sick_leave'
+            ? 'დღეს ბიულეტენზე ხართ'
+            : kind === 'vacation'
+              ? 'დღეს შვებულება გაქვთ'
+              : 'დღეს დასვენების დღე გაქვთ',
+          { selector: '[data-slot="alert-title"]' },
+        ),
+      ).toBeVisible()
+      expect(
+        screen.getAllByText(
+          kind === 'sick_leave'
+            ? '4 ნოემბერი 2026 / მიმდინარე'
+            : kind === 'vacation'
+              ? '4 ნოემბერი 2026 / 6 ნოემბერი 2026'
+              : '4 ნოემბერი 2026',
+        ).length,
+      ).toBeGreaterThanOrEqual(1)
+      expect(
+        screen.queryByText('მიზანი: 8 სთ მუშაობა + 1 სთ შესვენება'),
+      ).not.toBeInTheDocument()
+      expect(screen.queryByText('8 საათზე ნაკლები')).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('progressbar', { name: 'დღის მიზნის შესრულება' }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('მუშაობის ხანგრძლივობა'),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByText(/სამუშაო მიზანი არ არის განსაზღვრული/),
+      ).toBeVisible()
+      expect(
+        screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
+      ).toBeVisible()
+    },
+  )
+  it('keeps an open attendance session visible during approved vacation', async () => {
+    const state = working()
+    state.approvedLeave = {
+      kind: 'vacation',
+      startDate: '2026-11-04',
+      endDate: '2026-11-06',
+    }
+    calls.read.mockResolvedValue({ ok: true, value: state })
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" dashboardLayout />
+      </ModalProvider>,
+    )
+    expect(
+      await screen.findByRole('button', { name: 'სამუშაოს დასრულება' }),
+    ).toBeEnabled()
+    expect(screen.getByText('მუშაობთ')).toBeVisible()
+    expect(screen.getByText('დღეს შვებულება გაქვთ')).toBeVisible()
+    expect(
+      screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
+    ).toHaveTextContent('01:00:00')
+  })
   it('shows a full week of actual daily totals and labels future days separately', () => {
     const state = working()
     state.week = {
@@ -245,7 +797,7 @@ describe('persisted attendance dashboard', () => {
     expect(screen.queryByText('დღევანდელი თარიღი')).not.toBeInTheDocument()
     rerender(view(true))
     expect(
-      screen.getByRole('heading', { level: 1, name: 'დილა მშვიდობისა, ანა' }),
+      screen.getByRole('heading', { level: 1, name: /^დილა მშვიდობისა, ანა/ }),
     ).toBeVisible()
     expect(screen.getByText('დღევანდელი თარიღი')).toBeVisible()
     expect(screen.getByRole('grid', { name: 'ნოემბერი 2026' })).toBeVisible()
@@ -253,6 +805,26 @@ describe('persisted attendance dashboard', () => {
       screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
     ).toHaveTextContent('00:00:00')
     expect(calls.read).toHaveBeenCalledOnce()
+  })
+  it('keeps attendance focused on the current session and recent records', async () => {
+    calls.read.mockResolvedValue({ ok: true, value: working() })
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    expect(
+      await screen.findByRole('button', { name: 'სამუშაოს დასრულება' }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
+    ).toHaveTextContent('01:00:00')
+    expect(screen.getByText('10:00 - 19:00')).toBeVisible()
+    expect(screen.getByRole('table', { name: 'ბოლო დასწრებები' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'გასვლა' })).toBeVisible()
+    expect(screen.queryByText('ამ კვირაში')).not.toBeInTheDocument()
+    expect(screen.queryByText('დღევანდელი თარიღი')).not.toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })
   it.each([true, false])(
     'hides internal pending-review status on employee screens while running=%s',
@@ -357,6 +929,201 @@ describe('persisted attendance dashboard', () => {
     ).toBeDisabled()
     expect(screen.getByText('დასწრების ჩანაწერები ჯერ არ არის.')).toBeVisible()
   })
+  it('requires confirmation on a nonworking day and cancellation does not start work', async () => {
+    const state = overview()
+    state.workday = {
+      ...state.workday,
+      kind: 'day_off',
+      startsAt: null,
+      endsAt: null,
+      start: null,
+      end: null,
+    }
+    calls.read.mockResolvedValue({ ok: true, value: state })
+    calls.start.mockResolvedValue({ ok: true, value: { id: sessionId } })
+    const user = userEvent.setup()
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    const button = await screen.findByRole('button', {
+      name: 'სამუშაოს დაწყება',
+    })
+    expect(button).toBeEnabled()
+    expect(screen.getByText('არასამუშაო დღე')).toBeVisible()
+    await user.click(button)
+    const dialog = await screen.findByRole('dialog', {
+      name: 'არასამუშაო დღეს მუშაობა',
+    })
+    expect(calls.start).not.toHaveBeenCalled()
+    await user.click(within(dialog).getByRole('button', { name: 'გაუქმება' }))
+    expect(calls.start).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    await user.click(button)
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: 'მუშაობის დაწყება',
+      }),
+    )
+    await waitFor(() => expect(calls.start).toHaveBeenCalledOnce())
+    expect(
+      calls.start.mock.calls[0][0].data.intent.data.confirmedNonWorkingDate,
+    ).toBe('2026-11-04')
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    expect(calls.success).toHaveBeenCalledExactlyOnceWith(
+      'სამუშაოს დაწყება დაფიქსირდა.',
+    )
+  })
+  it.each(['day_off', 'vacation', 'sick_leave'] as const)(
+    'asks before restarting work during approved %s and submits only after confirmation',
+    async (kind) => {
+      const state = working()
+      state.openSession = null
+      if (!state.today) throw new Error('Missing attendance fixture')
+      state.today.incomplete = false
+      state.approvedLeave = {
+        kind,
+        startDate: '2026-11-04',
+        endDate:
+          kind === 'sick_leave'
+            ? null
+            : kind === 'vacation'
+              ? '2026-11-06'
+              : '2026-11-04',
+      }
+      calls.read.mockResolvedValue({ ok: true, value: state })
+      calls.start.mockResolvedValue({ ok: true, value: { id: sessionId } })
+      const user = userEvent.setup()
+      render(
+        <ModalProvider>
+          <AttendanceOverview actorId="employee" dashboardLayout />
+        </ModalProvider>,
+      )
+      const start = await screen.findByRole('button', {
+        name: 'სამუშაოს დაწყება',
+      })
+      await user.click(start)
+      const title =
+        kind === 'sick_leave'
+          ? 'ბიულეტენის დროს მუშაობა'
+          : kind === 'vacation'
+            ? 'შვებულების დროს მუშაობა'
+            : 'დასვენების დღეს მუშაობა'
+      const dialog = await screen.findByRole('dialog', { name: title })
+      expect(
+        within(dialog).getByText(
+          kind === 'sick_leave'
+            ? /დღეს ბიულეტენზე ხართ/
+            : kind === 'vacation'
+              ? /დღეს შვებულებაში ხართ/
+              : /დღეს დასვენების დღე გაქვთ/,
+        ),
+      ).toBeVisible()
+      expect(calls.start).not.toHaveBeenCalled()
+      await user.click(within(dialog).getByRole('button', { name: 'გაუქმება' }))
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+      )
+      expect(calls.start).not.toHaveBeenCalled()
+      await user.click(start)
+      await user.click(
+        within(await screen.findByRole('dialog', { name: title })).getByRole(
+          'button',
+          { name: 'მუშაობის დაწყება' },
+        ),
+      )
+      await waitFor(() => expect(calls.start).toHaveBeenCalledOnce())
+      expect(calls.start.mock.calls[0][0].data.intent.data).toMatchObject({
+        confirmedNonWorkingDate: '2026-11-04',
+        expectedLastSessionId: sessionId,
+      })
+    },
+  )
+  it.each([undefined, 'day_off', 'vacation'] as const)(
+    'keeps %s confirmation open on failure and blocks repeated submission while pending',
+    async (kind) => {
+      const state = overview()
+      if (kind)
+        state.approvedLeave = {
+          kind,
+          startDate: '2026-11-04',
+          endDate: '2026-11-04',
+        }
+      else state.workday.kind = 'day_off'
+      calls.read.mockResolvedValue({ ok: true, value: state })
+      let complete: ((result: unknown) => void) | undefined
+      calls.start.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            complete = resolve
+          }),
+      )
+      const user = userEvent.setup()
+      render(
+        <ModalProvider>
+          <AttendanceOverview actorId="employee" />
+        </ModalProvider>,
+      )
+      await user.click(
+        await screen.findByRole('button', { name: 'სამუშაოს დაწყება' }),
+      )
+      const dialog = await screen.findByRole('dialog')
+      const confirm = within(dialog).getByRole('button', {
+        name: 'მუშაობის დაწყება',
+      })
+      await user.click(confirm)
+      expect(confirm).toBeDisabled()
+      expect(confirm).toHaveAttribute('aria-busy', 'true')
+      expect(
+        within(dialog).getByRole('button', { name: 'გაუქმება' }),
+      ).toBeDisabled()
+      await user.keyboard('{Escape}')
+      expect(dialog).toBeVisible()
+      expect(calls.start).toHaveBeenCalledOnce()
+      await act(async () => {
+        complete?.({ ok: false, message: 'მოთხოვნა ვერ დასრულდა.' })
+      })
+      await waitFor(() => expect(confirm).toBeEnabled())
+      expect(dialog).toBeVisible()
+      expect(calls.success).not.toHaveBeenCalled()
+      expect(calls.error).toHaveBeenCalledExactlyOnceWith(
+        'მოთხოვნა ვერ დასრულდა.',
+      )
+    },
+  )
+  it('offers a distinct setup action when browser approval blocks an employee without recording a punch', async () => {
+    const message =
+      'მოწყობილობა დასადასტურებელია. გახსენით ანგარიშის უსაფრთხოება და დაუკავშირდით HR-ს.'
+    calls.read.mockResolvedValue({ ok: true, value: overview() })
+    calls.verify.mockRejectedValueOnce(new ClockVerificationError(message))
+    const user = userEvent.setup()
+    render(
+      <ModalProvider>
+        <AttendanceOverview actorId="employee" />
+      </ModalProvider>,
+    )
+    await user.click(
+      await screen.findByRole('button', { name: 'სამუშაოს დაწყება' }),
+    )
+    const warning = await screen.findByRole('alert')
+    expect(
+      within(warning).getByRole('link', { name: 'მოწყობილობის გამართვა' }),
+    ).toHaveAttribute('href', '/settings/security')
+    expect(
+      warning.querySelector('[data-slot="alert-description"]'),
+    ).toHaveTextContent(message)
+    expect(
+      warning.querySelector('[data-slot="alert-description"]'),
+    ).not.toHaveTextContent('მოწყობილობის გამართვა')
+    expect(calls.start).not.toHaveBeenCalled()
+    expect(calls.success).not.toHaveBeenCalled()
+    expect(calls.error).toHaveBeenCalledExactlyOnceWith(message)
+  })
   it('refetches the persisted server state after check-in and shows a success toast', async () => {
     let state = overview()
     calls.read.mockImplementation(async () => ({ ok: true, value: state }))
@@ -379,8 +1146,12 @@ describe('persisted attendance dashboard', () => {
         'სამუშაოს დაწყება დაფიქსირდა.',
       ),
     )
-    expect(calls.start.mock.calls[0][0].data.expectedLastSessionId).toBeNull()
-    expect(calls.start.mock.calls[0][0].data).not.toHaveProperty('employeeId')
+    expect(
+      calls.start.mock.calls[0][0].data.intent.data.expectedLastSessionId,
+    ).toBeNull()
+    expect(calls.start.mock.calls[0][0].data.intent.data).not.toHaveProperty(
+      'employeeId',
+    )
     expect(
       screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
     ).toHaveTextContent('01:00:00')
@@ -441,7 +1212,9 @@ describe('persisted attendance dashboard', () => {
     await user.click(within(dialog).getByRole('button', { name: 'დასრულება' }))
     await waitFor(() =>
       expect(calls.finish).toHaveBeenCalledWith({
-        data: { sessionId, confirmEarly: true },
+        data: {
+          intent: { kind: 'out', data: { sessionId, confirmEarly: true } },
+        },
       }),
     )
     await waitFor(() =>
@@ -450,7 +1223,7 @@ describe('persisted attendance dashboard', () => {
       ),
     )
   })
-  it('leaves the timer running after a rejected check-out and reports one safe error', async () => {
+  it('vacations the timer running after a rejected check-out and reports one safe error', async () => {
     const state = working()
     calls.read.mockResolvedValue({ ok: true, value: state })
     calls.finish.mockResolvedValue({
@@ -571,7 +1344,9 @@ describe('persisted attendance dashboard', () => {
     expect(
       screen.getByRole('timer', { name: 'ნამუშევარი დრო' }),
     ).toHaveTextContent('25:00:00')
-    expect(screen.getByText('2026-11-04 დღის აღრიცხული დრო')).toBeVisible()
+    expect(
+      screen.getByText('4 ნოემბერი, 2026 დღის აღრიცხული დრო'),
+    ).toBeVisible()
     await user.click(finish)
     expect(
       within(screen.getByRole('dialog')).getByText(
@@ -614,8 +1389,8 @@ describe('persisted attendance dashboard', () => {
         beforeColor,
       )
       expect(
-        screen.getByText('მიზანი: 8 სთ მუშაობა + 1 სთ შესვენება'),
-      ).toBeVisible()
+        screen.queryByText('მიზანი: 8 სთ მუშაობა + 1 სთ შესვენება'),
+      ).not.toBeInTheDocument()
       act(() => vi.advanceTimersByTime(1000))
       expect(screen.getByText(after)).toHaveAttribute(
         'data-variant',

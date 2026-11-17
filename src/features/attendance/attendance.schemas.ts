@@ -1,10 +1,14 @@
 import { z } from 'zod'
+import { recordIdSchema } from '#/lib/route-schemas'
+import { scheduleDateSchema } from '#/features/scheduling/scheduling.schemas'
 
 const identifier = z.uuid({ error: 'ჩანაწერის იდენტიფიკატორი არასწორია.' })
 export const checkInSchema = z.object(
   {
     requestId: identifier,
     expectedLastSessionId: identifier.nullable(),
+    /** Company-local date explicitly confirmed for a scheduled rest day or an approved day off/leave. */
+    confirmedNonWorkingDate: scheduleDateSchema.optional(),
   },
   { error: 'შესვლის მოთხოვნა არასწორია.' },
 )
@@ -23,6 +27,12 @@ const reason = z
   .trim()
   .min(5, 'მიზეზი უნდა შეიცავდეს სულ მცირე 5 სიმბოლოს.')
   .max(500, 'მიზეზი არ უნდა აღემატებოდეს 500 სიმბოლოს.')
+export const optionalAttendanceReasonSchema = z
+  .string({ error: 'მიზეზი არასწორია.' })
+  .trim()
+  .max(500, 'მიზეზი არ უნდა აღემატებოდეს 500 სიმბოლოს.')
+  .optional()
+  .default('')
 const revision = z
   .number({ error: 'ჩანაწერის ვერსია არასწორია.' })
   .int('ვერსია უნდა იყოს მთელი რიცხვი.')
@@ -48,7 +58,7 @@ export const attendanceCorrectionSchema = z
   .object({
     sessionId: identifier,
     revision,
-    reason,
+    reason: optionalAttendanceReasonSchema,
     start: localTime,
     end: localTime,
   })
@@ -56,7 +66,22 @@ export const attendanceCorrectionSchema = z
     path: ['end'],
     message: 'დასრულება უნდა იყოს დაწყების შემდეგ.',
   })
+export const manualAttendanceSchema = z
+  .object({
+    userId: recordIdSchema,
+    requestId: identifier,
+    start: localTime,
+    includeEnd: z.boolean({ error: 'მიუთითეთ დასრულების არჩევანი.' }),
+    end: z.union([localTime, z.literal('')]),
+    reason: optionalAttendanceReasonSchema,
+  })
+  .refine(
+    (value) =>
+      !value.includeEnd || (value.end !== '' && value.end > value.start),
+    { path: ['end'], message: 'დასრულება უნდა იყოს დაწყების შემდეგ.' },
+  )
 export const attendanceListSchema = z.object({
+  userId: recordIdSchema.optional(),
   page: z
     .number({ error: 'გვერდი არასწორია.' })
     .int('გვერდი არასწორია.')
@@ -65,6 +90,16 @@ export const attendanceListSchema = z.object({
   exceptionsOnly: z.boolean({ error: 'ფილტრი არასწორია.' }).default(false),
 })
 export const attendanceHistorySchema = z.object({ sessionId: identifier })
+export const attendanceCorrectionsSchema = attendanceListSchema.pick({
+  page: true,
+})
+export const employeeSessionListSchema = attendanceCorrectionsSchema.extend({
+  date: scheduleDateSchema,
+})
+export const attendanceSearchSchema = z.object({
+  userId: recordIdSchema.optional(),
+  correctionsPage: attendanceListSchema.shape.page.default(0),
+})
 export const attendanceLimitSchema = z.object({
   maxOpenHours: z
     .number({ error: 'მიუთითეთ საათების რაოდენობა.' })
@@ -72,7 +107,6 @@ export const attendanceLimitSchema = z.object({
     .min(8, 'მინიმუმ 8 საათი.')
     .max(72, 'მაქსიმუმ 72 საათი.'),
   revision,
-  reason,
 })
 export const attendanceAssignmentSchema = z.object({
   employeeId: identifier,
@@ -81,5 +115,4 @@ export const attendanceAssignmentSchema = z.object({
     .min(1, 'აირჩიეთ ხელმძღვანელი.')
     .max(128, 'იდენტიფიკატორი არასწორია.'),
   revoke: z.boolean({ error: 'არჩევანი არასწორია.' }),
-  reason,
 })

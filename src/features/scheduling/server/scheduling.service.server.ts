@@ -1,17 +1,147 @@
+import { randomUUID } from 'node:crypto'
+import { deliverNotifications } from '#/features/notifications/server/notifications.service.server'
 import '@tanstack/react-start/server-only'
 import { assertPermission } from '#/lib/authorization/access'
 import { AuthorizationError } from '#/lib/authorization/authorization-error'
-import { parseRoles } from '#/lib/authorization/permissions'
+import { formatGeorgianDate } from '#/lib/date-format'
+import {
+  hasPermission,
+  currentAuthorization,
+} from '#/lib/authorization/permissions'
 import {
   companyScheduleSchema,
   saveCompanyScheduleSchema,
+  employeeWorkingWeekSchema,
 } from '../scheduling.schemas'
-import { companyLocalDate, earliestScheduleDate } from '../scheduling.rules'
+import {
+  companyLocalDate,
+  earliestScheduleDate,
+  sameWorkingWeek,
+} from '../scheduling.rules'
 import * as repository from './scheduling.repository.server'
 import type { Actor } from '#/lib/authorization/actor'
-import type { ScheduleSettings } from '../scheduling.types'
+import type { OwnSchedule, ScheduleSettings } from '../scheduling.types'
 
 export class ScheduleWorkflowError extends Error {}
+
+/** Provisioning owns the account transaction; only current schedule administrators can assign a custom week. */
+async function requireScheduleAdministrator(
+  tx: repository.ScheduleTransaction,
+  actorId: string,
+) {
+  const { identity, person } = await repository.currentAccount(tx, actorId)
+  if (
+    !identity ||
+    identity.state !== 'active' ||
+    (person && person.status !== 'active')
+  )
+    throw new AuthorizationError()
+  if (!hasPermission(currentAuthorization(identity), 'attendance.configure'))
+    throw new AuthorizationError()
+}
+
+async function parseCustomWeek(
+  days: unknown,
+  tx: repository.ScheduleTransaction,
+) {
+  const parsed = employeeWorkingWeekSchema.safeParse(days)
+  if (!parsed.success)
+    throw new ScheduleWorkflowError('გადაამოწმეთ თანამშრომლის სამუშაო კვირა.')
+  const current = await repository.companyWorkdayAt(new Date(), tx)
+  if (!current.effectiveFrom)
+    throw new ScheduleWorkflowError(
+      'ჯერ განსაზღვრეთ კომპანიის მოქმედი სამუშაო განრიგი.',
+    )
+  return parsed.data
+}
+
+export async function assignInitialEmployeeWeek(
+  employeeId: string,
+  days: unknown,
+  actorId: string,
+  tx: repository.ScheduleTransaction,
+) {
+  await requireScheduleAdministrator(tx, actorId)
+  const week = await parseCustomWeek(days, tx)
+  await repository.insertEmployeeWeek(tx, employeeId, week, actorId)
+}
+
+/**
+ * Replaces an employee's recurring week, or returns them to the company schedule when `days` is null.
+ * Open attendance sessions keep the expectations they started with; later days use the new week.
+ * Returns whether anything changed so callers audit real changes only.
+ */
+export async function replaceEmployeeWeek(
+  employeeId: string,
+  days: unknown,
+  actorId: string,
+  tx: repository.ScheduleTransaction,
+) {
+  await requireScheduleAdministrator(tx, actorId)
+  const week = days === null ? null : await parseCustomWeek(days, tx)
+  const context = await repository.employeeNotificationContext(tx, employeeId)
+  const companyWeek = await repository.readCurrentCompanyWeek(tx)
+  const before = context?.week ?? companyWeek
+  const after = week ?? companyWeek
+  const changed = await repository.replaceEmployeeWeek(
+    tx,
+    employeeId,
+    week,
+    actorId,
+  )
+  if (
+    changed &&
+    context &&
+    before &&
+    after &&
+    !sameWorkingWeek(before, after)
+  ) {
+    await deliverNotifications(tx, {
+      eventKey: `schedule:employee:${employeeId}:${randomUUID()}`,
+      recipientIds: [context.userId],
+      actorId,
+      title: 'სამუშაო განრიგი შეიცვალა',
+      body: `თქვენი სამუშაო კვირა განახლდა. მოქმედებს ${formatGeorgianDate((await repository.companyWorkdayAt(new Date(), tx)).date)} თარიღიდან.`,
+      destination: { kind: 'schedule' },
+    })
+  }
+  return changed
+}
+
+/** Self-service read: the subject is always the authenticated actor, and only their effective week is returned. */
+export function readOwnSchedule(actor: Actor): Promise<OwnSchedule> {
+  return repository.transactSchedules(async (tx) => {
+    const workday = await repository.companyWorkdayAt(new Date(), tx)
+    const context = { timezone: workday.timezone, today: workday.date }
+    const stored = await repository.readEmployeeWeekByUser(tx, actor.id)
+    if (stored) {
+      const own = employeeWorkingWeekSchema.safeParse(stored)
+      return own.success
+        ? { ...context, source: 'individual', week: own.data }
+        : { ...context, source: 'none', week: null }
+    }
+    const company = await repository.readCurrentCompanyWeek(tx)
+    return company
+      ? { ...context, source: 'company', week: company }
+      : { ...context, source: 'none', week: null }
+  })
+}
+
+/** Read-only company week shown beside employees that inherit it; carries no administration or audit fields. */
+export function readCompanyWeek() {
+  return repository.transactSchedules((tx) =>
+    repository.readCurrentCompanyWeek(tx),
+  )
+}
+
+/** The attendance service establishes ownership and active employment before calling this interface. */
+export function getEmployeeWorkday(
+  now: Date,
+  employeeId: string,
+  tx: repository.ScheduleTransaction,
+) {
+  return repository.employeeWorkdayAt(now, employeeId, tx)
+}
 
 /** Internal attendance interface; the caller establishes the active employee before reading expectations. */
 export function getCompanyWorkday(
@@ -37,7 +167,7 @@ async function authorize(
   )
     throw new AuthorizationError()
   assertPermission(
-    { ...actor, roles: parseRoles(identity.roles) },
+    { ...actor, ...currentAuthorization(identity) },
     'attendance.configure',
   )
   return actor
@@ -110,6 +240,9 @@ export async function saveScheduleVersion(actor: Actor | null, input: unknown) {
         `ახალი განრიგის პირველი შესაძლო თარიღია ${minimum}. განაახლეთ გვერდის მონაცემები.`,
       )
     const schedule = companyScheduleSchema.parse({ ...parsed.data, timezone })
+    const previous = (
+      await repository.hydrateVersions(tx, latest ? [latest] : [])
+    ).at(0)
     await repository.insertVersion(
       tx,
       schedule,
@@ -117,6 +250,27 @@ export async function saveScheduleVersion(actor: Actor | null, input: unknown) {
       // Schedule creation has a fixed audit action; administrators do not enter a free-text reason.
       'კომპანიის სამუშაო განრიგის შენახვა.',
     )
+    if (!previous || !sameWorkingWeek(previous.days, schedule.days)) {
+      for await (const recipientIds of repository.inheritingEmployeePages(tx))
+        await deliverNotifications(tx, {
+          eventKey: `schedule:company:${schedule.effectiveFrom}`,
+          recipientIds,
+          actorId: administrator.id,
+          title: 'კომპანიის სამუშაო განრიგი შეიცვალა',
+          body: `ახალი სამუშაო განრიგი მოქმედებს ${formatGeorgianDate(schedule.effectiveFrom)} თარიღიდან.`,
+          destination: { kind: 'schedule' },
+        })
+    }
     return { effectiveFrom: schedule.effectiveFrom }
   })
+}
+
+/** Internal vacation workflow interface. The caller checks current permissions and locks the target employee. */
+export function getVacationWorkingDates(
+  tx: repository.ScheduleTransaction,
+  userId: string,
+  startDate: string,
+  endDate: string,
+) {
+  return repository.vacationWorkingDates(tx, userId, startDate, endDate)
 }

@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from '#/components/ui/select'
 import { Checkbox } from '#/components/ui/checkbox'
-import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
 import { Spinner } from '#/components/ui/spinner'
 import { updateAttendanceReviewer } from '../attendance.functions'
@@ -44,7 +43,6 @@ export function AttendanceAssignmentForm({
       employeeId: '',
       reviewerId: '',
       revoke: false,
-      reason: '',
     },
     validators: { onSubmit: attendanceAssignmentSchema },
     onSubmit: async ({ value }) => {
@@ -71,17 +69,15 @@ export function AttendanceAssignmentForm({
       }}
     >
       <FieldGroup>
-        <p className="text-sm text-muted-foreground">
-          ხელმძღვანელს სჭირდება დასწრების განხილვის უფლება და კონკრეტული
-          თანამშრომლის მინიჭება. საკუთარი ჩანაწერის დადასტურება ან შესწორება
-          დაუშვებელია.
-        </p>
         {(['employeeId', 'reviewerId'] as const).map((name) => (
           <form.Field key={name} name={name}>
             {(field) => (
               <Field data-invalid={!field.state.meta.isValid}>
                 <FieldLabel htmlFor={name}>
                   {name === 'employeeId' ? 'თანამშრომელი' : 'ხელმძღვანელი'}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
                 </FieldLabel>
                 <Select
                   value={field.state.value || null}
@@ -95,6 +91,8 @@ export function AttendanceAssignmentForm({
                     className="w-full"
                     onBlur={field.handleBlur}
                     aria-invalid={!field.state.meta.isValid}
+                    aria-required="true"
+                    aria-describedby={`${name}-error`}
                   >
                     <SelectValue placeholder="აირჩიეთ" />
                   </SelectTrigger>
@@ -110,7 +108,10 @@ export function AttendanceAssignmentForm({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <FieldError errors={field.state.meta.errors} />
+                <FieldError
+                  id={`${name}-error`}
+                  errors={field.state.meta.errors}
+                />
               </Field>
             )}
           </form.Field>
@@ -118,7 +119,7 @@ export function AttendanceAssignmentForm({
         <form.Field name="revoke">
           {(field) => (
             <Field>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
                 <Checkbox
                   id="revoke-reviewer"
                   checked={field.state.value}
@@ -134,33 +135,17 @@ export function AttendanceAssignmentForm({
             </Field>
           )}
         </form.Field>
-        <form.Field name="reason">
-          {(field) => (
-            <Field data-invalid={!field.state.meta.isValid}>
-              <FieldLabel htmlFor="assignment-reason">
-                ცვლილების მიზეზი
-              </FieldLabel>
-              <Input
-                id="assignment-reason"
-                value={field.state.value}
-                onChange={(event) => field.handleChange(event.target.value)}
-                onBlur={field.handleBlur}
-                aria-invalid={!field.state.meta.isValid}
-              />
-              <FieldError errors={field.state.meta.errors} />
-            </Field>
-          )}
-        </form.Field>
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(pending) => (
             <Button
-              className="relative h-11 px-10"
+              className="relative min-w-40 self-end px-8"
+              depth="raised"
               type="submit"
               disabled={pending}
               aria-busy={pending}
             >
               {pending ? (
-                <Spinner className="absolute left-4" aria-hidden="true" />
+                <Spinner className="absolute left-3" aria-hidden="true" />
               ) : null}
               მინიჭების შენახვა
             </Button>

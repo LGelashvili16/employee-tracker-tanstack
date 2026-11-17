@@ -5,6 +5,7 @@ import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Spinner } from '#/components/ui/spinner'
 import { useModal } from '#/hooks/use-modal'
+import { formatGeorgianDate } from '#/lib/date-format'
 import { formatAttendanceDuration, formatWorkedTime } from '../attendance.rules'
 import { workDurationStatus } from '../attendance.presentation'
 import { useElapsedSeconds } from '../hooks/use-elapsed-seconds'
@@ -71,7 +72,7 @@ export function FinishWorkConfirmation({
           <div className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">
               {oldSession
-                ? `${workDate ?? ''} დღის აღრიცხული დრო`
+                ? `${workDate ? formatGeorgianDate(workDate) : ''} დღის აღრიცხული დრო`
                 : 'დღეს აღრიცხული დრო'}
             </span>
             <span

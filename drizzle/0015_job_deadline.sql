@@ -1,0 +1,2 @@
+ALTER TABLE "job" ADD COLUMN "deadline" date;--> statement-breakpoint
+ALTER TABLE "job" ADD CONSTRAINT "job_deadline_valid" CHECK ("job"."deadline" is null or "job"."deadline" between date '1900-01-01' and date '2100-12-31');

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { EmployeeDetailPage } from '#/features/employees/pages/employee-detail-page'
-import { employeesContent } from '#/features/employees/employees.content'
+import { UserDetailPage } from '#/features/access/pages/user-detail-page'
+import { accessContent } from '#/features/access/access.content'
 import { pageHead } from '#/lib/page-head'
 import { requirePagePermission } from '#/lib/auth/auth.functions'
 import { z } from 'zod'
@@ -13,11 +13,11 @@ export const Route = createFileRoute(
     parse: (params) => z.object({ employeeId: recordIdSchema }).parse(params),
   },
   beforeLoad: () =>
-    requirePagePermission({ data: { permission: 'employees.read' } }),
+    requirePagePermission({ data: { permission: 'employees.manage' } }),
   head: () =>
     pageHead(
-      employeesContent.employeeDetail.title,
-      employeesContent.employeeDetail.description,
+      accessContent.userDetail.title,
+      accessContent.userDetail.description,
     ),
-  component: EmployeeDetailPage,
+  component: UserDetailPage,
 })

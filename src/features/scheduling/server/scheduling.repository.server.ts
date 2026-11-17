@@ -1,5 +1,5 @@
 import '@tanstack/react-start/server-only'
-import { and, asc, desc, eq, gt, inArray, lte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, isNull, lte, sql } from 'drizzle-orm'
 import { db } from '#/db'
 import {
   companySchedule,
@@ -7,15 +7,137 @@ import {
   companyScheduleAudit,
   user,
   employee,
+  employeeWorkSchedule,
 } from '#/db/schema'
 import type { CompanySchedule } from '../scheduling.schemas'
-import { companyLocalDate } from '../scheduling.rules'
+import { companyLocalDate, sameWorkingWeek } from '../scheduling.rules'
 import type { CompanyWorkday } from '../scheduling.types'
+import { employeeWorkingWeekSchema } from '../scheduling.schemas'
 
 export type ScheduleTransaction = Parameters<
   Parameters<typeof db.transaction>[0]
 >[0]
 export const transactSchedules = db.transaction.bind(db)
+
+export async function insertEmployeeWeek(
+  tx: ScheduleTransaction,
+  employeeId: string,
+  days: typeof employeeWorkSchedule.$inferInsert.days,
+  actorId: string,
+) {
+  await tx
+    .insert(employeeWorkSchedule)
+    .values({ employeeId, days, assignedBy: actorId })
+}
+
+/** Locks the existing row so concurrent edits of one employee cannot interleave; returns whether the stored week changed. */
+export async function replaceEmployeeWeek(
+  tx: ScheduleTransaction,
+  employeeId: string,
+  days: typeof employeeWorkSchedule.$inferInsert.days | null,
+  actorId: string,
+) {
+  const existing = (
+    await tx
+      .select({ days: employeeWorkSchedule.days })
+      .from(employeeWorkSchedule)
+      .where(eq(employeeWorkSchedule.employeeId, employeeId))
+      .for('update')
+  ).at(0)
+  if (days === null) {
+    if (!existing) return false
+    await tx
+      .delete(employeeWorkSchedule)
+      .where(eq(employeeWorkSchedule.employeeId, employeeId))
+    return true
+  }
+  if (existing && sameWorkingWeek(existing.days, days)) return false
+  await tx
+    .insert(employeeWorkSchedule)
+    .values({ employeeId, days, assignedBy: actorId })
+    .onConflictDoUpdate({
+      target: employeeWorkSchedule.employeeId,
+      set: { days, assignedBy: actorId, createdAt: new Date() },
+    })
+  return true
+}
+
+/** Employee records are linked to accounts one to one, so the signed-in account identifies the assignment. */
+export async function readEmployeeWeekByUser(
+  tx: ScheduleTransaction,
+  userId: string,
+) {
+  const row = (
+    await tx
+      .select({ days: employeeWorkSchedule.days })
+      .from(employee)
+      .innerJoin(
+        employeeWorkSchedule,
+        eq(employeeWorkSchedule.employeeId, employee.id),
+      )
+      .where(eq(employee.userId, userId))
+      .limit(1)
+  ).at(0)
+  return row?.days ?? null
+}
+
+export async function readCurrentCompanyWeek(tx: ScheduleTransaction) {
+  const today = (await companyWorkdayAt(new Date(), tx)).date
+  const { current } = await readVersions(tx, today)
+  const hydrated = (await hydrateVersions(tx, current ? [current] : [])).at(0)
+  return hydrated?.days ?? null
+}
+
+export async function employeeWorkdayAt(
+  now: Date,
+  employeeId: string,
+  tx: ScheduleTransaction,
+): Promise<CompanyWorkday> {
+  const base = await companyWorkdayAt(now, tx)
+  const assignment = (
+    await tx
+      .select()
+      .from(employeeWorkSchedule)
+      .where(eq(employeeWorkSchedule.employeeId, employeeId))
+      .limit(1)
+  ).at(0)
+  if (!assignment) return base
+  const empty: CompanyWorkday = {
+    ...base,
+    kind: 'unconfigured',
+    start: null,
+    end: null,
+    startsAt: null,
+    endsAt: null,
+  }
+  if (!base.effectiveFrom) return empty
+  const parsed = employeeWorkingWeekSchema.safeParse(assignment.days)
+  if (!parsed.success) return empty
+  const weekday = new Date(`${base.date}T12:00:00Z`).getUTCDay() || 7
+  const hours = parsed.data.find((day) => day.weekday === weekday)?.hours
+  if (!hours) return { ...empty, kind: 'day_off' }
+  const start = sql`(${base.date}::date + ${hours.start}::time) at time zone ${base.timezone}`
+  const end = sql`(${base.date}::date + ${hours.end}::time) at time zone ${base.timezone}`
+  const record = (
+    await tx
+      .select({
+        startsAt: sql<Date>`${start}`.mapWith(companySchedule.createdAt),
+        endsAt: sql<Date>`${end}`.mapWith(companySchedule.createdAt),
+        valid: sql<boolean>`to_char((${start}) at time zone ${base.timezone}, 'HH24:MI') = ${hours.start} and to_char((${end}) at time zone ${base.timezone}, 'HH24:MI') = ${hours.end}`,
+      })
+      .from(employeeWorkSchedule)
+      .where(eq(employeeWorkSchedule.employeeId, employeeId))
+  ).at(0)
+  if (!record?.valid || record.endsAt <= record.startsAt) return empty
+  return {
+    ...base,
+    kind: 'scheduled',
+    start: hours.start,
+    end: hours.end,
+    startsAt: record.startsAt.toISOString(),
+    endsAt: record.endsAt.toISOString(),
+  }
+}
 
 /** Shared singleton lock also serializes the first write, when there is no schedule row to lock. */
 export async function lockScheduleTimeline(tx: ScheduleTransaction) {
@@ -26,7 +148,11 @@ export async function currentAccount(tx: ScheduleTransaction, actorId: string) {
   // Share locks keep suspension/role and employment changes from racing this transaction.
   const identity = (
     await tx
-      .select({ roles: user.roles, state: user.accessState })
+      .select({
+        roles: user.roles,
+        permissionOverrides: user.permissionOverrides,
+        state: user.accessState,
+      })
       .from(user)
       .where(eq(user.id, actorId))
       .for('share')
@@ -187,5 +313,74 @@ export async function companyWorkdayAt(
     end: record.end.slice(0, 5),
     startsAt: record.startsAt.toISOString(),
     endsAt: record.endsAt.toISOString(),
+  }
+}
+
+/** Bounded inclusive dates for paid-vacation charging. The caller owns authorization and the employee lock. */
+export async function vacationWorkingDates(
+  tx: ScheduleTransaction,
+  userId: string,
+  startDate: string,
+  endDate: string,
+) {
+  await tx.execute(sql`select pg_advisory_xact_lock_shared(812734, 1)`)
+  const result = await tx.execute<{
+    date: string
+    working: boolean
+    configured: boolean
+  }>(sql`
+    select dates.day::date::text as date, version.effective_from is not null as configured,
+      case when assignment.days is not null then exists (
+        select 1 from jsonb_array_elements(assignment.days) item
+        where (item->>'weekday')::int = extract(isodow from dates.day)::int and item->'hours' <> 'null'::jsonb
+      ) else weekday.start_time is not null and weekday.end_time is not null end as working
+    from generate_series(${startDate}::date, ${endDate}::date, '1 day'::interval) dates(day)
+    left join lateral (select effective_from from company_schedule where effective_from <= dates.day::date order by effective_from desc limit 1) version on true
+    left join company_schedule_day weekday on weekday.effective_from = version.effective_from and weekday.weekday = extract(isodow from dates.day)::int
+    left join employee person on person.user_id = ${userId}
+    left join employee_work_schedule assignment on assignment.employee_id = person.id
+  `)
+  return result.rows
+}
+
+export async function employeeNotificationContext(
+  tx: ScheduleTransaction,
+  employeeId: string,
+) {
+  const person = (
+    await tx
+      .select({ userId: employee.userId })
+      .from(employee)
+      .where(eq(employee.id, employeeId))
+      .for('update')
+  ).at(0)
+  if (!person) return null
+  return { ...person, week: await readEmployeeWeekByUser(tx, person.userId) }
+}
+
+export async function* inheritingEmployeePages(tx: ScheduleTransaction) {
+  let cursor = ''
+  for (;;) {
+    const people = await tx
+      .select({ userId: employee.userId })
+      .from(employee)
+      .innerJoin(user, eq(user.id, employee.userId))
+      .leftJoin(
+        employeeWorkSchedule,
+        eq(employeeWorkSchedule.employeeId, employee.id),
+      )
+      .where(
+        and(
+          gt(employee.userId, cursor),
+          eq(employee.status, 'active'),
+          eq(user.accessState, 'active'),
+          isNull(employeeWorkSchedule.employeeId),
+        ),
+      )
+      .orderBy(asc(employee.userId))
+      .limit(500)
+    if (!people.length) return
+    yield people.map((person) => person.userId)
+    cursor = people[people.length - 1].userId
   }
 }

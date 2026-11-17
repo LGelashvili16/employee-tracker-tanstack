@@ -1,13 +1,140 @@
 import '@tanstack/react-start/server-only'
 import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm'
 import { db } from '#/db'
-import { attendanceSession, employee, user } from '#/db/schema'
+import { attendanceAudit, attendanceSession, employee, user } from '#/db/schema'
 import type { AttendanceDay } from '../attendance.types'
+import type { SQL } from 'drizzle-orm'
+import { MAX_WORKDAY_SECONDS } from '../attendance.rules'
 
 export type AttendanceTransaction = Parameters<
   Parameters<typeof db.transaction>[0]
 >[0]
 export const transactAttendance = db.transaction.bind(db)
+
+const workdayLimit = sql`${MAX_WORKDAY_SECONDS} * interval '1 second'`
+
+function closedWorkdayDurationSql(employeeId: SQL, workDate: SQL) {
+  return sql`coalesce((select sum(completed.ended_at-completed.started_at)
+    from ${attendanceSession} completed where completed.employee_id=${employeeId}
+      and completed.work_date=${workDate} and completed.ended_at is not null), interval '0 seconds')`
+}
+
+/** The retained work date, rather than midnight or a new interval, owns the limit. */
+export function workdayAutomaticCutoffSql(
+  employeeId: SQL,
+  workDate: SQL,
+  startedAt: SQL,
+) {
+  return sql`${startedAt} + greatest(interval '0 seconds', ${workdayLimit}-${closedWorkdayDurationSql(employeeId, workDate)})`
+}
+
+export async function workdayLimitReached(
+  tx: AttendanceTransaction,
+  employeeId: string,
+  workDate: string,
+) {
+  const result = await tx.execute<{ reached: boolean }>(
+    sql`select ${closedWorkdayDurationSql(sql`${employeeId}`, sql`${workDate}::date`)} >= ${workdayLimit} as reached`,
+  )
+  return result.rows[0].reached
+}
+
+export async function automaticCheckoutDue(
+  tx: AttendanceTransaction,
+  employeeId: string,
+  workDate: string,
+  startedAt: Date,
+  now: Date,
+) {
+  const result = await tx.execute<{ due: boolean }>(
+    sql`select ${workdayAutomaticCutoffSql(sql`${employeeId}`, sql`${workDate}::date`, sql`${startedAt}::timestamptz`)} <= ${now}::timestamptz as due`,
+  )
+  return result.rows[0].due
+}
+
+export async function employeeDaySessions(
+  tx: AttendanceTransaction,
+  employeeId: string,
+  date: string,
+  page: number,
+) {
+  return tx
+    .select({
+      id: attendanceSession.id,
+      startedBy: sql<
+        string | null
+      >`(select u.name from attendance_punch p join "user" u on u.id = p.actor_id where p.session_id = attendance_session.id and p.kind = 'in')`,
+      endedBy: sql<
+        string | null
+      >`(select u.name from attendance_punch p join "user" u on u.id = p.actor_id where p.session_id = attendance_session.id and p.kind = 'out')`,
+      timezone: attendanceSession.timezone,
+      startedAt: attendanceSession.startedAt,
+      endedAt: attendanceSession.endedAt,
+      originalStartedAt: attendanceSession.originalStartedAt,
+      originalEndedAt: attendanceSession.originalEndedAt,
+      autoClosedAt: attendanceSession.autoClosedAt,
+      reviewState: attendanceSession.reviewState,
+      // Qualify the correlated ID explicitly: single-table Drizzle projections otherwise unqualify column references.
+      corrected: sql<boolean>`exists (select 1 from ${attendanceAudit} where ${attendanceAudit.targetId} = attendance_session.id::text and ${attendanceAudit.action} = 'attendance.corrected')`,
+    })
+    .from(attendanceSession)
+    .where(
+      and(
+        eq(attendanceSession.employeeId, employeeId),
+        eq(attendanceSession.workDate, date),
+      ),
+    )
+    .orderBy(desc(attendanceSession.startedAt), desc(attendanceSession.id))
+    .limit(21)
+    .offset(page * 20)
+}
+
+/** Project only attendance correction details belonging to this authenticated employee. */
+export async function employeeCorrections(
+  tx: AttendanceTransaction,
+  employeeId: string,
+  page: number,
+) {
+  const rows = await tx
+    .select({
+      id: attendanceAudit.id,
+      actorName: user.name,
+      reason: attendanceAudit.reason,
+      createdAt: attendanceAudit.createdAt,
+      workDate: attendanceSession.workDate,
+      timezone: attendanceSession.timezone,
+      beforeStart: sql<string>`${attendanceAudit.before}->>'startedAt'`,
+      beforeEnd: sql<string | null>`${attendanceAudit.before}->>'endedAt'`,
+      afterStart: sql<string>`${attendanceAudit.after}->>'startedAt'`,
+      afterEnd: sql<string | null>`${attendanceAudit.after}->>'endedAt'`,
+    })
+    .from(attendanceAudit)
+    .innerJoin(
+      attendanceSession,
+      sql`${attendanceSession.id}::text = ${attendanceAudit.targetId}`,
+    )
+    .innerJoin(user, eq(user.id, attendanceAudit.actorId))
+    .where(
+      and(
+        eq(attendanceSession.employeeId, employeeId),
+        eq(attendanceAudit.action, 'attendance.corrected'),
+      ),
+    )
+    .orderBy(desc(attendanceAudit.createdAt), desc(attendanceAudit.id))
+    .limit(21)
+    .offset(page * 20)
+  return {
+    items: rows
+      .slice(0, 20)
+      .map(({ beforeStart, beforeEnd, afterStart, afterEnd, ...row }) => ({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+        before: { startedAt: beforeStart, endedAt: beforeEnd },
+        after: { startedAt: afterStart, endedAt: afterEnd },
+      })),
+    hasMore: rows.length > 20,
+  }
+}
 
 export async function employeeForActor(
   tx: AttendanceTransaction,
@@ -135,6 +262,7 @@ export async function attendanceDays(
   since?: string,
 ): Promise<Array<AttendanceDay>> {
   const actualEnd = sql`coalesce(${attendanceSession.endedAt}, ${now}::timestamptz)`
+  const scheduled = sql`${attendanceSession.expectedEndAt} > ${attendanceSession.expectedStartAt}`
   const beforeSchedule = sql`greatest(0, extract(epoch from (least(${actualEnd}, ${attendanceSession.expectedStartAt}) - ${attendanceSession.startedAt})))`
   const afterSchedule = sql`greatest(0, extract(epoch from (${actualEnd} - greatest(${attendanceSession.startedAt}, ${attendanceSession.expectedEndAt}))))`
   const rows = await tx
@@ -152,16 +280,16 @@ export async function attendanceDays(
           Number,
         ),
       lateSeconds:
-        sql<number>`greatest(0, extract(epoch from (min(${attendanceSession.startedAt}) - min(${attendanceSession.expectedStartAt}))))`.mapWith(
+        sql<number>`greatest(0, extract(epoch from (min(${attendanceSession.startedAt}) filter (where ${scheduled}) - min(${attendanceSession.expectedStartAt}) filter (where ${scheduled}))))`.mapWith(
           Number,
         ),
       earlySeconds:
-        sql<number>`case when bool_or(${attendanceSession.endedAt} is null) then 0 else greatest(0, extract(epoch from (max(${attendanceSession.expectedEndAt}) - max(${attendanceSession.endedAt})))) end`.mapWith(
+        sql<number>`case when bool_or(${attendanceSession.endedAt} is null) then 0 else greatest(0, extract(epoch from (max(${attendanceSession.expectedEndAt}) filter (where ${scheduled}) - max(${attendanceSession.endedAt}) filter (where ${scheduled})))) end`.mapWith(
           Number,
         ),
       incomplete: sql<boolean>`bool_or(${attendanceSession.endedAt} is null)`,
       earlyStartSeconds:
-        sql<number>`greatest(0, extract(epoch from (min(${attendanceSession.expectedStartAt}) - min(${attendanceSession.startedAt}))))`.mapWith(
+        sql<number>`greatest(0, extract(epoch from (min(${attendanceSession.expectedStartAt}) filter (where ${scheduled}) - min(${attendanceSession.startedAt}) filter (where ${scheduled}))))`.mapWith(
           Number,
         ),
       outsideSeconds:
@@ -178,8 +306,8 @@ export async function attendanceDays(
         sql<number>`count(*) filter (where ${attendanceSession.reviewState} = 'rejected')`.mapWith(
           Number,
         ),
-      requiresReview: sql<boolean>`bool_or(${attendanceSession.endedAt} is null and ${now}::timestamptz - ${attendanceSession.startedAt} >= ${attendanceSession.maxOpenHours} * interval '1 hour')`,
-      corrected: sql<boolean>`bool_or((${attendanceSession.originalStartedAt} is not null and ${attendanceSession.originalStartedAt} <> ${attendanceSession.startedAt}) or (${attendanceSession.endedAt} is not null and (${attendanceSession.originalEndedAt} is null or ${attendanceSession.originalEndedAt} <> ${attendanceSession.endedAt})))`,
+      requiresReview: sql<boolean>`bool_or((${attendanceSession.endedAt} is null and ${now}::timestamptz - ${attendanceSession.startedAt} >= ${attendanceSession.maxOpenHours} * interval '1 hour') or (${attendanceSession.autoClosedAt} is not null and ${attendanceSession.reviewState} = 'pending'))`,
+      corrected: sql<boolean>`bool_or((${attendanceSession.originalStartedAt} is not null and ${attendanceSession.originalStartedAt} <> ${attendanceSession.startedAt}) or (${attendanceSession.endedAt} is not null and (coalesce(${attendanceSession.originalEndedAt}, ${attendanceSession.autoClosedAt}) is null or coalesce(${attendanceSession.originalEndedAt}, ${attendanceSession.autoClosedAt}) <> ${attendanceSession.endedAt})))`,
     })
     .from(attendanceSession)
     .where(

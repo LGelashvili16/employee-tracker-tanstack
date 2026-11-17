@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { IconArrowRight, IconKey } from '@tabler/icons-react'
 import { Button } from '#/components/ui/button'
 import {
   Card,
@@ -11,33 +12,38 @@ import { authContent } from '../auth.content'
 
 export function ForgotPasswordPage() {
   return (
-    <Card>
-      <CardHeader>
+    <Card className="w-full py-8 shadow-sm sm:px-4 sm:py-10">
+      <CardHeader className="flex flex-col items-center gap-4 text-center">
+        <span
+          aria-hidden="true"
+          className="flex size-16 items-center justify-center rounded-full bg-muted text-foreground ring-8 ring-muted/50"
+        >
+          <IconKey className="size-8" />
+        </span>
         <CardTitle>
-          <h1 className="text-2xl">{authContent.forgotPassword.title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {authContent.forgotPassword.title}
+          </h1>
         </CardTitle>
-        <CardDescription>
-          {authContent.forgotPassword.description}
+        <CardDescription className="max-w-sm leading-6">
+          აღდგენის კოდის მისაღებად დაუკავშირდით კომპანიის ადმინისტრატორს. კოდი
+          მოქმედებს 15 წუთის განმავლობაში.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
-        <p className="text-sm leading-7">
-          დაუკავშირდით კომპანიის ადმინისტრატორს. პირადობის გადამოწმების შემდეგ
-          მიიღებთ ერთჯერად კოდს, რომელიც 15 წუთის განმავლობაში მოქმედებს. ახალი
-          ანგარიშის შექმნა საჭირო არ არის.
-        </p>
+      <CardContent className="flex flex-col gap-3">
         <Button
           nativeButton={false}
           role="link"
-          className="w-full"
+          className="h-10 w-full"
           render={<Link to="/auth/reset-password" />}
         >
           უკვე მაქვს აღდგენის კოდი
+          <IconArrowRight aria-hidden="true" />
         </Button>
         <Button
           nativeButton={false}
           role="link"
-          className="w-full"
+          className="h-10 w-full"
           variant="outline"
           render={<Link to="/auth/login" />}
         >

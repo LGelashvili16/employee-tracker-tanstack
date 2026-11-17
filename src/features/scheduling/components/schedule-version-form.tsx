@@ -6,6 +6,7 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Spinner } from '#/components/ui/spinner'
 import { toast } from 'sonner'
+import { formatGeorgianDate } from '#/lib/date-format'
 import {
   Field,
   FieldError,
@@ -22,7 +23,6 @@ import {
   IconCalendarWeek,
   IconBell,
   IconCalendarClock,
-  IconInfoCircle,
 } from '@tabler/icons-react'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
@@ -91,7 +91,7 @@ export function ScheduleVersionForm({
       // Report the confirmed save separately from cache refresh, which can fail independently.
       setSaved(true)
       toast.success('განრიგი შენახულია.', {
-        description: `ძალაში შესვლის თარიღი: ${result.value.effectiveFrom}.`,
+        description: `ძალაში შესვლის თარიღი: ${formatGeorgianDate(result.value.effectiveFrom)}.`,
       })
       await client.invalidateQueries({ queryKey: scheduleSettingsKey(actorId) })
     },
@@ -156,9 +156,6 @@ export function ScheduleVersionForm({
                     </CardHeader>
                     <CardContent>
                       {renderFields(disabled, ['effectiveFrom', 'timezone'])}
-                      {/* <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                        დროის სარტყელი პირველი შენახვის შემდეგ ფიქსირდება.
-                      </p> */}
                     </CardContent>
                   </Card>
                   <Card>
@@ -180,17 +177,7 @@ export function ScheduleVersionForm({
                   </Card>
                 </FieldGroup>
               </div>
-              <div className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
-                <IconInfoCircle
-                  className="mt-1 size-4 shrink-0"
-                  aria-hidden="true"
-                />
-                <p>
-                  შეხსენებების გაგზავნა ჯერ მიუწვდომელია. აქ ინახება მათი დროის
-                  პარამეტრები.
-                </p>
-              </div>
-              <footer className="sticky bottom-4 z-10 flex justify-end rounded-xl border bg-card p-4 shadow-lg">
+              <footer className="flex justify-end">
                 <Button
                   type="submit"
                   className="relative min-h-10 px-10"

@@ -35,7 +35,7 @@ export function AuthWelcome({
           </div>
         ) : null}
         <h2 className="max-w-lg text-4xl font-semibold leading-relaxed tracking-tight xl:text-5xl">
-          თქვენი გუნდი.
+          თქვენი თანამშრომლები.
           <br />
           ერთ სივრცეში.
         </h2>

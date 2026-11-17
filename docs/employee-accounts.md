@@ -1,6 +1,6 @@
 # Employee accounts
 
-Employees cannot create accounts themselves. An authorized administrator provisions
+Employees cannot create accounts themselves. An authorized employee manager provisions
 one company employee and one linked Better Auth identity in a transaction. The
 employee then sets their own password using a one-time activation code.
 
@@ -18,8 +18,8 @@ database advisory lock so two operators cannot bootstrap separate owners concurr
 
 The command deliberately displays a new activation code once to the operator. Treat
 this output as a credential; do not capture it in shared logs or commit it. Open
-`/auth/register`, enter that code, and choose a password of at least 12 characters.
-Then log in with the company code and that password. No initial password is shared.
+`/auth/register`, enter that code, and choose a password of at least 8 characters.
+Then log in with the username and that password. No initial password is shared.
 
 If the original owner code expires or the owner loses access, a database operator
 can recover the existing owner rather than create a duplicate:
@@ -32,23 +32,32 @@ This operator-only path revokes existing sessions and challenges, restores the s
 owner identity, audits the reason, and displays an activation or reset code once.
 It is never exposed by an HTTP route or server function.
 
-## Administrator workflow
+## Employee management workflow
 
-Open `/admin/users`. The route and every server function independently require
-`admin.access` and `users.manage`. Choose an immutable employee code, full name,
-optional contact email, role, and administrative reason. Management-role assignment
+Employee creation and account management live under the management sidebar group. The existing `hr_manager` role (HR), administrators, and owners can use this workflow. HR may create ordinary employee accounts and manage their profile and access lifecycle. Assigning a management role, including HR, still requires `roles.manage`; administrator/owner creation remains excluded. Company schedule changes require `attendance.configure`, which HR managers now hold. Old admin user routes have been deleted; employee links use the management routes directly. The `$employeeId` route parameter carries the linked auth user ID, preserving existing account links.
+
+Open `/manage/employees`. The route and every server function independently require
+`manage.access` and `employees.manage`. Choose an immutable username, full name,
+optional email, job title, phone number, and role. Account creation records an automatic audit reason;
+subsequent access changes still require an administrative reason. Management-role assignment
 also requires `roles.manage`. This screen cannot create administrators or owners.
 
-Employee codes are normalized to lowercase and become Better Auth usernames.
-Database constraints enforce unique codes, unique usernames, one employee record
+Usernames are normalized to lowercase. Migration `0010_employee_username.sql` renames `employee.code` to `employee.username`, including its unique index and normalization constraint, without recreating employee records. Better Auth's username plugin is already enabled on the server, provisioning instance, and client; its auth-owned `user.username` column and typed SDK require no regeneration for this employee-table rename. Existing administrative request/response keys named `code` remain compatibility aliases for the username; activation and reset codes remain separate secrets.
+Database constraints enforce unique usernames in each table, one employee record
 per auth account, and one credential record per auth account. Do not assign a new
-code to an existing person returning to work; restore their original record.
-An administrator can still mistakenly enter the same person under another code;
+username to an existing person returning to work; restore their original record.
+An administrator can still mistakenly enter the same person under another username;
 the employee roster remains the source for identifying people, not email addresses.
 
 The first activation code expires after 24 hours. It is shown only in the response
 dialog and is not persisted in Query or browser storage. Close the dialog to discard
 the UI copy. Deliver the code privately after verifying the employee's identity.
+
+Codes are 12 characters from a 32-symbol alphabet without look-alikes (no I, O, 0, 1),
+about 60 bits of randomness, displayed as `XXXX-XXXX-XXXX`. Employees may type them in
+lowercase, with or without dashes or spaces. That is ample because a code is single-use,
+stored only as a SHA-256 hash, expires within hours, and the redeem endpoints are
+rate limited. The rules live in `access.rules.ts`.
 
 - An invited employee can receive a replacement activation code.
 - An active employee can receive a password-reset code that expires after 15 minutes.
@@ -59,7 +68,7 @@ the UI copy. Deliver the code privately after verifying the employee's identity.
   never activated still needs a new activation code. Inactive employment independently
   blocks login, activation, and password reset; account restoration cannot override it.
 - An administrator cannot suspend or reset themselves through this administrative
-  interface. Acting on an owner/admin account requires an owner. The operator
+  interface. Acting on an owner account requires an owner. Platform account administrators may manage other administrators; HR cannot. The operator
   recovery command is the emergency route for an inaccessible sole owner.
 
 Privileged operations re-read and lock the acting account and target account.
@@ -81,15 +90,55 @@ The main auth handler keeps public signup, public identity updates, and
 username-availability lookup disabled. Self-service password change remains under
 Better Auth's existing credential checks.
 
-The login page accepts a company code through Better Auth's username plugin. Existing
-accounts with real auth email can continue using email login. Stored real employee
-contact email is not automatically a login alias, verified identity, or recovery
-channel. Email delivery is not configured; recovery currently uses administrator codes.
+The login page accepts a username or email through Better Auth's native sign-in methods.
+New accounts with email use the normalized email as their auth identity as well as contact email.
+Better Auth enforces email uniqueness; activation is still required before either sign-in method works.
+Existing accounts retain their current auth email; older contact-only addresses are not silently promoted to login identities.
+Email is not marked verified by provisioning. Email delivery is not configured; recovery still uses administrator-issued codes.
+
+## Editing details after creation
+
+Who may change what:
+
+- **Employee managers** (`manage.access` and `employees.manage`) edit full name, email, job title and
+  phone from the account page `/manage/employees/$employeeId` (the lean list on `/manage/employees` links to it;
+  button "რედაქტირება"). No free-text reason is required. The server records a fixed
+  action description, the authenticated actor, target account and timestamp as `account.details_updated`. The username and role cannot be edited here, and the
+  usual target rules apply (not yourself, owner required for admin/owner accounts).
+- **Employees** edit only their own phone number on `/settings/profile`. The subject is always
+  the signed-in account; no identifier is accepted from the browser.
+- **Email** changes require employee-management access because email is not verified yet. For accounts that
+  sign in with email, the login email follows the contact email, must stay unique, and cannot be
+  removed. For email-less accounts the address is stored as contact information only.
+- **Passwords** are changed by the employee on `/settings/security` (current password required,
+  other devices are signed out, five attempts per minute). A forgotten password goes through
+  `/auth/forgot-password`: the administrator issues a reset code and the employee redeems it on
+  `/auth/reset-password`.
+
+## Assigned working week
+
+New employees inherit the effective company schedule by default. An employee manager with
+`attendance.configure` may instead assign a complete seven-day recurring week during creation.
+Each day specifies start/end hours or explicitly marks a day off. The company timezone
+remains authoritative, and an active company schedule must exist before a custom assignment.
+The assignment and account are saved in one transaction, with the assigning actor retained.
+For example, office staff can work Monday through Friday while another employee inherits Saturday work.
+Existing employees without an assignment continue using company defaults. Open sessions retain
+their original expected times.
+
+An employee manager with `attendance.configure` can later replace the week, or return the employee
+to the company schedule, from "რედაქტირება" on the account page `/manage/employees/$employeeId`. The
+change records the authenticated actor, target account, timestamp and a fixed server-owned description
+as `account.schedule_updated` only when the
+week really changed. Administrators without that permission do not see the schedule section and
+the server rejects the attempt. The account page shows the effective week as a seven-day strip,
+labelled "ინდივიდუალური" or "კომპანიის განრიგი". Employees see their own effective week, with
+today highlighted, on `/schedule`; it is read-only and is served for the signed-in account only.
 
 ## Required auth email field
 
 Better Auth still requires an email-shaped protocol identifier. Newly provisioned
-employees receive a random `employee-<identifier>@accounts.teamwork.invalid`. The reserved `.invalid`
+employees without email receive a random `employee-<identifier>@accounts.teamwork.invalid`. The reserved `.invalid`
 domain cannot deliver mail and is never presented as an employee contact address.
 Real optional contact email lives on the employee record, and the application actor
 projection exposes that value or null. Do not send verification or recovery email
@@ -122,3 +171,9 @@ The integration suite requires a local PostgreSQL connection with permission to
 create databases. It creates a uniquely named test database, applies all migrations,
 and drops that database afterward. It refuses remote database hosts and does not
 provision test employees in the development employee roster.
+
+## Platform account controls
+
+Employee creation and HR profile management remain under `/manage/employees`. Administrators use `/admin/access` for all login identities, their role memberships and individual permission exceptions, suspension/restoration, and session revocation. This is an access directory, not a duplicate employee profile workflow. Owner accounts and self-access are protected. Apply migration `0016_user_permission_overrides.sql` before deploying these controls. It was applied to the verified local development database; other environments must run their normal reviewed migrations.
+
+Employee role choices use the shared authorization schema: თანამშრომელი, წარმოების სპეციალისტი, წარმოების უფროსი, გაყიდვების მენეჯერი, and HR, in that order. Admin and protected owner roles are excluded from employee creation and remain available only through their existing privileged workflows. The retired operations role is no longer accepted by provisioning or access administration.

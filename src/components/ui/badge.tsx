@@ -18,6 +18,9 @@ const badgeVariants = cva(
           'bg-badge-yellow text-badge-yellow-foreground [a]:hover:bg-badge-yellow/80',
         orange:
           'bg-badge-orange text-badge-orange-foreground [a]:hover:bg-badge-orange/80',
+        blue: 'bg-badge-blue text-badge-blue-foreground [a]:hover:bg-badge-blue/80',
+        purple:
+          'bg-badge-purple text-badge-purple-foreground [a]:hover:bg-badge-purple/80',
         secondary:
           'bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80',
         destructive:

@@ -1,6 +1,14 @@
-import { FeaturePage } from '#/components/common/feature-page'
-import { companySettingsContent } from '../company-settings.content'
+import { PlannedFeaturePage } from '#/components/common/planned-feature-page'
 
 export function CompanySettingsPage() {
-  return <FeaturePage {...companySettingsContent.companySettings} />
+  return (
+    <PlannedFeaturePage
+      title="კომპანიის პარამეტრები"
+      items={[
+        'კომპანიის დასახელების, ლოგოსა და საკონტაქტო ინფორმაციის მართვა.',
+        'სამუშაო სივრცის ბრენდინგისა და ანგარიშებში გამოყენებული კომპანიის მონაცემების გამართვა.',
+        'მნიშვნელოვანი პარამეტრების ცვლილებების ისტორია და პასუხისმგებელი მომხმარებლის ჩვენება.',
+      ]}
+    />
+  )
 }

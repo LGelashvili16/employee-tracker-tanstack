@@ -1,0 +1,2 @@
+ALTER TABLE "attendance_security_policy" ADD COLUMN "browser_approval_required" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "attendance_security_policy" ADD CONSTRAINT "attendance_security_passkey_requires_browser" CHECK (not "attendance_security_policy"."passkey_required" or "attendance_security_policy"."browser_approval_required");
