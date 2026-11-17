@@ -24,55 +24,57 @@ export function NotificationsPage() {
   const [offset, setOffset] = useState(0)
   const query = useQuery(notificationsQueryOptions(actor.id, pageSize, offset))
   return (
-    <FeaturePage {...notificationsContent.notifications}>
-      <Card className="w-full max-w-3xl">
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>თქვენი შეტყობინებები</CardTitle>
-            {query.data && !query.isError ? (
-              <Badge variant="secondary">
-                {query.data.unseenCount} წაუკითხავი
-              </Badge>
-            ) : null}
-          </div>
-          <CardDescription>
-            {notificationsContent.notifications.description}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-2">
-          <NotificationsFeed
-            actorId={actor.id}
-            limit={pageSize}
-            offset={offset}
-          />
-        </CardContent>
-        <CardFooter className="flex flex-wrap justify-between gap-3">
-          <Button
-            variant="outline"
-            disabled={offset === 0 || query.isFetching}
-            onClick={() =>
-              setOffset((current) => Math.max(0, current - pageSize))
-            }
-          >
-            წინა
-          </Button>
-          <span className="text-sm text-muted-foreground" aria-live="polite">
-            გვერდი {offset / pageSize + 1}
-          </span>
-          <Button
-            variant="outline"
-            disabled={
-              !query.data?.hasMore ||
-              query.isFetching ||
-              query.isError ||
-              offset >= 100000
-            }
-            onClick={() => setOffset((current) => current + pageSize)}
-          >
-            შემდეგი
-          </Button>
-        </CardFooter>
-      </Card>
-    </FeaturePage>
+    <div className="mx-auto w-full max-w-3xl">
+      <FeaturePage {...notificationsContent.notifications}>
+        <Card className="w-full">
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle>თქვენი შეტყობინებები</CardTitle>
+              {query.data && !query.isError ? (
+                <Badge variant="secondary">
+                  {query.data.unseenCount} წაუკითხავი
+                </Badge>
+              ) : null}
+            </div>
+            <CardDescription>
+              {notificationsContent.notifications.description}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-2">
+            <NotificationsFeed
+              actorId={actor.id}
+              limit={pageSize}
+              offset={offset}
+            />
+          </CardContent>
+          <CardFooter className="flex flex-wrap justify-between gap-3">
+            <Button
+              variant="outline"
+              disabled={offset === 0 || query.isFetching}
+              onClick={() =>
+                setOffset((current) => Math.max(0, current - pageSize))
+              }
+            >
+              წინა
+            </Button>
+            <span className="text-sm text-muted-foreground" aria-live="polite">
+              გვერდი {offset / pageSize + 1}
+            </span>
+            <Button
+              variant="outline"
+              disabled={
+                !query.data?.hasMore ||
+                query.isFetching ||
+                query.isError ||
+                offset >= 100000
+              }
+              onClick={() => setOffset((current) => current + pageSize)}
+            >
+              შემდეგი
+            </Button>
+          </CardFooter>
+        </Card>
+      </FeaturePage>
+    </div>
   )
 }

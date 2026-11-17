@@ -42,6 +42,8 @@ This is a single-company employee tracking, time and attendance, scheduling, and
 
 ## Implementation Workflow
 
+- Remove application files made obsolete by a change after verifying they have no remaining imports, configuration references, dynamic references, or framework/task entry-point role. Clean up their exclusively unused dependencies too. Preserve unrelated user changes, migrations, operational scripts, tests, and reusable shared UI primitives; do not treat a missing static import alone as proof that a file is unused.
+
 1. Read the applicable `AGENTS.md` files and run the Intent skill discovery above. If Intent is unavailable, report that fact and do not download a replacement.
 2. Inspect the existing implementation, `package.json`, lockfile, `components.json`, reusable components, schemas, and relevant library types before designing a replacement.
 3. Identify the owning feature, routes, server entry points, permissions, Zod validation, Georgian user-facing copy, data model, and state transitions. Determine whether existing tables and libraries already satisfy the requirement.
