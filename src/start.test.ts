@@ -11,6 +11,7 @@ const calls = vi.hoisted(() => ({
   currentRequestIp: vi.fn(),
 }))
 vi.mock('@tanstack/react-start', () => ({
+  createCsrfMiddleware: () => ({}),
   createMiddleware: () => ({
     server: (handler: Middleware) => {
       calls.middleware.mockImplementation(handler)

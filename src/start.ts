@@ -1,5 +1,14 @@
-import { createMiddleware, createStart } from '@tanstack/react-start'
+import {
+  createCsrfMiddleware,
+  createMiddleware,
+  createStart,
+} from '@tanstack/react-start'
 import { reportError } from '#/lib/error-diagnostics'
+
+const csrfMiddleware = createCsrfMiddleware({
+  filter: ({ handlerType }) => handlerType === 'serverFn',
+  failureResponse: () => new Response('მოთხოვნა დაბლოკილია.', { status: 403 }),
+})
 
 const networkMiddleware = createMiddleware().server(
   async ({ request, next }) => {
@@ -19,5 +28,5 @@ const networkMiddleware = createMiddleware().server(
 )
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [networkMiddleware],
+  requestMiddleware: [csrfMiddleware, networkMiddleware],
 }))
