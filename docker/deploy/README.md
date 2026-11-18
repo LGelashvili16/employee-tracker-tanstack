@@ -1,5 +1,9 @@
 # Automatic VPS deployments
 
+For `beta.adwings.ge` on the VPS with host Nginx, follow the
+[host Nginx deployment runbook](host-nginx.md). The instructions below apply to
+the separate Caddy deployment target.
+
 This setup targets one x86-64 Linux VPS with Docker Engine and the Compose v2
 plugin. It is separate from the local Docker Desktop preview. Use
 `compose.yaml` with `compose.vps.yaml`; do not combine it with the development
