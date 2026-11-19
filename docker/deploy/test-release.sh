@@ -65,6 +65,9 @@ ENV
   if [[ $scenario != first* ]]; then
     printf '# slot=blue\nold-config\n' >"$TEAM_ADWINGS_DEPLOY_ROOT/.deploy/caddy/Caddyfile"
   fi
+  if [[ $scenario == success || $scenario == rollback ]]; then
+    printf 'old backup helper\n' >"$TEAM_ADWINGS_DEPLOY_ROOT/.deploy/backup.sh"
+  fi
   [[ $scenario != nginx ]] || export TEAM_ADWINGS_DEPLOY_TARGET=nginx
   mode=deploy
   [[ $scenario != rollback ]] || mode=rollback
@@ -98,6 +101,11 @@ ENV
   fi
   if [[ $scenario == rollback ]]; then
     if grep -q 'run --rm --no-deps migrate' "$log"; then exit 1; fi
+    grep -Fxq 'old backup helper' "$TEAM_ADWINGS_DEPLOY_ROOT/.deploy/backup.sh"
+  fi
+  if [[ $scenario == first || $scenario == success || $scenario == nginx ]]; then
+    cmp -s "$release/docker/backup.sh" "$TEAM_ADWINGS_DEPLOY_ROOT/.deploy/backup.sh"
+    grep -q 'up -d --no-deps backup$' "$log"
   fi
   if [[ $scenario == legacy || $scenario == pull || $scenario == migration || $scenario == readiness || $scenario == validation ]]; then
     if grep -q 'reload --config /etc/caddy/Caddyfile.next' "$log"; then exit 1; fi

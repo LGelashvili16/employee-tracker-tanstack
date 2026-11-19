@@ -31,10 +31,6 @@ if [[ $project == team-adwings ]]; then
     exit 1
   fi
 fi
-if [[ ! -f $root/.deploy/backup.sh ]]; then
-  cp "$bundle/docker/backup.sh" "$root/.deploy/backup.sh"
-fi
-
 export BLUE_IMAGE=$image GREEN_IMAGE=$image MIGRATION_IMAGE=$migrations
 compose=(docker compose --profile release --project-name "$project" --project-directory "$root"
   --env-file "$root/.env.docker" -f "$bundle/compose.yaml" -f "$bundle/compose.vps.yaml")
@@ -81,7 +77,16 @@ if [[ $mode == deploy ]]; then
   dc up -d --no-recreate --wait --wait-timeout 120 db
   # Migrations must be additive and compatible with the active release.
   dc run --rm --no-deps migrate
-  dc --profile backups up -d --no-deps --no-recreate backup
+  backup_source="$bundle/docker/backup.sh"
+  backup_script="$root/.deploy/backup.sh"
+  if ! cmp -s "$backup_source" "$backup_script"; then
+    cp "$backup_source" "$backup_script.next"
+    mv -f "$backup_script.next" "$backup_script"
+  fi
+  # A changed bind-mounted script must recreate the backup container.
+  backup_digest=$(sha256sum "$backup_source")
+  export TEAM_ADWINGS_BACKUP_SCRIPT_SHA256="${backup_digest%% *}"
+  dc --profile backups up -d --no-deps backup
 fi
 
 switched=false
