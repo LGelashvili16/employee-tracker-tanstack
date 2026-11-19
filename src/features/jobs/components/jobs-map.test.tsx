@@ -4,6 +4,10 @@ import { afterEach, expect, it, vi } from 'vitest'
 import JobsMap from './jobs-map'
 import type { ReactNode } from 'react'
 
+vi.mock('#/db', async () => ({
+  db: (await import('drizzle-orm/node-postgres')).drizzle.mock(),
+}))
+
 afterEach(() => vi.unstubAllGlobals())
 const map = vi.hoisted(() => ({
   fitBounds: vi.fn(),

@@ -6,6 +6,10 @@ import { AnnouncementDialog } from './announcement-dialog'
 import { PublishAnnouncementSheet } from './publish-announcement-sheet'
 import { LoginAnnouncement } from './login-announcement'
 
+vi.mock('#/db', async () => ({
+  db: (await import('drizzle-orm/node-postgres')).drizzle.mock(),
+}))
+
 const api = vi.hoisted(() => ({
   mark: vi.fn(),
   create: vi.fn(),
