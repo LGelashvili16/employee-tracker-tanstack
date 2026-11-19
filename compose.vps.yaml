@@ -75,9 +75,6 @@ services:
     logging: *logging
 
   backup:
-    extends:
-      file: compose.prod.yaml
-      service: backup
     volumes:
       - ./.deploy/backup.sh:/scripts/backup.sh:ro
 

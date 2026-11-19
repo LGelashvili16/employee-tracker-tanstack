@@ -6,7 +6,9 @@ import type * as ReactRouter from '@tanstack/react-router'
 import { AnnouncementsPage } from './announcements-page'
 
 vi.mock('#/db', async () => ({
-  db: (await import('drizzle-orm/node-postgres')).drizzle.mock(),
+  db: (await import('drizzle-orm/node-postgres')).drizzle.mock({
+    schema: await import('#/db/schema'),
+  }),
 }))
 
 const listTotal = vi.hoisted(() => ({ value: 1 }))

@@ -7,7 +7,9 @@ import type { Actor } from '#/lib/authorization/actor'
 import type { EmployeeAccountRecord } from '../access.types'
 
 vi.mock('#/db', async () => ({
-  db: (await import('drizzle-orm/node-postgres')).drizzle.mock(),
+  db: (await import('drizzle-orm/node-postgres')).drizzle.mock({
+    schema: await import('#/db/schema'),
+  }),
 }))
 
 const { getEmployeeAccount, updateEmployeeDetails } = vi.hoisted(() => ({

@@ -7,7 +7,9 @@ import { PublishAnnouncementSheet } from './publish-announcement-sheet'
 import { LoginAnnouncement } from './login-announcement'
 
 vi.mock('#/db', async () => ({
-  db: (await import('drizzle-orm/node-postgres')).drizzle.mock(),
+  db: (await import('drizzle-orm/node-postgres')).drizzle.mock({
+    schema: await import('#/db/schema'),
+  }),
 }))
 
 const api = vi.hoisted(() => ({

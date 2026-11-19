@@ -5,7 +5,9 @@ import JobsMap from './jobs-map'
 import type { ReactNode } from 'react'
 
 vi.mock('#/db', async () => ({
-  db: (await import('drizzle-orm/node-postgres')).drizzle.mock(),
+  db: (await import('drizzle-orm/node-postgres')).drizzle.mock({
+    schema: await import('#/db/schema'),
+  }),
 }))
 
 afterEach(() => vi.unstubAllGlobals())

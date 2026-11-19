@@ -67,26 +67,8 @@ services:
     logging: *logging
 
   backup:
-    image: postgres:18-bookworm
-    profiles: [backups]
-    restart: unless-stopped
-    environment:
-      PGHOST: db
-      PGPORT: ${POSTGRES_PORT:-5433}
-      PGUSER: ${POSTGRES_USER:-team_adwings}
-      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
-      PGDATABASE: ${POSTGRES_DB:-team_adwings}
-      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
-      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
-    entrypoint: [/bin/sh, /scripts/backup.sh]
     volumes:
       - ./docker/backup.sh:/scripts/backup.sh:ro
-      - ./backups:/backups
-    depends_on:
-      db:
-        condition: service_healthy
-    networks: [backend]
-    logging: *logging
 
 volumes:
   caddy_data:
