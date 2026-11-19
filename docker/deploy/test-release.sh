@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# No Docker daemon or network: exercise orchestration failures with a fake CLI.
+# Use real Compose validation and mock commands that need Docker or the network.
 set -Eeuo pipefail
 bundle=$(cd -- "$(dirname -- "$0")/../.." && pwd)
+COMPOSE_TEST_DOCKER=$(command -v docker)
+export COMPOSE_TEST_DOCKER
 workspace=$(mktemp -d /tmp/team-adwings-release-test.XXXXXX)
 cleanup() {
   [[ $workspace == /tmp/team-adwings-release-test.* && -d $workspace ]]
@@ -20,8 +22,11 @@ elif [[ $1 == volume ]]; then
 elif [[ $1 == pull ]]; then
   [[ $MOCK_FAIL != pull ]]
 elif [[ $1 == compose ]]; then
+  args=("$@")
   while [[ $# -gt 0 && $1 != config && $1 != ps && $1 != exec && $1 != up && $1 != run && $1 != stop ]]; do shift; done
   case $1 in
+    config)
+      exec "$COMPOSE_TEST_DOCKER" "${args[@]}" ;;
     ps)
       if [[ $* != *'-aq'* ]]; then echo fake-container; fi ;;
     up)
@@ -48,9 +53,15 @@ for scenario in first success legacy pull migration readiness validation reload 
   export MOCK_FAIL=$scenario
   release="$TEAM_ADWINGS_DEPLOY_ROOT/releases/candidate"
   mkdir -p "$TEAM_ADWINGS_DEPLOY_ROOT/.deploy/caddy" "$release/docker/deploy"
+  cp "$bundle"/compose{,.vps,.nginx}.yaml "$release/"
   cp "$bundle/docker/deploy/release.sh" "$release/docker/deploy/"
   cp "$bundle/docker/backup.sh" "$release/docker/"
-  touch "$TEAM_ADWINGS_DEPLOY_ROOT/.env.docker"
+  cat >"$TEAM_ADWINGS_DEPLOY_ROOT/.env.docker" <<'ENV'
+POSTGRES_PASSWORD=release-test-password
+BETTER_AUTH_SECRET=release-test-secret
+APP_URL=https://beta.example.test
+APP_DOMAIN=beta.example.test
+ENV
   if [[ $scenario != first* ]]; then
     printf '# slot=blue\nold-config\n' >"$TEAM_ADWINGS_DEPLOY_ROOT/.deploy/caddy/Caddyfile"
   fi

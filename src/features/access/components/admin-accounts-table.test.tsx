@@ -6,7 +6,9 @@ import type { AdminAccount } from '../admin-access.types'
 import type { AnchorHTMLAttributes } from 'react'
 
 vi.mock('#/db', async () => ({
-  db: (await import('drizzle-orm/node-postgres')).drizzle.mock(),
+  db: (await import('drizzle-orm/node-postgres')).drizzle.mock({
+    schema: await import('#/db/schema'),
+  }),
 }))
 
 vi.mock('@tanstack/react-router', () => ({

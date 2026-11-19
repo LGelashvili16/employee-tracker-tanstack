@@ -5,7 +5,9 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import { SecurityPolicy } from './security-policy-form'
 
 vi.mock('#/db', async () => ({
-  db: (await import('drizzle-orm/node-postgres')).drizzle.mock(),
+  db: (await import('drizzle-orm/node-postgres')).drizzle.mock({
+    schema: await import('#/db/schema'),
+  }),
 }))
 
 const calls = vi.hoisted(() => ({
