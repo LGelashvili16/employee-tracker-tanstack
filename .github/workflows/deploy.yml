@@ -33,6 +33,28 @@ jobs:
           docker run --rm "$BUILD_IMAGE" pnpm lint
           docker run --rm "$BUILD_IMAGE" pnpm exec tsc --noEmit
           docker run --rm "$BUILD_IMAGE" pnpm test
+      - name: Check attendance modules in the production runtime image
+        env:
+          RUNTIME_IMAGE: team-adwings-runtime-check:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          docker build --target runtime --tag "$RUNTIME_IMAGE" .
+          docker run --rm -i --network none --entrypoint node \
+            -e DATABASE_URL=postgresql://fixture:fixture@127.0.0.1:1/fixture \
+            -e BETTER_AUTH_URL=https://example.test \
+            -e BETTER_AUTH_SECRET=runtime-check-only-placeholder-secret \
+            "$RUNTIME_IMAGE" --input-type=module - <<'JS'
+          import { strict as assert } from 'node:assert'
+          import { readdir } from 'node:fs/promises'
+
+          const directory = './.output/server/_ssr'
+          const files = await readdir(directory)
+          for (const prefix of ['attendance.functions-', 'attendance-security.functions-']) {
+            const modules = files.filter((file) => file.startsWith(prefix) && file.endsWith('.mjs'))
+            assert(modules.length > 0, `Missing runtime modules for ${prefix}`)
+            for (const file of modules) await import(`${directory}/${file}`)
+          }
+          JS
 
   publish:
     if: github.ref == 'refs/heads/main'

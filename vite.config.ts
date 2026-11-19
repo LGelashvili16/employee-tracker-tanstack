@@ -31,6 +31,8 @@ const config = defineConfig({
     devtools(),
     nitro({
       ...attendanceTaskConfig,
+      // Preserve the passkey library's module initialization order in production.
+      traceDeps: ['@simplewebauthn/server*'],
       rollupConfig: { external: [/^@sentry\//] },
       routeRules: {
         '/service-worker.js': { headers: { 'Cache-Control': 'no-cache' } },
