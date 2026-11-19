@@ -24,7 +24,7 @@ vi.mock('workbox-precaching', () => ({
 vi.mock('workbox-routing', () => ({ registerRoute: workbox.registerRoute }))
 
 const workerScope = {
-  location: new URL('https://teamwork.example/'),
+  location: new URL('https://team-adwings.example/'),
   __WB_MANIFEST: [],
   addEventListener:
     vi.fn<
@@ -62,7 +62,7 @@ describe('PWA update messages', () => {
   it.each([null, 'SKIP_WAITING', {}, { type: 'RELOAD' }])(
     'rejects malformed update messages: %j',
     (data) => {
-      sendMessage(data, { url: 'https://teamwork.example/auth/login' })
+      sendMessage(data, { url: 'https://team-adwings.example/auth/login' })
       expect(workerScope.skipWaiting).not.toHaveBeenCalled()
     },
   )
@@ -76,7 +76,7 @@ describe('PWA update messages', () => {
   it('allows a validated update request from this app', () => {
     sendMessage(
       { type: 'SKIP_WAITING' },
-      { url: 'https://teamwork.example/auth/login' },
+      { url: 'https://team-adwings.example/auth/login' },
     )
     expect(workerScope.skipWaiting).toHaveBeenCalledOnce()
   })
@@ -90,10 +90,10 @@ afterAll(() => vi.unstubAllGlobals())
 
 describe('PWA navigation privacy', () => {
   it.each([
-    ['POST', 'navigate', 'https://teamwork.example/dashboard'],
-    ['GET', 'cors', 'https://teamwork.example/dashboard'],
-    ['GET', 'navigate', 'https://teamwork.example/api/auth/get-session'],
-    ['GET', 'navigate', 'https://teamwork.example/_serverFn/session'],
+    ['POST', 'navigate', 'https://team-adwings.example/dashboard'],
+    ['GET', 'cors', 'https://team-adwings.example/dashboard'],
+    ['GET', 'navigate', 'https://team-adwings.example/api/auth/get-session'],
+    ['GET', 'navigate', 'https://team-adwings.example/_serverFn/session'],
     ['GET', 'navigate', 'https://other.example/dashboard'],
   ])('does not intercept %s %s %s', (method, mode, url) => {
     const [matches] = workbox.registerRoute.mock.calls[0]
@@ -107,7 +107,7 @@ describe('PWA navigation privacy', () => {
     expect(
       matches({
         request: { method: 'GET', mode: 'navigate' },
-        url: new URL('https://teamwork.example/manage/employees'),
+        url: new URL('https://team-adwings.example/manage/employees'),
       }),
     ).toBe(true)
     expect(workbox.precache).toHaveBeenCalledWith([], {
@@ -119,7 +119,7 @@ describe('PWA navigation privacy', () => {
 
   it('always requests fresh navigation responses, preserving authorization failures', async () => {
     const [, navigate] = workbox.registerRoute.mock.calls[0]
-    const request = new Request('https://teamwork.example/manage/employees')
+    const request = new Request('https://team-adwings.example/manage/employees')
     const forbidden = new Response('Forbidden', { status: 403 })
     network.mockResolvedValue(forbidden)
     expect(await navigate({ request })).toBe(forbidden)
@@ -136,7 +136,7 @@ describe('PWA navigation privacy', () => {
     workbox.matchPrecache.mockResolvedValue(offline)
     expect(
       await navigate({
-        request: new Request('https://teamwork.example/dashboard'),
+        request: new Request('https://team-adwings.example/dashboard'),
       }),
     ).toBe(offline)
     expect(workbox.matchPrecache).toHaveBeenCalledWith('/offline.html')
@@ -149,7 +149,7 @@ describe('PWA navigation privacy', () => {
     expect(
       (
         await navigate({
-          request: new Request('https://teamwork.example/dashboard'),
+          request: new Request('https://team-adwings.example/dashboard'),
         })
       ).type,
     ).toBe('error')

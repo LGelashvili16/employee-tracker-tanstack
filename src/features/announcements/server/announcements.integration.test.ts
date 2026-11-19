@@ -18,7 +18,7 @@ import type { Actor } from '#/lib/authorization/actor'
 
 vi.mock('@tanstack/react-start/server-only', () => ({}))
 const originalUrl = process.env.DATABASE_URL
-const databaseName = `teamwork_announcements_test_${randomBytes(8).toString('hex')}`
+const databaseName = `team_adwings_announcements_test_${randomBytes(8).toString('hex')}`
 let admin: pg.Client | undefined
 let connection: pg.Client | undefined
 let database: typeof Database | undefined
@@ -262,7 +262,7 @@ describe.runIf(process.env.RUN_ANNOUNCEMENTS_DB_TESTS === '1')(
       try {
         await connected
         const listeners = await sql().query(
-          "SELECT pid FROM pg_stat_activity WHERE datname = current_database() AND application_name = 'teamwork_realtime'",
+          "SELECT pid FROM pg_stat_activity WHERE datname = current_database() AND application_name = 'team_adwings_realtime'",
         )
         expect(listeners.rowCount).toBe(1)
         await sql().query('SELECT pg_terminate_backend($1)', [
@@ -273,7 +273,7 @@ describe.runIf(process.env.RUN_ANNOUNCEMENTS_DB_TESTS === '1')(
         expect(
           (
             await sql().query(
-              "SELECT count(*)::int AS value FROM pg_stat_activity WHERE datname = current_database() AND application_name = 'teamwork_realtime'",
+              "SELECT count(*)::int AS value FROM pg_stat_activity WHERE datname = current_database() AND application_name = 'team_adwings_realtime'",
             )
           ).rows[0].value,
         ).toBe(1)

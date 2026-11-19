@@ -121,9 +121,7 @@ describe('work schedule page states', () => {
       }),
     ).toBeVisible()
     expect(
-      screen.getByText(
-        /თუ სესია ღია დარჩა, ის 18 საათის შემდეგ ავტომატურად დასრულდება/,
-      ),
+      screen.getByText(/18 საათს მიაღწევს, ღია სესია ავტომატურად დასრულდება/),
     ).toBeVisible()
     expect(
       screen.getByRole('combobox', { name: 'თანამშრომელი' }),

@@ -1,4 +1,4 @@
-name: tanstack-employee-tracker
+name: team-adwings
 
 services:
   db:
@@ -7,8 +7,8 @@ services:
     command: [postgres, -p, '${POSTGRES_PORT:-5433}']
     environment:
       PGPORT: ${POSTGRES_PORT:-5433}
-      POSTGRES_DB: ${POSTGRES_DB:-employee_tracking}
-      POSTGRES_USER: ${POSTGRES_USER:-employee_tracking}
+      POSTGRES_DB: ${POSTGRES_DB:-team_adwings}
+      POSTGRES_USER: ${POSTGRES_USER:-team_adwings}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.docker}
     volumes:
       # PostgreSQL 18+ uses the parent path, unlike older PostgreSQL images.

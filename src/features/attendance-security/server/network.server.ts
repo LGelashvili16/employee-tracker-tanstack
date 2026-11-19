@@ -22,7 +22,9 @@ export function normalizeIp(value: string): string | null {
 const proxyHeaderSchema = z.enum(['x-real-ip', 'cf-connecting-ip']).optional()
 export function requestIp(request: Request, peer?: string): string | null {
   const header = proxyHeaderSchema.parse(
-    process.env.TEAMWORK_CLIENT_IP_HEADER || undefined,
+    process.env.TEAM_ADWINGS_CLIENT_IP_HEADER ||
+      process.env.TEAMWORK_CLIENT_IP_HEADER ||
+      undefined,
   )
   // Opt-in is deployment-owned: the proxy must overwrite this header and prevent direct origin access.
   const candidate = header ? request.headers.get(header) : peer

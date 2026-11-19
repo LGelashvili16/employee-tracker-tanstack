@@ -33,7 +33,7 @@ This is a single-company employee tracking, time and attendance, scheduling, and
 
 ## Required UI and design standard
 
-- Before designing, implementing, changing, or reviewing any UI, read [Teamwork UI and design guidelines](docs/ui-design-guidelines.md). This is the canonical, living design standard; local skills and external inspiration support it rather than replace it.
+- Before designing, implementing, changing, or reviewing any UI, read [Team Adwings UI and design guidelines](docs/ui-design-guidelines.md). This is the canonical, living design standard; local skills and external inspiration support it rather than replace it.
 - Typography, hierarchy, spacing and density, color and contrast, iconography, consistency and polish, and clarity are mandatory acceptance criteria. Reuse the existing tokens, Base UI/shadcn components, Tabler icons, and Georgian copy.
 - Use the shadcn Data Table pattern with TanStack Table and shared shadcn pagination controls. Growing lists require debounced search, server-side filtering/sorting/pagination, and validated URL search parameters.
 - Use the approved rounded shadcn tab strip below the main page title. Page headers show titles and relevant actions without unnecessary descriptions. All action buttons and button-styled controls use the shared subtle 3D treatment.
@@ -53,7 +53,7 @@ This is a single-company employee tracking, time and attendance, scheduling, and
 
 ## Product Scope
 
-- The application name is **Teamwork**, with this exact spelling and capitalization in every locale. Use `APP_NAME` from `src/lib/app.ts` for app branding and document-title suffixes. Keep surrounding interface copy Georgian; the product name is a proper name and is not translated.
+- The application name is **Team Adwings**, with this exact spelling and capitalization in every locale. Use `APP_NAME` from `src/lib/app.ts` for app branding and document-title suffixes. Keep surrounding interface copy Georgian; the product name is a proper name and is not translated.
 - Prefer clear sentences without decorative hyphens. Do not use em dashes or en dashes in authored UI copy, comments, documentation, or agent responses. If a dash is necessary, use the short ASCII hyphen `-`. Preserve required hyphens in identifiers, URLs, commands, code operators, and other machine-readable syntax; do not rewrite third-party source snapshots solely for this style rule.
 - Payroll, salaries, finance, CRM, sales, customers, opportunities, and quotes are out of scope. Do not add their routes, navigation, modules, permissions, tables, integrations, or reports unless the user explicitly changes this scope.
 - Preserve attendance, timesheets, scheduling, jobs, leave, employee management, notifications, account settings, and platform administration. Timesheets remain attendance records and are not a payroll feature.

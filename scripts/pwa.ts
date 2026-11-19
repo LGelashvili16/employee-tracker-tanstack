@@ -29,7 +29,7 @@ const manifest = {
 
 export function pwaPlugins() {
   const offlineDocument: Plugin = {
-    name: 'teamwork-pwa-documents',
+    name: 'team-adwings-pwa-documents',
     generateBundle() {
       if (this.environment.name === 'client') {
         this.emitFile({

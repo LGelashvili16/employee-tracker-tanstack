@@ -1,7 +1,8 @@
 // Adapted from React Bits: https://reactbits.dev/text-animations/particle-text
 // Copyright (c) 2026 David Haz. See particle-text.LICENSE.md.
 
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { useEffect, useRef } from 'react'
+import type { CSSProperties } from 'react'
 
 export interface ParticleTextProps {
   text?: string

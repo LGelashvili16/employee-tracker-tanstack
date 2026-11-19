@@ -1,7 +1,9 @@
-name: Production deployment
+name: Team Adwings production deployment
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -10,11 +12,31 @@ permissions:
 
 # Serialize the entire release. Never interrupt a deployment during a proxy switch.
 concurrency:
-  group: teamwork-production
+  group: team-adwings-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  build:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build and check the committed source
+        env:
+          BUILD_IMAGE: team-adwings-checks:${{ github.sha }}
+        run: |
+          bash -n docker/deploy/release.sh
+          bash docker/deploy/test-release.sh
+          docker build --target build --tag "$BUILD_IMAGE" .
+          docker run --rm "$BUILD_IMAGE" pnpm lint
+          docker run --rm "$BUILD_IMAGE" pnpm exec tsc --noEmit
+          docker run --rm "$BUILD_IMAGE" pnpm test
+
+  publish:
+    if: github.ref == 'refs/heads/main'
+    needs: checks
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -27,18 +49,6 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-      - name: Build and check the committed source
-        env:
-          BUILD_IMAGE: teamwork-checks:${{ github.sha }}
-        run: |
-          bash -n docker/deploy/release.sh
-          bash -n docker/deploy/release-nginx.sh
-          bash docker/deploy/test-release.sh
-          bash docker/deploy/test-release-nginx.sh
-          docker build --target build --tag "$BUILD_IMAGE" .
-          docker run --rm "$BUILD_IMAGE" pnpm lint
-          docker run --rm "$BUILD_IMAGE" pnpm exec tsc --noEmit
-          docker run --rm "$BUILD_IMAGE" pnpm test
       - name: Publish immutable runtime and migration images
         id: publish
         env:
@@ -46,7 +56,6 @@ jobs:
           GH_USER: ${{ github.actor }}
           REPOSITORY: ${{ github.repository }}
           REVISION: ${{ github.sha }}
-          DEPLOY_TARGET: ${{ vars.TEAMWORK_DEPLOY_TARGET }}
         run: |
           set -euo pipefail
           repository="ghcr.io/${REPOSITORY,,}"
@@ -63,23 +72,25 @@ jobs:
 
   deploy:
     if: github.ref == 'refs/heads/main'
-    needs: build
+    needs: publish
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    environment: production
+    environment: team-adwings-production
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
       - name: Deploy over verified SSH
         env:
-          SSH_HOST: ${{ secrets.VPS_HOST }}
-          SSH_USER: ${{ secrets.VPS_USER }}
-          SSH_PORT: ${{ secrets.VPS_PORT }}
-          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
-          IMAGE: ${{ needs.build.outputs.image }}
-          MIGRATIONS: ${{ needs.build.outputs.migrations }}
+          SSH_HOST: ${{ secrets.TEAM_ADWINGS_VPS_HOST }}
+          SSH_USER: ${{ secrets.TEAM_ADWINGS_VPS_USER }}
+          SSH_PORT: ${{ secrets.TEAM_ADWINGS_VPS_PORT }}
+          SSH_KEY: ${{ secrets.TEAM_ADWINGS_VPS_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.TEAM_ADWINGS_VPS_KNOWN_HOSTS }}
+          DEPLOY_TARGET: ${{ vars.TEAM_ADWINGS_DEPLOY_TARGET }}
+          COMPOSE_PROJECT: ${{ vars.TEAM_ADWINGS_COMPOSE_PROJECT }}
+          IMAGE: ${{ needs.publish.outputs.image }}
+          MIGRATIONS: ${{ needs.publish.outputs.migrations }}
           REVISION: ${{ github.sha }}
         run: |
           set -euo pipefail
@@ -91,19 +102,21 @@ jobs:
           [[ "$MIGRATIONS" =~ ^ghcr\.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$ ]]
           [[ "$REVISION" =~ ^[a-f0-9]{40}$ ]]
           install -m 700 -d "$HOME/.ssh"
-          printf '%s\n' "$SSH_KEY" > "$HOME/.ssh/deploy_key"
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" | tr -d '\r' > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
           trap 'rm -f "$HOME/.ssh/deploy_key"' EXIT
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15)
           destination="$SSH_USER@$SSH_HOST"
-          case ${DEPLOY_TARGET:-caddy} in
-            nginx) root=/var/www/team-adwings; script=release-nginx.sh ;;
-            caddy) root=/opt/teamwork; script=release.sh ;;
-            *) echo 'Invalid TEAMWORK_DEPLOY_TARGET' >&2; exit 1 ;;
+          case $DEPLOY_TARGET in
+            nginx) root=/var/www/team-adwings ;;
+            caddy) root=/opt/team-adwings ;;
+            *) echo 'Invalid TEAM_ADWINGS_DEPLOY_TARGET' >&2; exit 1 ;;
           esac
+          COMPOSE_PROJECT=${COMPOSE_PROJECT:-team-adwings}
+          [[ $COMPOSE_PROJECT == team-adwings || $COMPOSE_PROJECT == teamwork ]]
           release="$root/releases/$REVISION-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           ssh "${options[@]}" -p "$SSH_PORT" "$destination" "umask 077; mkdir -p '$release'"
-          tar -czf release.tgz compose.yaml compose.prod.yaml compose.vps.yaml compose.nginx.yaml docker/deploy/release.sh docker/deploy/release-nginx.sh docker/deploy/beta.adwings.conf docker/backup.sh
+          tar -czf release.tgz compose.yaml compose.prod.yaml compose.vps.yaml compose.nginx.yaml docker/deploy/release.sh docker/deploy/beta.adwings.conf docker/backup.sh
           scp "${options[@]}" -P "$SSH_PORT" release.tgz "$destination:$release/release.tgz"
-          ssh "${options[@]}" -p "$SSH_PORT" "$destination" "tar -xzf '$release/release.tgz' -C '$release' && TEAMWORK_DEPLOY_ROOT='$root' bash '$release/docker/deploy/$script' '$IMAGE' '$MIGRATIONS'"
+          ssh "${options[@]}" -p "$SSH_PORT" "$destination" "tar -xzf '$release/release.tgz' -C '$release' && TEAM_ADWINGS_DEPLOY_TARGET='$DEPLOY_TARGET' TEAM_ADWINGS_COMPOSE_PROJECT='$COMPOSE_PROJECT' bash '$release/docker/deploy/release.sh' '$IMAGE' '$MIGRATIONS'"

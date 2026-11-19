@@ -15,7 +15,7 @@ import type { auth as Authentication } from '#/lib/auth/auth'
 vi.mock('@tanstack/react-start/server-only', () => ({}))
 const enabled = process.env.RUN_ACCOUNT_DB_TESTS === '1'
 const originalUrl = process.env.DATABASE_URL
-const databaseName = `teamwork_account_test_${randomBytes(8).toString('hex')}`
+const databaseName = `team_adwings_account_test_${randomBytes(8).toString('hex')}`
 let adminConnection: pg.Client | undefined
 let service: typeof AccessService
 let administration: typeof AdminAccessService

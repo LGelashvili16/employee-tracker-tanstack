@@ -24,7 +24,7 @@ Set `BETTER_AUTH_URL` to the application's stable canonical origin. Production p
 
 By default, request IPs come only from the runtime's direct peer address. Client-supplied forwarded headers are ignored. Some Nitro deployments do not expose a peer address to Start; in that case the address is unknown. IP-restricted attendance denies unknown addresses except for the Owner/Admin attendance allowlist exemption. An active global blocklist denies unknown addresses for every role.
 
-When behind a controlled proxy, set `TEAMWORK_CLIENT_IP_HEADER=x-real-ip` or `TEAMWORK_CLIENT_IP_HEADER=cf-connecting-ip`. Only configure this after the proxy overwrites the chosen header and direct origin access is prevented. An environment switch cannot establish that network trust itself. `x-forwarded-for` is deliberately unsupported. Do not copy an incoming arbitrary header into the trusted header.
+When behind a controlled proxy, set `TEAM_ADWINGS_CLIENT_IP_HEADER=x-real-ip` or `TEAM_ADWINGS_CLIENT_IP_HEADER=cf-connecting-ip`. Only configure this after the proxy overwrites the chosen header and direct origin access is prevented. An environment switch cannot establish that network trust itself. `x-forwarded-for` is deliberately unsupported. Do not copy an incoming arbitrary header into the trusted header.
 
 Enter exact public IPv4 or IPv6 addresses, one per line. CIDR ranges, hostnames, ports, and comma-separated forwarded chains are not individual IP entries. IPv6 and IPv4-mapped IPv6 addresses are normalized before comparison. Company devices behind NAT may share one public address. A VPN/proxy or remote access to an office computer can undermine location assumptions.
 

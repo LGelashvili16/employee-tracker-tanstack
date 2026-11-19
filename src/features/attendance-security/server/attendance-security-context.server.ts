@@ -30,6 +30,7 @@ export function relyingParty() {
   }
 }
 function deviceCookieName() {
+  // Keep enrolled browsers recognized by both versions during a rolling release.
   return relyingParty().secure
     ? '__Host-teamwork-attendance-device'
     : 'teamwork-attendance-device'

@@ -1,6 +1,6 @@
-# Teamwork PWA
+# Team Adwings PWA
 
-Teamwork supports installation as a standalone app. Authentication, attendance,
+Team Adwings supports installation as a standalone app. Authentication, attendance,
 approvals, and other business actions require an internet connection.
 
 ## Included functionality

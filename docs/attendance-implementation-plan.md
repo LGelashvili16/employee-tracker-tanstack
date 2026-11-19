@@ -1,4 +1,4 @@
-# Teamwork attendance implementation plan
+# Team Adwings attendance implementation plan
 
 This document tracks delivery in small, verifiable steps. Company work schedules are configured at `/manage/schedule`. The dashboard and attendance page now share working self-service check-in/out, a persistent timer, today's schedule, weekly summaries, and recent attendance. Other unimplemented workflows remain explicit shells. Notification delivery, manager attendance, corrections, and breaks remain pending.
 

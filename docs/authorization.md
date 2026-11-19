@@ -1,12 +1,12 @@
 # Authorization
 
-Teamwork uses Better Auth 1.7.15 for session identity and its `better-auth/plugins/access` helpers for fixed RBAC roles. The existing `user.roles` column remains the only role source. It is a server-assigned, comma-separated field with `input: false`. Migration `0016_user_permission_overrides.sql` adds validated per-user allow/deny exceptions to the auth user.
+Team Adwings uses Better Auth 1.7.15 for session identity and its `better-auth/plugins/access` helpers for fixed RBAC roles. The existing `user.roles` column remains the only role source. It is a server-assigned, comma-separated field with `input: false`. Migration `0016_user_permission_overrides.sql` adds validated per-user allow/deny exceptions to the auth user.
 
 ## Roles and permission checks
 
 `announcements.manage` grants announcement publishing to HR, administrators, and the protected owner. `/manage/announcements` also inherits `manage.access`. All authenticated active accounts can voluntarily read company announcements; acknowledgements derive the recipient from the authenticated actor. Publishing rechecks current grants transactionally and cannot trust client role data. See [announcements](announcements.md).
 
-`src/lib/authorization/permissions.ts` defines the permission vocabulary, Georgian role labels, and Better Auth role objects. Existing route permission identifiers remain stable. The `teamwork` access-control resource groups those identifiers without introducing a second permission vocabulary.
+`src/lib/authorization/permissions.ts` defines the permission vocabulary, Georgian role labels, and Better Auth role objects. Existing route permission identifiers remain stable. The `team-adwings` access-control resource groups those identifiers without introducing a second permission vocabulary.
 
 - `hasPermission(roles, permission)` checks one grant.
 - `hasEveryPermission(roles, permissions)` requires all grants, including grants combined across roles. Empty requirements deny access.

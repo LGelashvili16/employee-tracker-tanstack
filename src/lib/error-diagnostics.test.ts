@@ -27,7 +27,7 @@ it('logs a correlated reference and safe diagnostic without error payloads', () 
     },
   )
   const diagnostic = reportError('network-access', error, 503)
-  expect(log).toHaveBeenCalledWith('[Teamwork]', {
+  expect(log).toHaveBeenCalledWith('[Team Adwings]', {
     source: 'network-access',
     ...diagnostic,
     status: 503,

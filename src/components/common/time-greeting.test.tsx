@@ -33,7 +33,7 @@ describe('company-time greeting', () => {
       'საღამო მშვიდობისა',
     )
   })
-  it('renders the signed-in display name in a centered heading and updates when the server sample changes', () => {
+  it('greets the signed-in employee by first name and updates when the server sample changes', () => {
     const { rerender } = render(
       <TimeGreeting
         name="ანა მაისურაძე"
@@ -43,7 +43,7 @@ describe('company-time greeting', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'დილა მშვიდობისა, ანა მაისურაძე',
+        name: 'დილა მშვიდობისა, ანა !',
       }),
     ).toBeVisible()
     rerender(
@@ -55,14 +55,14 @@ describe('company-time greeting', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'საღამო მშვიდობისა, ანა მაისურაძე',
+        name: 'საღამო მშვიდობისა, ანა !',
       }),
     ).toBeVisible()
   })
   it('uses an honest generic greeting while the server clock is unavailable', () => {
     render(<TimeGreeting name="ანა" />)
     expect(
-      screen.getByRole('heading', { level: 1, name: 'გამარჯობა, ანა' }),
+      screen.getByRole('heading', { level: 1, name: 'გამარჯობა, ანა !' }),
     ).toBeVisible()
   })
   it('keeps SSR deterministic and renders names as text', () => {

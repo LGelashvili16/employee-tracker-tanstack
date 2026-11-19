@@ -113,7 +113,7 @@ export async function requestGeocoding(
     const response = await fetch(url, {
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'Teamwork/1.0 (company job map; Photon geocoding)',
+        'User-Agent': 'team-adwings/1.0 (company job map; Photon geocoding)',
       },
       signal: AbortSignal.timeout(8000),
       redirect: 'error',
