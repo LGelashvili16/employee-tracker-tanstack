@@ -4,6 +4,10 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import type { AnchorHTMLAttributes } from 'react'
 import { AppShell } from './app-shell'
 
+vi.mock('#/db', async () => ({
+  db: (await import('drizzle-orm/node-postgres')).drizzle.mock(),
+}))
+
 vi.mock('#/hooks/use-business-notification-refresh', () => ({
   useBusinessNotificationRefresh: () => undefined,
 }))

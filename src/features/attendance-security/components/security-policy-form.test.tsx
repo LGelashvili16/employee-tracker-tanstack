@@ -4,6 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { SecurityPolicy } from './security-policy-form'
 
+vi.mock('#/db', async () => ({
+  db: (await import('drizzle-orm/node-postgres')).drizzle.mock(),
+}))
+
 const calls = vi.hoisted(() => ({
   read: vi.fn(),
   save: vi.fn(),
