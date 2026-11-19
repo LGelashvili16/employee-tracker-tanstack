@@ -34,9 +34,9 @@ This avoids stopping the app for ordinary releases. It does not provide high
 availability for a VPS, Docker daemon, database or proxy failure. Infrastructure
 upgrades need separate maintenance. Size RAM and disk for both app containers,
 the database, retained assets and backups.
-Releases do not recreate existing database or backup containers. The initial
-backup helper is saved at `/opt/team-adwings/.deploy/backup.sh`; update that helper
-and restart its container explicitly during infrastructure maintenance.
+Releases preserve the existing database container. They update the backup helper
+at `/opt/team-adwings/.deploy/backup.sh` and recreate the backup worker when its
+script or configuration changes.
 
 ## One-time VPS setup
 

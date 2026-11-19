@@ -75,6 +75,8 @@ services:
     logging: *logging
 
   backup:
+    labels:
+      ge.adwings.team.backup-script: ${TEAM_ADWINGS_BACKUP_SCRIPT_SHA256:-}
     volumes:
       - ./.deploy/backup.sh:/scripts/backup.sh:ro
 

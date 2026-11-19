@@ -107,17 +107,19 @@ upgrade.
 
 ## Backups
 
-The `backups` profile immediately creates a custom-format database dump, then
-repeats every `BACKUP_INTERVAL_SECONDS` (default 86400). Completed archives are
-checked using `pg_restore --list`, and local retention defaults to seven days.
+The `backups` profile creates a custom-format database dump each day at 05:00
+Asia/Tbilisi time. If the worker starts after 05:00 and today's scheduled archive
+is missing, it runs that backup immediately. The filename identifies the scheduled
+time in UTC. The worker checks completed archives using `pg_restore --list`, and
+local retention defaults to seven days.
 The `./backups` directory is excluded from Git and Docker build context.
 
 **These are local dumps on the VPS.** Configure encrypted offsite copies to your
 chosen destination and monitor failures before relying on them for production.
 Daily dumps can lose up to a day of changes; use WAL archiving/PITR if a smaller
 recovery window is needed. Uploaded photos need their own durable storage and
-backup strategy. Dumps omit roles and ownership; manage any custom roles/grants
-separately.
+backup strategy. Each dump covers one database. Manage cluster-wide roles and
+tablespaces separately.
 
 Test restoration into a new database, replacing the filename and username:
 
