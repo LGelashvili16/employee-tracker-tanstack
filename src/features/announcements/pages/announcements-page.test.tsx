@@ -2,11 +2,12 @@ import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { expect, it, vi } from 'vitest'
 import type { AnchorHTMLAttributes } from 'react'
+import type * as ReactRouter from '@tanstack/react-router'
 import { AnnouncementsPage } from './announcements-page'
 
 const listTotal = vi.hoisted(() => ({ value: 1 }))
 vi.mock('@tanstack/react-router', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@tanstack/react-router')>()),
+  ...(await importOriginal<typeof ReactRouter>()),
   Link: ({
     to,
     search: _search,

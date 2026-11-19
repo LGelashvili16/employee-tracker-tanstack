@@ -11,7 +11,7 @@ import type { Actor } from '#/lib/authorization/actor'
 vi.mock('@tanstack/react-start/server-only', () => ({}))
 const enabled = process.env.RUN_NOTIFICATIONS_DB_TESTS === '1'
 const originalUrl = process.env.DATABASE_URL
-const databaseName = `teamwork_notifications_test_${randomBytes(8).toString('hex')}`
+const databaseName = `team_adwings_notifications_test_${randomBytes(8).toString('hex')}`
 let admin: pg.Client | undefined
 let connection: pg.Client | undefined
 let database: typeof Database | undefined

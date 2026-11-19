@@ -17,6 +17,7 @@ let retry: ReturnType<typeof setTimeout> | undefined
 
 /** PostgreSQL delivers this wake-up only if the caller's business transaction commits. */
 export async function signalRealtime(tx: Transaction, value: RealtimeSignal) {
+  // Both deployment slots must share the same channel during a release.
   const payload = JSON.stringify(realtimeSignalSchema.parse(value))
   await tx.execute(sql`select pg_notify('teamwork_events', ${payload})`)
 }
@@ -41,7 +42,7 @@ function connect() {
     connectionString: z.url().parse(process.env.DATABASE_URL),
     connectionTimeoutMillis: 3000,
     keepAlive: true,
-    application_name: 'teamwork_realtime',
+    application_name: 'team_adwings_realtime',
   })
   client = next
   function disconnected() {

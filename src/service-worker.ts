@@ -13,7 +13,7 @@ declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<PrecacheEntry | string>
 }
 
-setCacheNameDetails({ prefix: 'teamwork', suffix: 'public-v1' })
+setCacheNameDetails({ prefix: 'team-adwings', suffix: 'public-v1' })
 cleanupOutdatedCaches()
 
 // Only explicitly listed build assets enter this cache. Never cache SSR or API data.

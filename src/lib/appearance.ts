@@ -161,6 +161,7 @@ export const accentPalettes: readonly AccentPalette[] = palettes.sort(
   },
 )
 
+// Stable storage key preserves accent choices across the rebrand.
 export const ACCENT_STORAGE_KEY = 'teamwork.accent.v1'
 export const DEFAULT_ACCENT = 'neutral'
 export const accentIds = accentPalettes.map(({ id }) => id)

@@ -7,7 +7,7 @@ export const setupCodeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 export const setupCodeLength = 12
 const setupCodeGroupSize = 4
 
-/** Better Auth requires an email-shaped identifier, so accounts without email get one under this reserved, undeliverable domain. */
+/** Keep the reserved, undeliverable domain stable so both release slots recognize accounts without email. */
 export const syntheticAuthEmailSuffix = '@accounts.teamwork.invalid'
 export const isSyntheticAuthEmail = (email: string) =>
   email.endsWith(syntheticAuthEmailSuffix)

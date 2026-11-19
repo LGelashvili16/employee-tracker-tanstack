@@ -40,7 +40,7 @@ Configure the application in `.env.local` when implementing database, auth, and
 email integrations:
 
 ```dotenv
-DATABASE_URL=postgresql://employee_tracking:YOUR_HEX_PASSWORD@127.0.0.1:5433/employee_tracking
+DATABASE_URL=postgresql://team_adwings:YOUR_HEX_PASSWORD@127.0.0.1:5433/team_adwings
 BETTER_AUTH_SECRET=YOUR_AUTH_SECRET
 BETTER_AUTH_URL=http://localhost:3005
 SMTP_HOST=127.0.0.1
@@ -122,10 +122,10 @@ separately.
 Test restoration into a new database, replacing the filename and username:
 
 ```sh
-docker compose --env-file .env.docker exec db createdb -U employee_tracking restore_check
+docker compose --env-file .env.docker exec db createdb -U team_adwings restore_check
 docker compose --env-file .env.docker cp ./backups/database-TIMESTAMP.dump db:/tmp/restore.dump
-docker compose --env-file .env.docker exec db pg_restore -U employee_tracking -d restore_check --no-owner --no-acl --exit-on-error /tmp/restore.dump
-docker compose --env-file .env.docker exec db psql -U employee_tracking -d restore_check -c "SELECT PostGIS_Version();"
+docker compose --env-file .env.docker exec db pg_restore -U team_adwings -d restore_check --no-owner --no-acl --exit-on-error /tmp/restore.dump
+docker compose --env-file .env.docker exec db psql -U team_adwings -d restore_check -c "SELECT PostGIS_Version();"
 ```
 
 Verify restored application data as well; an archive listing is not a full

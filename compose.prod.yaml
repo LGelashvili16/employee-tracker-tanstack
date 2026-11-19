@@ -1,7 +1,7 @@
 # Combine with compose.yaml; never include compose.dev.yaml on the VPS.
 services:
   app:
-    image: tanstack-employee-tracker:local
+    image: team-adwings:local
     build:
       context: .
       target: runtime
@@ -12,7 +12,7 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: '3000'
-      DATABASE_URL: postgresql://${POSTGRES_USER:-employee_tracking}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5433}/${POSTGRES_DB:-employee_tracking}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-team_adwings}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5433}/${POSTGRES_DB:-team_adwings}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env.docker}
       BETTER_AUTH_URL: ${APP_URL:-http://localhost:3005}
       REDIS_URL: ${REDIS_URL:-}
@@ -73,9 +73,9 @@ services:
     environment:
       PGHOST: db
       PGPORT: ${POSTGRES_PORT:-5433}
-      PGUSER: ${POSTGRES_USER:-employee_tracking}
+      PGUSER: ${POSTGRES_USER:-team_adwings}
       PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
-      PGDATABASE: ${POSTGRES_DB:-employee_tracking}
+      PGDATABASE: ${POSTGRES_DB:-team_adwings}
       BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
     entrypoint: [/bin/sh, /scripts/backup.sh]

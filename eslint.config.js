@@ -15,6 +15,16 @@ export default [
     },
   },
   {
-    ignores: ['eslint.config.js', 'prettier.config.js'],
+    files: ['src/features/auth/components/particle-text.tsx'],
+    // Keep the defensive runtime checks from the adapted React Bits source.
+    rules: { '@typescript-eslint/no-unnecessary-condition': 'off' },
+  },
+  {
+    ignores: [
+      '.agents/**',
+      '.output/**',
+      'eslint.config.js',
+      'prettier.config.js',
+    ],
   },
 ]

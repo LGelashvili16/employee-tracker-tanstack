@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { APP_NAME } from '#/lib/app'
 
 const metadataSchema = z.object({
   status: z.number().optional(),
@@ -47,7 +48,7 @@ export function reportError(
       : parsed.success && parsed.data.name === 'ZodError'
         ? 'INVALID_CONFIGURATION_OR_INPUT'
         : 'UNCLASSIFIED'
-  console.error('[Teamwork]', {
+  console.error(`[${APP_NAME}]`, {
     source,
     reference,
     timestamp,

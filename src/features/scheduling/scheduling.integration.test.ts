@@ -23,7 +23,7 @@ let service: typeof ScheduleService
 let applicationDatabase: typeof Database | undefined
 
 const enabled = process.env.RUN_SCHEDULE_DB_TESTS === '1'
-const databaseName = `teamwork_schedule_test_${randomBytes(8).toString('hex')}`
+const databaseName = `team_adwings_schedule_test_${randomBytes(8).toString('hex')}`
 let admin: pg.Client | undefined
 let connection: pg.Client | undefined
 let created = false

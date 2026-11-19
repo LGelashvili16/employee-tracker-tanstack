@@ -187,23 +187,25 @@ export function parseRoles(value: string): Array<Role> {
 // A single resource preserves the existing permission identifiers used by routes.
 // Better Auth handles role authorization; resource ownership stays in feature policies.
 export const accessControl = createAccessControl({
-  teamwork: permissionSchema.options,
+  'team-adwings': permissionSchema.options,
 })
 export const roles = {
-  employee: accessControl.newRole({ teamwork: [] }),
-  production_specialist: accessControl.newRole({ teamwork: ['jobs.claim'] }),
+  employee: accessControl.newRole({ 'team-adwings': [] }),
+  production_specialist: accessControl.newRole({
+    'team-adwings': ['jobs.claim'],
+  }),
   supervisor: accessControl.newRole({
-    teamwork: managementPermissions.supervisor,
+    'team-adwings': managementPermissions.supervisor,
   }),
   sales_manager: accessControl.newRole({
-    teamwork: ['manage.access', 'jobs.manage'],
+    'team-adwings': ['manage.access', 'jobs.manage'],
   }),
   hr_manager: accessControl.newRole({
-    teamwork: managementPermissions.hr_manager,
+    'team-adwings': managementPermissions.hr_manager,
   }),
   // Employee account management is explicit; attendance review and job management remain separate.
-  admin: accessControl.newRole({ teamwork: administrationPermissions }),
-  owner: accessControl.newRole({ teamwork: permissionSchema.options }),
+  admin: accessControl.newRole({ 'team-adwings': administrationPermissions }),
+  owner: accessControl.newRole({ 'team-adwings': permissionSchema.options }),
 } satisfies Record<Role, unknown>
 
 export function hasPermission(
@@ -221,7 +223,7 @@ export function hasPermission(
   return actorRoles.some(
     (role) =>
       roleSchema.safeParse(role).success &&
-      roles[role].authorize({ teamwork: [permission] }).success,
+      roles[role].authorize({ 'team-adwings': [permission] }).success,
   )
 }
 

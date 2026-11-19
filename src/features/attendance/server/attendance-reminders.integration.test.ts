@@ -10,7 +10,7 @@ import type { db as Database } from '#/db'
 vi.mock('@tanstack/react-start/server-only', () => ({}))
 const enabled = process.env.RUN_NOTIFICATION_REMINDERS_DB_TESTS === '1'
 const originalUrl = process.env.DATABASE_URL
-const databaseName = `teamwork_reminders_test_${randomBytes(8).toString('hex')}`
+const databaseName = `team_adwings_reminders_test_${randomBytes(8).toString('hex')}`
 let admin: pg.Client | undefined
 let connection: pg.Client | undefined
 let database: typeof Database | undefined

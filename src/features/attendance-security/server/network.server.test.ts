@@ -22,15 +22,15 @@ describe('trusted exact client addresses', () => {
       expect(normalizeIp(value)).toBeNull()
   })
   it('ignores spoofed headers unless the deployment explicitly trusts one overwritten header', () => {
-    vi.stubEnv('TEAMWORK_CLIENT_IP_HEADER', '')
+    vi.stubEnv('TEAM_ADWINGS_CLIENT_IP_HEADER', '')
     const request = new Request('https://example.com', {
       headers: { 'x-forwarded-for': '192.0.2.1', 'x-real-ip': '198.51.100.1' },
     })
     expect(requestIp(request, '127.0.0.1')).toBe('127.0.0.1')
     expect(requestIp(request)).toBeNull()
-    vi.stubEnv('TEAMWORK_CLIENT_IP_HEADER', 'x-real-ip')
+    vi.stubEnv('TEAM_ADWINGS_CLIENT_IP_HEADER', 'x-real-ip')
     expect(requestIp(request, '127.0.0.1')).toBe('198.51.100.1')
-    vi.stubEnv('TEAMWORK_CLIENT_IP_HEADER', 'x-forwarded-for')
+    vi.stubEnv('TEAM_ADWINGS_CLIENT_IP_HEADER', 'x-forwarded-for')
     expect(() => requestIp(request)).toThrow()
   })
 })

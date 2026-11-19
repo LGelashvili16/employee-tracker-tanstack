@@ -28,7 +28,7 @@ import type { db as Database } from '#/db'
 vi.mock('@tanstack/react-start/server-only', () => ({}))
 const originalUrl = process.env.DATABASE_URL
 const originalAuthUrl = process.env.BETTER_AUTH_URL
-const name = `teamwork_security_test_${randomBytes(8).toString('hex')}`
+const name = `team_adwings_security_test_${randomBytes(8).toString('hex')}`
 const hash = (value: string | Buffer) =>
   createHash('sha256').update(value).digest()
 let admin: pg.Client | undefined

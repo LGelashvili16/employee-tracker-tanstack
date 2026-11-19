@@ -14,7 +14,7 @@ import { serverFnDevLookup } from './scripts/server-fn-dev.ts'
 
 const config = defineConfig({
   // Keep Start's optimizer artifacts separate from standalone local previews.
-  cacheDir: 'node_modules/.vite/teamwork-start',
+  cacheDir: 'node_modules/.vite/team-adwings-start',
   optimizeDeps: {
     // Lazy routes introduce Base UI subpaths after startup. Prebundle them together
     // so navigation does not invalidate dependencies already loaded by the browser.

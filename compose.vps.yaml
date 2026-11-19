@@ -6,7 +6,7 @@ x-web: &web
     NODE_ENV: production
     HOST: 0.0.0.0
     PORT: '3000'
-    DATABASE_URL: postgresql://${POSTGRES_USER:-employee_tracking}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5433}/${POSTGRES_DB:-employee_tracking}
+    DATABASE_URL: postgresql://${POSTGRES_USER:-team_adwings}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5433}/${POSTGRES_DB:-team_adwings}
     BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET}
     BETTER_AUTH_URL: ${APP_URL:?Set APP_URL to the HTTPS production URL}
     REDIS_URL: ${REDIS_URL:-}
@@ -22,7 +22,7 @@ x-web: &web
         CMD,
         node,
         -e,
-        "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(5000)}).then(r=>{if(r.status!==200)process.exit(1)}).catch(()=>process.exit(1))",
+        "fetch('http://127.0.0.1:3000/api/health',{headers:{'x-real-ip':'127.0.0.1'},signal:AbortSignal.timeout(5000)}).then(r=>{if(r.status!==200)process.exit(1)}).catch(()=>process.exit(1))",
       ]
     interval: 5s
     timeout: 6s

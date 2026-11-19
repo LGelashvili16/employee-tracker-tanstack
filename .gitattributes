@@ -1,4 +1,5 @@
 Dockerfile text eol=lf
 *.yaml text eol=lf
 docker/*.sh text eol=lf
+docker/deploy/*.sh text eol=lf
 docker/Caddyfile text eol=lf

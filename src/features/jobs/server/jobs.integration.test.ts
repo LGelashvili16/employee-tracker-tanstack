@@ -29,7 +29,7 @@ vi.mock('#/server/integrations/geocoding.server', () => ({
 }))
 const enabled = process.env.RUN_JOBS_DB_TESTS === '1'
 const originalUrl = process.env.DATABASE_URL
-const databaseName = `teamwork_jobs_test_${randomBytes(8).toString('hex')}`
+const databaseName = `team_adwings_jobs_test_${randomBytes(8).toString('hex')}`
 let admin: pg.Client | undefined
 let connection: pg.Client | undefined
 let database: typeof Database | undefined

@@ -55,7 +55,7 @@ it.each([403, 503] as const)(
     const html = await response.text()
     const page = new DOMParser().parseFromString(html, 'text/html')
     expect(page.documentElement.lang).toBe('ka')
-    expect(page.title).toContain('Teamwork')
+    expect(page.title).toContain('Team Adwings')
     expect(page.querySelector('h1')?.textContent).toBe(
       status === 403
         ? 'ამ ქსელიდან წვდომა შეზღუდულია'
@@ -76,7 +76,7 @@ it.each([403, 503] as const)(
       expect(html).toContain(reference)
       expect(response.headers.get('retry-after')).toBe('30')
       expect(console.error).toHaveBeenCalledWith(
-        '[Teamwork]',
+        '[Team Adwings]',
         expect.objectContaining({
           reference,
           status: 503,

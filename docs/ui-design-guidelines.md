@@ -1,4 +1,4 @@
-# Teamwork UI and design guidelines
+# Team Adwings UI and design guidelines
 
 Status: required project instructions. Version: 76. Last updated: 2026-11-17.
 
@@ -10,7 +10,7 @@ Typography, hierarchy, spacing and density, color and contrast, iconography, con
 
 - The user's latest explicit requirements take precedence. This guide is the canonical project design standard; local skills and external inspiration support it rather than replace it.
 - Use `shadcn` for composition, `ui-ux-pro-max` for applicable design guidance, and `vercel-react-best-practices` for React implementation. Use `web-design-guidelines` for a requested UI/accessibility review. Follow the Intent discovery requirements in `AGENTS.md`.
-- Mobbin, Dribbble, Behance, and other references may inform a specific interaction or layout. Translate useful ideas into the existing Teamwork system. Do not import unrelated palettes, fonts, icon sets, component libraries, or decorative effects.
+- Mobbin, Dribbble, Behance, and other references may inform a specific interaction or layout. Translate useful ideas into the existing Team Adwings system. Do not import unrelated palettes, fonts, icon sets, component libraries, or decorative effects.
 - Existing screens can contain inconsistencies. Their existence does not establish a competing standard. Bring touched UI into alignment within the task's scope instead of copying its inconsistencies.
 - This guide does not authorize an unrelated application-wide redesign, dependency installation, or permission change. Improve shared primitives when the requested change calls for it, with verification proportional to their reach.
 
@@ -63,7 +63,7 @@ Place the page title outside and above a route-aware tabs wrapper when that wrap
 
 ## Color, contrast, and iconography
 
-- The sidebar uses one small, diffuse accent halo behind the Teamwork logo, fading out before the navigation starts. Do not retain diagonal rays or a full-sidebar color wash. Extend the decorative field through the inset shell's padding so no inner rectangular edge is visible, while preserving navigation spacing. Keep it behind content, hidden from assistive technology, pointer-transparent and disabled in forced-colors mode. Derive its hue from the current sidebar primary token and reduce intensity in dark mode. Use one static radial gradient with no continuous animation, pointer tracking, canvas, blur filters or additional dependencies. This branding-only decoration does not authorize accent washes on notification chrome or other content surfaces.
+- The sidebar uses one small, diffuse accent halo behind the Team Adwings logo, fading out before the navigation starts. Do not retain diagonal rays or a full-sidebar color wash. Extend the decorative field through the inset shell's padding so no inner rectangular edge is visible, while preserving navigation spacing. Keep it behind content, hidden from assistive technology, pointer-transparent and disabled in forced-colors mode. Derive its hue from the current sidebar primary token and reduce intensity in dark mode. Use one static radial gradient with no continuous animation, pointer tracking, canvas, blur filters or additional dependencies. This branding-only decoration does not authorize accent washes on notification chrome or other content surfaces.
 
 - Keep notification popup headers, footers, borders, header icons and idle actions neutral in both themes. Accent color identifies hover, focus, expanded/selected controls and unread icon/count state; unread-row backgrounds remain neutral. Footer links gain accent color only on hover/focus. Keep the theme selector's surrounding surface neutral and tint only its selected option. Avoid persistent decorative accent washes or shiny surfaces, especially in dark mode. Preserve body/read metadata contrast, red unread dots and existing status variants.
 
@@ -443,7 +443,7 @@ Correction reasons are optional; blank reasons still retain the full actor/times
 
 ## Network access error documents
 
-Network-blocked document requests show a centered, Georgian Teamwork error card with the correct 403 status and guidance to use an allowed network or contact an administrator. Access-check failures show a separate 503 message and retry action. These pre-app documents use shadcn Card/Button, Tabler icons and self-contained fallback CSS because application assets may also be blocked. They work without JavaScript, respect the system color scheme and expose no session, IP or database details. API and server-function failures keep their plain-text response contract and all errors remain private and uncached.
+Network-blocked document requests show a centered, Georgian Team Adwings error card with the correct 403 status and guidance to use an allowed network or contact an administrator. Access-check failures show a separate 503 message and retry action. These pre-app documents use shadcn Card/Button, Tabler icons and self-contained fallback CSS because application assets may also be blocked. They work without JavaScript, respect the system color scheme and expose no session, IP or database details. API and server-function failures keep their plain-text response contract and all errors remain private and uncached.
 
 Error pages distinguish sign-in, permission, missing-resource, rate-limit, temporary-service, and unexpected failures where a safe status is available. Show Georgian recovery guidance and support references for unexpected failures. Diagnostic console records contain only generated reference IDs, UTC timestamps, source, status, and explicitly allowed technical categories. Never log raw errors, stacks, request URLs, tokens, SQL, IP addresses, or employee details. Expected 404s and permission denials do not need error-level logs. Offline guidance must clarify that writes require a connection.
 

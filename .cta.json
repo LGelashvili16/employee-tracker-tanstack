@@ -1,6 +1,6 @@
 {
   "bundler": "vite",
-  "projectName": "tanstack-employee-tracking",
+  "projectName": "team-adwings",
   "mode": "file-router",
   "typescript": true,
   "packageManager": "pnpm",

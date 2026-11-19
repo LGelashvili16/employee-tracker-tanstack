@@ -4,7 +4,7 @@ export function serverFnDevLookup(): Plugin {
   const lookupSuffix = '?server-fn-module-lookup'
 
   return {
-    name: 'teamwork-server-fn-dev-lookup',
+    name: 'team-adwings-server-fn-dev-lookup',
     apply: 'serve',
     enforce: 'pre',
     load: {

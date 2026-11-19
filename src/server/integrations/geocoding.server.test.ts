@@ -81,7 +81,7 @@ describe('Photon adapter', () => {
     expect(url.searchParams.get('q')).toBe('უნივერსიტეტის ქუჩა')
     expect(fetcher.mock.calls[0][1]).toMatchObject({
       redirect: 'error',
-      headers: { 'User-Agent': expect.stringContaining('Teamwork') },
+      headers: { 'User-Agent': expect.stringContaining('team-adwings') },
     })
     expect(result[0]).toMatchObject({
       sourceId: 'W:123',

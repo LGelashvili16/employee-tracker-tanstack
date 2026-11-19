@@ -1,6 +1,6 @@
 # Shared live events
 
-Teamwork uses one authenticated, same-origin SSE connection at `/api/events` per open application tab. PostgreSQL records remain authoritative; signals only tell connected clients to reconcile. Announcements, complaints, notifications and jobs are registered features. Recipient-only notification signals reconcile every active inbox query variant, replacing periodic polling. Reconnect snapshots never replay notification toasts.
+Team Adwings uses one authenticated, same-origin SSE connection at `/api/events` per open application tab. PostgreSQL records remain authoritative; signals only tell connected clients to reconcile. Announcements, complaints, notifications and jobs are registered features. Recipient-only notification signals reconcile every active inbox query variant, replacing periodic polling. Reconnect snapshots never replay notification toasts.
 
 ## Ownership
 

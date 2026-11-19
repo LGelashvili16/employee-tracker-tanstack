@@ -20,7 +20,7 @@ import type { Actor } from '#/lib/authorization/actor'
 vi.mock('@tanstack/react-start/server-only', () => ({}))
 const enabled = process.env.RUN_TEAMS_DB_TESTS === '1'
 const originalUrl = process.env.DATABASE_URL
-const databaseName = `teamwork_teams_test_${randomBytes(8).toString('hex')}`
+const databaseName = `team_adwings_teams_test_${randomBytes(8).toString('hex')}`
 let admin: pg.Client | undefined
 let connection: pg.Client
 let database: typeof Database | undefined
