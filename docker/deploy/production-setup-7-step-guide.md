@@ -1,4 +1,4 @@
-I renamed the app to **Team Adwings**, with `team-adwings` for the repo, Docker project, and deployment names. I also replaced the single-container release with a **blue/green deployment** for `beta.adwings.ge`. The revised [GitHub workflow](C:/Users/user/Desktop/tanstack-employee-tracking/.github/workflows/deploy.yml) checks pull requests. A merge or direct push to `main` builds and deploys automatically. A PR closed without merging doesn’t deploy.
+**Team Adwings** uses `team-adwings` for the GitHub repository and Docker project. Production uses a **blue/green deployment** for `beta.adwings.ge`. The [GitHub workflow](../../.github/workflows/deploy.yml) checks pull requests. A merge or direct push to `main` builds and deploys automatically. A PR closed without merging doesn’t deploy.
 
 Host Nginx still owns HTTPS. It forwards beta traffic to a private Caddy switcher on `127.0.0.1:3006`, which routes to the active app container. **A failed build, migration command, or candidate health check leaves the active container serving.** The release switches traffic only after the new container is healthy, and restores the previous route if the proxy check fails. Keep migrations compatible with both versions and avoid long blocking schema changes. Two app containers on one VPS don’t protect against a VPS or database outage.
 
@@ -35,11 +35,9 @@ sudo docker volume ls --format '{{.Name}}' |
 
 You already created `team-adwings-deploy`, so there’s no `adduser` step. The VPS should be `x86_64`, and port `3006` should be free for the first install.
 
-**Check the volume output before creating credentials.**
+**Your VPS installation is fresh.** Expect no matching volume on the first run. Leave `TEAM_ADWINGS_COMPOSE_PROJECT` unset. The workflow defaults to `team-adwings` and creates `team-adwings_postgres_data`. Your Windows Docker volumes are separate from the VPS.
 
-- **No matching volume:** This is a fresh install. Use the new `team-adwings` Compose project.
-- **`teamwork_postgres_data` contains existing app data:** Back it up, preserve the current `.env.docker` database credentials, and set `TEAM_ADWINGS_COMPOSE_PROJECT=teamwork` in GitHub in step 4. The new app can reuse that database while any old single-container app on port `3005` keeps serving through the cutover. Renaming that Docker project and its persistent volume needs a separate database migration.
-- **Both volumes exist and you’re unsure which holds production data:** Identify the live database before proceeding. A name change should never silently send production to a fresh database.
+If you unexpectedly find `teamwork_postgres_data` on the VPS, check whether it contains data you need before continuing. The [legacy database instructions](host-nginx.md#1-prepare-the-vps) cover that case.
 
 Create the directories and allow the deploy user to operate Docker:
 
@@ -161,18 +159,18 @@ unset GHCR_USER GHCR_TOKEN
 
 This gives the VPS permission to pull the production images. GitHub Actions uses its own `GITHUB_TOKEN` to publish them.
 
-## 4. GitHub · Rename the repo and create the production environment
+## 4. GitHub · Verify the repo name and configure the production environment
 
-In the existing GitHub repository, open **Settings → General → Repository name** and rename it to **`team-adwings`**. This keeps the existing repo history and PRs. The workflow derives the GHCR image path from the repo name, so the new images will be published under `ghcr.io/lgelashvili16/team-adwings`. [GitHub repository rename documentation](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository)
+Use the existing [LGelashvili16/team-adwings repository](https://github.com/LGelashvili16/team-adwings). If GitHub still shows the previous name, open **Settings → General → Repository name** and rename that repository to **`team-adwings`**. This preserves the existing branches, commit history, and pull requests. The workflow derives the image path from the repo name and publishes to `ghcr.io/lgelashvili16/team-adwings`. [GitHub repository rename documentation](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository)
 
-In **Settings → Environments**, create **`team-adwings-production`**. Set **Deployment branches and tags → Selected branches and tags → Branch → `main`**. Leave required reviewers disabled if you want fully automatic redeploys. [GitHub environment setup](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)
+In **Settings → Environments**, open **`team-adwings-production`**, or create it if it’s missing. Set **Deployment branches and tags → Selected branches and tags → Branch → `main`**. Leave required reviewers disabled if you want fully automatic redeploys. [GitHub environment setup](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)
 
 Add these **environment variables and secrets**:
 
 | Type | Name | Value |
 |---|---|---|
 | Variable | `TEAM_ADWINGS_DEPLOY_TARGET` | `nginx` |
-| Variable | `TEAM_ADWINGS_COMPOSE_PROJECT` | Leave unset for a fresh install. Use `teamwork` only to reuse the old production database and project. |
+| Optional variable | `TEAM_ADWINGS_COMPOSE_PROJECT` | Leave unset on this VPS. The default is `team-adwings`. |
 | Secret | `TEAM_ADWINGS_VPS_HOST` | `91.99.233.177`, if this is still your VPS IP |
 | Secret | `TEAM_ADWINGS_VPS_PORT` | `22`, or the actual SSH port |
 | Secret | `TEAM_ADWINGS_VPS_USER` | `team-adwings-deploy` |
@@ -198,11 +196,22 @@ The workflow already exists in the repo. There’s no separate action to create 
 
 ## 5. Windows · Push the change and trigger the first release
 
-In PowerShell, from your local project directory:
+In PowerShell, from your local project directory, check that `origin` points to the renamed repository:
+
+```powershell
+git remote -v
+```
+
+If it still points to the previous repository URL, update it and fetch:
 
 ```powershell
 git remote set-url origin https://github.com/LGelashvili16/team-adwings.git
-git remote -v
+git fetch origin
+```
+
+Then check your branch and local changes:
+
+```powershell
 git status --short
 git branch --show-current
 git diff --stat
@@ -233,7 +242,7 @@ sudo docker ps --filter "label=com.docker.compose.project=$PROJECT" \
   --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 ```
 
-Use `PROJECT=teamwork` if you chose the legacy project. Expect `{"status":"ok"}` and an `edge` container published only at `127.0.0.1:3006`. **If this check fails, leave Nginx where it is** and inspect the Actions log.
+Expect `{"status":"ok"}` and an `edge` container published only at `127.0.0.1:3006`. **If this check fails, leave Nginx where it is** and inspect the Actions log.
 
 ## 6. VPS · Switch only `beta.adwings.ge` in Nginx
 
@@ -329,7 +338,7 @@ sudo docker logs --tail 30 team-adwings-backup-1
 sudo ls -lh /var/www/team-adwings/backups
 ```
 
-For the legacy project, the backup container is `teamwork-backup-1`. Keep an off-VPS copy and test a restore separately.
+Keep an off-VPS copy and test a restore separately.
 
 After a successful Actions deployment using the **new** key, remove only the old Actions public-key line from the deploy user’s `authorized_keys`:
 
@@ -339,4 +348,4 @@ sudoedit /home/team-adwings-deploy/.ssh/authorized_keys
 
 You can then remove `TEAMWORK_DEPLOY_ACTION`, `TEAMWORK_DEPLOY_TARGET`, and any superseded deployment secrets from GitHub once no workflow uses them. A few internal identifiers still contain `teamwork` because the old and new app versions share attendance cookies, database events, and other persisted values during rollout. Keeping those identifiers stable protects existing sessions and data.
 
-I verified the production build, TypeScript, lint, 646 automated tests, the Compose topology, the release failure scenarios, and a local Caddy health request. I haven’t changed the GitHub settings or deployed to your VPS. The commands above and the [deployment runbook](C:/Users/user/Desktop/tanstack-employee-tracking/docker/deploy/host-nginx.md) cover the live setup.
+The [host Nginx deployment runbook](host-nginx.md) also documents the live setup.
