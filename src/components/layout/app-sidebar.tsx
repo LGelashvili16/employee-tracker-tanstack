@@ -81,6 +81,7 @@ export function AppSidebar({
   ]
   return (
     <Sidebar variant={inset ? 'inset' : 'sidebar'}>
+      <div className="sidebar-brand-halo" aria-hidden="true" />
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

@@ -110,12 +110,12 @@ function Calendar({
           defaultClassNames.day
         ),
         range_start: cn(
-          "relative isolate z-0 rounded-l-(--cell-radius) bg-muted after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-muted",
+          "relative isolate z-0 rounded-l-(--cell-radius) bg-[var(--calendar-range-background,var(--muted))] after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-[var(--calendar-range-background,var(--muted))]",
           defaultClassNames.range_start
         ),
         range_middle: cn("rounded-none", defaultClassNames.range_middle),
         range_end: cn(
-          "relative isolate z-0 rounded-r-(--cell-radius) bg-muted after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-muted",
+          "relative isolate z-0 rounded-r-(--cell-radius) bg-[var(--calendar-range-background,var(--muted))] after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-[var(--calendar-range-background,var(--muted))]",
           defaultClassNames.range_end
         ),
         today: cn(

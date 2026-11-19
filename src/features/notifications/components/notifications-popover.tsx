@@ -53,9 +53,9 @@ export function NotificationsPopover({ actorId }: { actorId: string }) {
         <div className="flex shrink-0 items-center justify-between gap-3 bg-muted/15 px-5 py-5">
           <div
             aria-hidden="true"
-            className="flex size-10 shrink-0 items-center justify-center rounded-2xl border bg-background shadow-sm"
+            className="flex size-10 shrink-0 items-center justify-center rounded-2xl border bg-background text-muted-foreground shadow-sm"
           >
-            <IconInbox className="size-5 text-muted-foreground" />
+            <IconInbox className="size-5" />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-2">
@@ -63,7 +63,7 @@ export function NotificationsPopover({ actorId }: { actorId: string }) {
                 შეტყობინებები
               </PopoverTitle>
               {query.data && !query.isError ? (
-                <Badge variant="secondary">
+                <Badge variant={unseenCount > 0 ? 'accent' : 'secondary'}>
                   {unseenCount > 0
                     ? `${unseenCount} წაუკითხავი`
                     : 'ყველა ნანახია'}
@@ -76,6 +76,7 @@ export function NotificationsPopover({ actorId }: { actorId: string }) {
           </div>
           <Button
             variant="outline"
+            depth="raised"
             size="icon"
             className="size-11 rounded-xl"
             aria-label="ყველა შეტყობინების ნანახად მონიშვნა"
@@ -113,7 +114,7 @@ export function NotificationsPopover({ actorId }: { actorId: string }) {
           <Link
             to="/notifications"
             onClick={() => setOpen(false)}
-            className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-primary underline underline-offset-4 hover:decoration-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-foreground underline underline-offset-4 hover:text-primary hover:decoration-2 focus-visible:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             ყველას ნახვა
           </Link>

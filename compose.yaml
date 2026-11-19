@@ -2,7 +2,7 @@ name: tanstack-employee-tracker
 
 services:
   db:
-    image: postgis/postgis:18-3.6
+    image: postgis/postgis:18-3.7
     restart: unless-stopped
     command: [postgres, -p, '${POSTGRES_PORT:-5433}']
     environment:

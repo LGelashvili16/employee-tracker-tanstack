@@ -12,6 +12,7 @@ export const permissionSchema = z.enum(
     'attendance.record.manage',
     'timesheets.review.team',
     'schedule.manage',
+    'teams.manage',
     'jobs.manage',
     'jobs.claim',
     'announcements.manage',
@@ -100,6 +101,7 @@ export function currentAuthorization(value: {
 }
 
 const administrationPermissions = [
+  'teams.manage',
   'attendance.record.manage',
   'attendance.correct.self',
   'attendance.devices.manage',
@@ -133,6 +135,7 @@ const managementPermissions: Record<
   ReadonlyArray<Permission>
 > = {
   supervisor: [
+    'teams.manage',
     'complaints.review.assigned',
     'manage.access',
     'attendance.read.team',

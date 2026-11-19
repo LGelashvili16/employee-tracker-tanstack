@@ -10,6 +10,7 @@ import {
   IconLock,
   IconCalendarCog,
   IconUsers,
+  IconUser,
   IconCalendarCheck,
   IconReportAnalytics,
   IconMailPlus,
@@ -118,8 +119,14 @@ export const navigationItems = [
     permission: 'attendance.configure',
   },
   {
-    to: '/manage/employees',
+    to: '/manage/teams',
     icon: IconUsers,
+    label: 'გუნდები',
+    permission: 'teams.manage',
+  },
+  {
+    to: '/manage/employees',
+    icon: IconUser,
     label: 'თანამშრომლები',
     permission: 'employees.manage',
   },

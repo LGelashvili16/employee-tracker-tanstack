@@ -32,7 +32,9 @@ jobs:
           BUILD_IMAGE: teamwork-checks:${{ github.sha }}
         run: |
           bash -n docker/deploy/release.sh
+          bash -n docker/deploy/release-nginx.sh
           bash docker/deploy/test-release.sh
+          bash docker/deploy/test-release-nginx.sh
           docker build --target build --tag "$BUILD_IMAGE" .
           docker run --rm "$BUILD_IMAGE" pnpm lint
           docker run --rm "$BUILD_IMAGE" pnpm exec tsc --noEmit
@@ -44,6 +46,7 @@ jobs:
           GH_USER: ${{ github.actor }}
           REPOSITORY: ${{ github.repository }}
           REVISION: ${{ github.sha }}
+          DEPLOY_TARGET: ${{ vars.TEAMWORK_DEPLOY_TARGET }}
         run: |
           set -euo pipefail
           repository="ghcr.io/${REPOSITORY,,}"
@@ -94,8 +97,13 @@ jobs:
           trap 'rm -f "$HOME/.ssh/deploy_key"' EXIT
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15)
           destination="$SSH_USER@$SSH_HOST"
-          release="/opt/teamwork/releases/$REVISION-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          ssh "${options[@]}" -p "$SSH_PORT" "$destination" "mkdir -p '$release'"
-          tar -czf release.tgz compose.yaml compose.prod.yaml compose.vps.yaml docker/deploy/release.sh docker/backup.sh
+          case ${DEPLOY_TARGET:-caddy} in
+            nginx) root=/var/www/team-adwings; script=release-nginx.sh ;;
+            caddy) root=/opt/teamwork; script=release.sh ;;
+            *) echo 'Invalid TEAMWORK_DEPLOY_TARGET' >&2; exit 1 ;;
+          esac
+          release="$root/releases/$REVISION-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          ssh "${options[@]}" -p "$SSH_PORT" "$destination" "umask 077; mkdir -p '$release'"
+          tar -czf release.tgz compose.yaml compose.prod.yaml compose.vps.yaml compose.nginx.yaml docker/deploy/release.sh docker/deploy/release-nginx.sh docker/deploy/beta.adwings.conf docker/backup.sh
           scp "${options[@]}" -P "$SSH_PORT" release.tgz "$destination:$release/release.tgz"
-          ssh "${options[@]}" -p "$SSH_PORT" "$destination" "tar -xzf '$release/release.tgz' -C '$release' && bash '$release/docker/deploy/release.sh' '$IMAGE' '$MIGRATIONS'"
+          ssh "${options[@]}" -p "$SSH_PORT" "$destination" "tar -xzf '$release/release.tgz' -C '$release' && TEAMWORK_DEPLOY_ROOT='$root' bash '$release/docker/deploy/$script' '$IMAGE' '$MIGRATIONS'"

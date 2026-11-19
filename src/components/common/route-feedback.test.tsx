@@ -51,4 +51,36 @@ it('offers a full reload of the failed URL and a dashboard link without exposing
     screen.getByRole('link', { name: 'მთავარ გვერდზე დაბრუნება' }),
   ).toHaveAttribute('href', '/dashboard')
   expect(screen.queryByText('private failure details')).not.toBeInTheDocument()
+  expect(await screen.findByText(/მიუთითეთ შეცდომის კოდი/)).toBeVisible()
 })
+
+it.each([
+  [401, 'საჭიროა ავტორიზაცია'],
+  [403, 'წვდომა შეზღუდულია'],
+  [404, 'გვერდი ვერ მოიძებნა'],
+  [429, 'მოთხოვნები ძალიან ხშირია'],
+  [503, 'სერვისი დროებით მიუწვდომელია'],
+] as const)(
+  'shows actionable guidance for status %s',
+  async (status, title) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const root = createRootRoute({
+      component: () => (
+        <RouteError error={{ status, message: 'private details' }} />
+      ),
+    })
+    const router = createRouter({
+      routeTree: root,
+      history: createMemoryHistory({ initialEntries: ['/'] }),
+    })
+    render(<RouterProvider router={router} />)
+    expect(await screen.findByRole('heading', { name: title })).toBeVisible()
+    expect(screen.queryByText('private details')).not.toBeInTheDocument()
+    if (status === 401) {
+      expect(screen.getByRole('link', { name: 'ავტორიზაცია' })).toHaveAttribute(
+        'href',
+        '/auth/login',
+      )
+    }
+  },
+)

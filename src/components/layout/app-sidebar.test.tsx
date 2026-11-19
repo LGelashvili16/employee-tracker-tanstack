@@ -101,9 +101,16 @@ describe('workspace navigation', () => {
       expect(
         screen.queryByRole('button', { name: 'მართვა' }),
       ).not.toBeInTheDocument()
-      expect(
-        screen.queryByRole('link', { name: 'გუნდები' }),
-      ).not.toBeInTheDocument()
+      if (role === 'hr_manager') {
+        expect(
+          screen.queryByRole('link', { name: 'გუნდები' }),
+        ).not.toBeInTheDocument()
+      } else {
+        expect(screen.getByRole('link', { name: 'გუნდები' })).toHaveAttribute(
+          'href',
+          '/manage/teams',
+        )
+      }
       expect(
         screen.queryByRole('link', { name: 'მართვის მიმოხილვა' }),
       ).not.toBeInTheDocument()
@@ -197,7 +204,7 @@ describe('workspace navigation', () => {
       screen.queryByRole('link', { name: 'საათების განხილვა' }),
     ).not.toBeInTheDocument()
   })
-  it('keeps personal work and platform access for admins without team-management access', () => {
+  it('keeps personal work, team management and platform access for admins', () => {
     renderSidebar('admin')
     expect(
       screen.getByRole('link', { name: 'მთავარი გვერდი' }),

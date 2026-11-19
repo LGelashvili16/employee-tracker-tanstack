@@ -430,7 +430,7 @@ pre code {
 
 .demo-button:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.3;
   transform: none;
 }
 
@@ -734,6 +734,39 @@ a {
 [data-slot='sidebar-wrapper'] a,
 [data-slot='sidebar'] a {
   color: inherit;
+}
+
+/* Localized brand lighting fades out before the navigation begins. */
+.sidebar-brand-halo {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 8rem;
+  z-index: -1;
+  overflow: clip;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.8;
+  background: radial-gradient(
+    ellipse 7rem 3.75rem at 2.75rem 2rem,
+    color-mix(in srgb, var(--sidebar-primary) 18%, transparent) 0%,
+    color-mix(in srgb, var(--sidebar-primary) 7%, transparent) 38%,
+    transparent 76%
+  );
+}
+
+/* Cancel the inset shell's p-2 so the field starts at the viewport edges. */
+[data-slot='sidebar'][data-variant='inset'] .sidebar-brand-halo {
+  inset: -0.5rem -0.5rem auto;
+}
+
+.dark .sidebar-brand-halo {
+  opacity: 0.45;
+}
+
+@media (forced-colors: active) {
+  .sidebar-brand-halo {
+    display: none;
+  }
 }
 
 .dark body {

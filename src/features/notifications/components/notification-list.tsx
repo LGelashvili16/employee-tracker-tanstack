@@ -39,7 +39,7 @@ export function NotificationList({
           <li
             key={item.id}
             className={cn(
-              'flex items-start gap-3 rounded-xl px-3 py-3.5 transition-colors hover:bg-muted/40 motion-reduce:transition-none',
+              'flex items-start gap-3 rounded-xl px-3 py-3.5 transition-colors hover:bg-accent focus-within:bg-accent motion-reduce:transition-none',
               unseen && 'bg-muted/30',
             )}
           >
@@ -48,7 +48,7 @@ export function NotificationList({
               data-slot="notification-item-icon"
               className={cn(
                 'relative flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted text-muted-foreground ring-1 ring-border/60',
-                unseen && 'bg-background text-foreground',
+                unseen && 'bg-background text-primary',
               )}
             >
               {unseen ? (

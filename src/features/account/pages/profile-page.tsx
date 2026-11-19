@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { FeaturePage } from '#/components/common/feature-page'
 import { accountContent } from '../account.content'
 import { ProfileOverview } from '../components/profile-overview'
+import { AppearanceSettings } from '../components/appearance-settings'
 
 const authenticatedRoute = getRouteApi('/_authenticated')
 
@@ -18,6 +19,7 @@ export function ProfilePage() {
       <QueryClientProvider client={client}>
         <ProfileOverview actor={actor} />
       </QueryClientProvider>
+      <AppearanceSettings />
     </FeaturePage>
   )
 }

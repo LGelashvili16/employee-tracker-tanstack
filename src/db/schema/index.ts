@@ -13,3 +13,5 @@ export * from './leave/day-off-allowance.schema'
 export * from './complaints/complaint.schema'
 export * from './attendance/attendance-digest.schema'
 export * from './attendance/attendance-security.schema'
+
+export * from './teams/team.schema'

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { IconDeviceDesktop, IconMoon, IconSun } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
+import { cn } from 'cn'
 
 type ThemeMode = 'light' | 'dark' | 'auto'
 
@@ -80,13 +81,17 @@ export default function ThemeToggle() {
         <Button
           key={option}
           type="button"
-          variant="ghost"
+          variant={mode === option ? 'soft' : 'ghost'}
+          depth={mode === option ? 'raised' : undefined}
           size="icon"
           aria-label={`${label} თემა`}
           aria-pressed={mode === option}
           title={`${label} თემა`}
           onClick={() => selectMode(option)}
-          className="rounded-lg text-muted-foreground hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-sm"
+          className={cn(
+            'rounded-lg',
+            mode !== option && 'text-muted-foreground',
+          )}
         >
           <Icon className="size-4" stroke={1.75} aria-hidden="true" />
         </Button>

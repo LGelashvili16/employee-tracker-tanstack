@@ -1,0 +1,36 @@
+# Combine with compose.yaml and compose.prod.yaml for the host Nginx deployment.
+services:
+  app:
+    build: !reset null
+    image: ${TEAMWORK_APP_IMAGE:?Set the runtime image digest}
+    environment:
+      BETTER_AUTH_URL: ${APP_URL:?Set APP_URL to the HTTPS production URL}
+      TEAMWORK_CLIENT_IP_HEADER: x-real-ip
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/api/health',{headers:{'x-real-ip':'127.0.0.1'},signal:AbortSignal.timeout(5000)}).then(r=>{if(r.status!==200)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 6s
+      retries: 12
+      start_period: 15s
+
+  migrate:
+    image: ${MIGRATION_IMAGE:?Set the migration image digest}
+    profiles: [production]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-employee_tracking}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5433}/${POSTGRES_DB:-employee_tracking}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${APP_URL:?Set APP_URL to the HTTPS production URL}
+    networks: [backend]
+    restart: 'no'
+
+  backup:
+    volumes:
+      - ${TEAMWORK_DEPLOY_ROOT:?Set TEAMWORK_DEPLOY_ROOT}/.deploy/backup.sh:/scripts/backup.sh:ro
+      - ${TEAMWORK_DEPLOY_ROOT:?Set TEAMWORK_DEPLOY_ROOT}/backups:/backups

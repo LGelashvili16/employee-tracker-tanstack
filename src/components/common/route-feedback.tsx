@@ -1,4 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import {
   IconAlertTriangle,
   IconArrowLeft,
@@ -13,10 +14,48 @@ import {
   EmptyMedia,
 } from '#/components/ui/empty'
 import { APP_NAME } from '#/lib/app'
+import { errorStatus, reportError } from '#/lib/error-diagnostics'
 import { PageSkeleton } from './page-skeleton'
 
-export function RouteError() {
+const errorCopy = {
+  401: [
+    'საჭიროა ავტორიზაცია',
+    'თქვენი სესია შესაძლოა დასრულდა. გასაგრძელებლად გაიარეთ ავტორიზაცია.',
+  ],
+  403: [
+    'წვდომა შეზღუდულია',
+    'ამ გვერდზე წვდომის უფლება არ გაქვთ. თუ წვდომა სამუშაოდ გჭირდებათ, დაუკავშირდით ადმინისტრატორს.',
+  ],
+  404: [
+    'გვერდი ვერ მოიძებნა',
+    'გვერდი ან ჩანაწერი აღარ არის ხელმისაწვდომი. შეამოწმეთ ბმული ან დაბრუნდით მთავარ გვერდზე.',
+  ],
+  429: [
+    'მოთხოვნები ძალიან ხშირია',
+    'ცოტა ხანში სცადეთ ხელახლა. განმეორებითი მცდელობები შეზღუდვას ვერ მოხსნის.',
+  ],
+  503: [
+    'სერვისი დროებით მიუწვდომელია',
+    'ცოტა ხანში სცადეთ ხელახლა. თუ პრობლემა განმეორდება, დაუკავშირდით ადმინისტრატორს.',
+  ],
+  500: [
+    'გვერდის გახსნა ვერ მოხერხდა',
+    'შეამოწმეთ ინტერნეტთან კავშირი და სცადეთ ხელახლა ან დაბრუნდით მთავარ გვერდზე.',
+  ],
+} as const
+
+export function RouteError({ error }: { error?: unknown }) {
   const href = useLocation({ select: (location) => location.href })
+  const status = errorStatus(error)
+  const [title, description] = errorCopy[status]
+  const [diagnostic, setDiagnostic] = useState<ReturnType<typeof reportError>>()
+  useEffect(() => {
+    if (status === 500 || status === 503) {
+      setDiagnostic(reportError('route', error, status))
+    } else {
+      setDiagnostic(undefined)
+    }
+  }, [error, status])
   return (
     <main className="flex min-h-svh flex-col bg-background px-5 text-foreground sm:px-10">
       <header className="mx-auto flex w-full max-w-6xl items-center py-6 sm:py-8">
@@ -43,11 +82,10 @@ export function RouteError() {
                   id="route-error-title"
                   className="text-xl leading-relaxed font-semibold tracking-tight sm:text-2xl"
                 >
-                  გვერდის გახსნა ვერ მოხერხდა
+                  {title}
                 </h1>
                 <p className="text-sm leading-7 text-muted-foreground">
-                  გვერდი დროებით მიუწვდომელია. სცადეთ ხელახლა ან დაბრუნდით
-                  მთავარ გვერდზე.
+                  {description}
                 </p>
               </EmptyHeader>
               <EmptyContent className="max-w-md sm:flex-row sm:justify-center">
@@ -56,10 +94,10 @@ export function RouteError() {
                   role="link"
                   size="lg"
                   className="min-h-11 w-full px-4 sm:w-auto"
-                  render={<a href={href} />}
+                  render={<a href={status === 401 ? '/auth/login' : href} />}
                 >
                   <IconRefresh data-icon="inline-start" aria-hidden="true" />
-                  ხელახლა ცდა
+                  {status === 401 ? 'ავტორიზაცია' : 'ხელახლა ცდა'}
                 </Button>
                 <Button
                   nativeButton={false}
@@ -79,6 +117,17 @@ export function RouteError() {
         </Card>
         <p className="text-center text-xs leading-6 text-muted-foreground">
           თუ პრობლემა განმეორდება, დაუკავშირდით ადმინისტრატორს.
+          {diagnostic && (
+            <>
+              <br />
+              მიუთითეთ შეცდომის კოდი:{' '}
+              <span className="wrap-anywhere">{diagnostic.reference}</span>
+              <br />
+              <time dateTime={diagnostic.timestamp}>
+                {diagnostic.timestamp}
+              </time>
+            </>
+          )}
         </p>
       </section>
     </main>
@@ -128,7 +177,7 @@ export function RouteNotFound() {
         </Button>
       </section>
       <footer className="py-6 text-center text-xs leading-6 text-muted-foreground sm:py-8">
-        ერთი სივრცე თქვენი სამუშაო დღის სამართავად.
+        თუ ბმული სამუშაოდ გჭირდებათ, გადაამოწმეთ მისამართი ადმინისტრატორთან.
       </footer>
     </main>
   )

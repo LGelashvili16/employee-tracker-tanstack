@@ -1,6 +1,6 @@
 # Teamwork UI and design guidelines
 
-Status: required project instructions. Version: 62. Last updated: 2026-11-17.
+Status: required project instructions. Version: 76. Last updated: 2026-11-17.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -63,6 +63,15 @@ Place the page title outside and above a route-aware tabs wrapper when that wrap
 
 ## Color, contrast, and iconography
 
+- The sidebar uses one small, diffuse accent halo behind the Teamwork logo, fading out before the navigation starts. Do not retain diagonal rays or a full-sidebar color wash. Extend the decorative field through the inset shell's padding so no inner rectangular edge is visible, while preserving navigation spacing. Keep it behind content, hidden from assistive technology, pointer-transparent and disabled in forced-colors mode. Derive its hue from the current sidebar primary token and reduce intensity in dark mode. Use one static radial gradient with no continuous animation, pointer tracking, canvas, blur filters or additional dependencies. This branding-only decoration does not authorize accent washes on notification chrome or other content surfaces.
+
+- Keep notification popup headers, footers, borders, header icons and idle actions neutral in both themes. Accent color identifies hover, focus, expanded/selected controls and unread icon/count state; unread-row backgrounds remain neutral. Footer links gain accent color only on hover/focus. Keep the theme selector's surrounding surface neutral and tint only its selected option. Avoid persistent decorative accent washes or shiny surfaces, especially in dark mode. Preserve body/read metadata contrast, red unread dots and existing status variants.
+
+- Keep neutral first in the accent selector and group neighboring hues together. Sort new palette entries automatically through the shared registry, preserving the same DOM and keyboard order. Extend subtle accent treatment to selected select options and checked menu choices. Reserve broad content surfaces, headings, separators and semantic status colors for their established purposes.
+
+- Personal accent colors are selected in გარეგნობა on `/settings/profile`, independently of light/dark/system mode. Keep the existing neutral option as the default alongside საფირონის ლურჯი, ძველი ოქროსფერი, სპილენძისფერი and ზამბახისფერი. Define new palettes only in `src/lib/appearance.ts`; see [adding appearance colors](appearance-colors.md). Use the generated semantic tokens for primary actions, links, focus and selected navigation. Preserve status, schedule and map color meanings.
+- The accent registry also includes ნეფრიტის მწვანე, ევკალიპტის მწვანე, ტყის მწვანე, ღვინისფერი, მუქი ლურჯი, ინდიგო, კობალტის ლურჯი, მუქი ნარინჯისფერი and ზეთისხილისფერი. Use each palette's reviewed light/dark primary and foreground pairs for checked switches, checkboxes and radio buttons. Tint current pagination, selected table rows, calendar ranges and text selection subtly. Preserve neutral's existing appearance. Verify button hover contrast as well as resting states; never recolor business-status badges to match the personal accent.
+
 - Use semantic tokens such as `background`, `foreground`, `muted`, `muted-foreground`, `border`, `primary`, and `destructive`, plus existing badge variants. Keep foundations in `src/styles.css` and variants in shared primitives.
 - Keep primary emphasis restrained. Use status colors for their established meaning rather than decorating arbitrary rows or headings.
 - Verify at least 4.5:1 contrast for normal text, 3:1 for large text, and 3:1 for meaningful control boundaries and graphical indicators against adjacent colors. Check light and dark themes separately.
@@ -83,7 +92,7 @@ Map cartography has its own reference palette, maintained in `src/components/ui/
 
 ## Shared components are the default
 
-Employee management and the attendance directory belong in the management navigation group, labeled `მართვა`. The management attendance directory and employee detail use `/manage/attendance` and `/manage/attendance/$userId`. Company schedule and attendance configuration live on the dedicated `/manage/schedule` page, labeled `სამუშაო განრიგი`, with its own sidebar entry guarded by `attendance.configure`. Omit the rules shortcut from attendance and do not retain the old company-attendance/settings URL aliases. The application currently has no teams, team-creation workflows, or team-management route. Attendance review uses direct employee-to-reviewer assignments. HR receives the explicit permissions for these workflows. Keep company-wide reads distinct from assigned-employee review and correction scope. Platform administration is a separate concern. Its administration group contains working account controls and explicitly requested planned pages with specific future capabilities and a planned badge. Do not show an empty administration group, simulate unavailable actions, or retain old route aliases after moving a workflow.
+Employee management and the attendance directory belong in the management navigation group, labeled `მართვა`. The management attendance directory and employee detail use `/manage/attendance` and `/manage/attendance/$userId`. Company schedule and attendance configuration live on the dedicated `/manage/schedule` page, labeled `სამუშაო განრიგი`, with its own sidebar entry guarded by `attendance.configure`. Omit the rules shortcut from attendance and do not retain the old company-attendance/settings URL aliases. Production teams are managed at `/manage/teams`, labeled `გუნდები`, under an explicit `teams.manage` permission. Team membership is independent of attendance reviewer assignments. Attendance review uses direct employee-to-reviewer assignments. HR receives the explicit permissions for these workflows. Keep company-wide reads distinct from assigned-employee review and correction scope. Platform administration is a separate concern. Its administration group contains working account controls and explicitly requested planned pages with specific future capabilities and a planned badge. Do not show an empty administration group, simulate unavailable actions, or retain old route aliases after moving a workflow.
 
 - Use the existing Base UI/shadcn components for buttons, inputs, fields, selects, date pickers, checkboxes, switches, tabs, tables, pagination, badges, alerts, cards, dialogs, sheets, tooltips, Skeleton, and Spinner. Inspect their actual composition APIs before use.
 - Do not recreate shared controls with raw interactive HTML or add a competing UI library. Normal semantic HTML remains appropriate for page structure, text, lists, and genuine links.
@@ -431,3 +440,27 @@ Employee attendance uses one page for period totals and detailed sessions, with 
 The seven-column attendance activity grid runs Monday through Sunday. Offset the first day of a month to its weekday column, leaving preceding cells blank without inventing out-of-month records. Compact narrow-screen lists retain chronological order.
 
 Correction reasons are optional; blank reasons still retain the full actor/timestamp/before-and-after audit. Manual attendance entry uses a separate attendance.record.manage permission for administrators, owners and HR, and stays separate from device-verified punches. Its Sheet shows employee identity, check-in date/time, an off-by-default checkout Switch and optional note. Enabled checkout requires a valid later time. Reject future times, overlaps and daily-limit violations; mark entries as ხელით აღრიცხული and leave them pending review.
+
+## Network access error documents
+
+Network-blocked document requests show a centered, Georgian Teamwork error card with the correct 403 status and guidance to use an allowed network or contact an administrator. Access-check failures show a separate 503 message and retry action. These pre-app documents use shadcn Card/Button, Tabler icons and self-contained fallback CSS because application assets may also be blocked. They work without JavaScript, respect the system color scheme and expose no session, IP or database details. API and server-function failures keep their plain-text response contract and all errors remain private and uncached.
+
+Error pages distinguish sign-in, permission, missing-resource, rate-limit, temporary-service, and unexpected failures where a safe status is available. Show Georgian recovery guidance and support references for unexpected failures. Diagnostic console records contain only generated reference IDs, UTC timestamps, source, status, and explicitly allowed technical categories. Never log raw errors, stacks, request URLs, tokens, SQL, IP addresses, or employee details. Expected 404s and permission denials do not need error-level logs. Offline guidance must clarify that writes require a connection.
+
+## Production teams
+
+Use the jobs map for future crew locations. `/manage/teams` owns team names, specialist rosters, optional leaders and deactivation. Transfers explicitly identify the previous team and preserve history. Teams with members must be emptied before deactivation. Device configuration and GPS tracking are separate workflows.
+
+Version 70 (2026-11-17): Added the authorized production-team management workflow and navigation.
+
+Version 71 (2026-11-17): Employee navigation uses a single-person icon; teams retain the multi-person icon. Team creation and management share one right-side sheet with a fixed header/footer and scrollable sections. Transfers are confirmed inline within the sheet, without nested modals.
+
+Version 72 (2026-11-17): Team creation and editing use one complete draft containing the name, roster and optional leader. One footer Save commits all changes atomically. Member selection, transfers, leader changes and deactivation remain local until Save; cancellation discards the draft.
+
+Version 73 (2026-11-17): Team sheets group team information, selected members and employee selection in shared shadcn cards. The specialist picker loads 20 active eligible employees initially, supports debounced name/username and job-title filters, and loads further pages near the end of its scroll area. Keep a keyboard-accessible load-more/retry fallback and preserve the existing single-save draft.
+
+Version 74 (2026-11-17): The team employee picker starts with production specialists selected and offers a labeled checkbox group for Employee, Production Supervisor and Sales Manager roles. Roles combine with name and job-title filters and restart infinite results at page one. HR and platform-administration accounts remain excluded even when they hold another selectable role.
+
+Version 75 (2026-11-17): Place employee role checkboxes in a shadcn filter popover with an icon trigger and selected-role count. Keep name search and job-title inputs compact, icon-assisted and individually clearable, with accessible Georgian labels.
+
+Version 76 (2026-11-17): Preserve the teams directory while an editor loads. Team removal and deactivation use destructive styling and Tabler icons; permanent deletion requires a clear confirmation, retains an audit snapshot and releases members. Disabled teams can be restored. Team history uses the shared collapsible with a Tabler disclosure icon.

@@ -64,8 +64,8 @@ describe('role and permission boundaries', () => {
       ),
     ).toBe(false)
   })
-  it('rejects the retired team-management permission', () => {
-    expect(permissionSchema.safeParse('teams.manage').success).toBe(false)
+  it('recognizes the production team-management permission', () => {
+    expect(permissionSchema.safeParse('teams.manage').success).toBe(true)
   })
   it('applies per-user grants and denials consistently across role and all-permission checks', () => {
     const employee = {
@@ -135,6 +135,7 @@ describe('role and permission boundaries', () => {
   })
   it('grants administrators platform configuration, company reads, and vacation review', () => {
     const platformPermissions = [
+      'teams.manage',
       'attendance.record.manage',
       'attendance.correct.self',
       'attendance.clock.assist',
