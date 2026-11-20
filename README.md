@@ -211,4 +211,7 @@ For TanStack Start specific documentation, visit [TanStack Start](https://tansta
 
 # Commands
 
+For the standalone GPS TCP receiver, Docker deployment, protocol switching, and
+offline replay, see [GPS receiver](docs/gps-receiver.md).
+
 docker compose --env-file .env.docker -f compose.yaml -f compose.dev.yaml up -d db

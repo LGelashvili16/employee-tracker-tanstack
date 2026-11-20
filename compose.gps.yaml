@@ -1,0 +1,36 @@
+# Independent project: does not restart the web app, database, or blue/green stack.
+name: team-adwings-gps
+services:
+  gps:
+    build:
+      context: .
+      dockerfile: docker/gps/Dockerfile
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 0.5
+    stop_grace_period: 15s
+    environment:
+      GPS_PORT: '5505'
+      GPS_PROTOCOL: ${GPS_PROTOCOL:-auto}
+      GPS_REPLY: ${GPS_REPLY:-false}
+      GPS_DEVICE_IDS: ${GPS_DEVICE_IDS:-}
+      GPS_AUTH_SECRET: ${GPS_AUTH_SECRET:-}
+      GPS_UTC_OFFSET_MINUTES: ${GPS_UTC_OFFSET_MINUTES:-0}
+      GPS_JOURNAL_BYTES: ${GPS_JOURNAL_BYTES:-10485760}
+      GPS_JOURNAL_FILES: ${GPS_JOURNAL_FILES:-5}
+    ports:
+      - '${GPS_PUBLIC_PORT:-5505}:5505/tcp'
+    volumes:
+      - gps_data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+volumes:
+  gps_data:

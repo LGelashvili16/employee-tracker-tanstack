@@ -5,12 +5,15 @@
   "imports": {
     "#/*": "./src/*"
   },
-  "packageManager": "pnpm@12.16.1",
+  "packageManager": "pnpm@12.21.0",
   "scripts": {
     "dev": "vite dev --port 3005",
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "vite preview",
+    "gps:listen": "tsx scripts/gps-receiver.ts",
+    "gps:replay": "tsx scripts/gps-replay.ts",
+    "gps:build": "tsc -p tsconfig.gps.json",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed:notifications": "tsx scripts/seed-notifications.ts",

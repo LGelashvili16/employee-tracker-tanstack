@@ -7,6 +7,8 @@
 !**/.env*.example
 **/*.local
 backups
+.gps-data
+docker/gps/gps.env
 .deploy
 dist
 dist-ssr

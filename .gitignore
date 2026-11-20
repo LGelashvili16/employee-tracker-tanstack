@@ -7,6 +7,8 @@ dist-ssr
 .env.*
 !.env*.example
 /backups/
+/.gps-data/
+/docker/gps/gps.env
 /.deploy/
 .nitro
 .tanstack
