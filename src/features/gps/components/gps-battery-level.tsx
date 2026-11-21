@@ -1,14 +1,14 @@
 import { cn } from '#/lib/utils'
 
+export function gpsBatteryTone(percent: number | null) {
+  if (percent === null) return 'text-muted-foreground'
+  if (percent <= 20) return 'text-badge-red-foreground'
+  if (percent <= 50) return 'text-badge-yellow-foreground'
+  return 'text-badge-green-foreground'
+}
+
 export function GpsBatteryLevel({ percent }: { percent: number | null }) {
-  const color =
-    percent === null
-      ? 'text-muted-foreground'
-      : percent <= 20
-        ? 'text-badge-red-foreground'
-        : percent <= 50
-          ? 'text-badge-yellow-foreground'
-          : 'text-badge-green-foreground'
+  const color = gpsBatteryTone(percent)
 
   return (
     <span

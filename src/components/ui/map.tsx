@@ -248,16 +248,22 @@ export function MapMarker({
   longitude,
   latitude,
   children,
+  elevated = false,
 }: {
   longitude: number
   latitude: number
   children: ReactNode
+  /** Raises the marker above its siblings, for example while its popup is open. */
+  elevated?: boolean
 }) {
   const { map, library } = useMap()
   const [element] = useState(() => document.createElement('div'))
   const markerRef = useRef<MapLibre.Marker | null>(null)
   const position = useRef({ longitude, latitude })
   position.current = { longitude, latitude }
+  useEffect(() => {
+    element.style.zIndex = elevated ? '10' : ''
+  }, [element, elevated])
   useEffect(() => {
     const marker = new library.Marker({ element, anchor: 'bottom' })
       .setLngLat([position.current.longitude, position.current.latitude])

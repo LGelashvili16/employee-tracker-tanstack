@@ -7,7 +7,12 @@ import {
   createGpsDecodeErrorRecorder,
   createGpsIngest,
 } from './gps-ingest.server'
-import { gpsHistoryInput, gpsPageSize, gpsSearchSchema } from '../gps.schemas'
+import {
+  gpsHistoryInput,
+  gpsMapLimit,
+  gpsMapSchema,
+  gpsPageSize,
+} from '../gps.schemas'
 import type { Actor } from '#/lib/authorization/actor'
 import type { Position } from './protocols/protocol'
 
@@ -24,6 +29,8 @@ const owner: Actor = {
 }
 const reportedId = '009590038494'
 const settings = { name: 'საცდელი მოწყობილობა', reportedId, enabled: true }
+const all = (input: { q?: string } = {}) =>
+  gpsMapSchema.parse({ ...input, includeDisabled: true })
 
 beforeAll(async () => {
   if (!url) return
@@ -56,9 +63,11 @@ afterAll(async () => {
 it.skipIf(!url)(
   'registers, persists, deduplicates and reads GPS fixes through the registry',
   async () => {
-    const { readGpsWorkspace, saveGpsDevice } =
+    const { readGpsMapDevices, saveGpsDevice } =
       await import('./gps-management.service.server')
-    const read = () => readGpsWorkspace(owner, gpsSearchSchema.parse({}))
+    const read = async () => ({
+      rows: (await readGpsMapDevices(owner, all())).devices,
+    })
     expect(
       await saveGpsDevice(owner, { ...settings, id: null, version: null }),
     ).toBe(true)
@@ -121,6 +130,20 @@ it.skipIf(!url)(
         .rows[0].count,
     ).toBe(3)
     const [row] = (await read()).rows
+    const mapped = await readGpsMapDevices(owner, gpsMapSchema.parse({}))
+    expect(mapped.total).toBe(1)
+    expect(mapped.devices[0]).toMatchObject({
+      id: row.id,
+      batteryPercent: 63,
+      position: {
+        latitude: newest.latitude,
+        fixAt: new Date(newest.timestamp),
+      },
+    })
+    expect(
+      (await readGpsMapDevices(owner, gpsMapSchema.parse({ q: 'ზზზ' })))
+        .devices,
+    ).toEqual([])
     expect(row.lastContactAt).toEqual(receivedAt)
     expect(row.position).toMatchObject({
       latitude: newest.latitude,
@@ -181,20 +204,17 @@ it.skipIf(!url)(
       roles: ['employee'],
       permissionOverrides: { allow: ['manage.access', 'gps.read'], deny: [] },
     }
-    expect(
-      (await readGpsWorkspace(viewer, gpsSearchSchema.parse({ q: 'ახალი' })))
-        .total,
-    ).toBe(1)
+    expect((await readGpsMapDevices(viewer, all({ q: 'ახალი' }))).total).toBe(1)
     await expect(
       saveGpsDevice(viewer, { ...settings, id: null, version: null }),
     ).rejects.toThrow()
     await expect(
-      readGpsWorkspace(
+      readGpsMapDevices(
         {
           ...viewer,
           permissionOverrides: { allow: ['manage.access'], deny: [] },
         },
-        gpsSearchSchema.parse({}),
+        all(),
       ),
     ).rejects.toThrow()
   },
@@ -273,7 +293,7 @@ it.skipIf(!url)(
 it.skipIf(!url)(
   'stores only the latest diagnostic by kind and keeps malformed traffic out of last contact',
   async () => {
-    const { readGpsDiagnostics, readGpsWorkspace, saveGpsDevice } =
+    const { readGpsDiagnostics, readGpsMapDevices, saveGpsDevice } =
       await import('./gps-management.service.server')
     const id = '9590038497'
     await saveGpsDevice(owner, {
@@ -283,8 +303,8 @@ it.skipIf(!url)(
       version: null,
     })
     const {
-      rows: [device],
-    } = await readGpsWorkspace(owner, gpsSearchSchema.parse({ q: id }))
+      devices: [device],
+    } = await readGpsMapDevices(owner, all({ q: id }))
     const db = drizzle({ client })
     const ingest = createGpsIngest(db)
     const saveError = createGpsDecodeErrorRecorder(db)
@@ -325,11 +345,46 @@ it.skipIf(!url)(
     )
     expect(await readGpsDiagnostics(owner, device.id)).toHaveLength(4)
     expect(
-      (await readGpsWorkspace(owner, gpsSearchSchema.parse({ q: id }))).rows[0]
-        .lastContactAt,
+      (await readGpsMapDevices(owner, all({ q: id }))).devices[0].lastContactAt,
     ).toEqual(latest)
     expect(() =>
       readGpsDiagnostics({ ...owner, roles: ['employee'] }, device.id),
     ).toThrow()
+  },
+)
+
+it.skipIf(!url)(
+  'limits the Jobs overlay after removing disabled and unlocated trackers',
+  async () => {
+    const { readGpsMapDevices } =
+      await import('./gps-management.service.server')
+    const q = 'GPS overlay eligibility fixture'
+    const { rows: located } = await client.query<{ id: string }>(
+      "insert into gps_device (name, reported_id, enabled) values ($1, '98000001', true), ($1, '98000002', false) returning id",
+      [q],
+    )
+    for (const { id } of located) {
+      await client.query(
+        `insert into gps_position (device_id, fingerprint, fix_at, received_at, valid, latitude, longitude, speed_kmh, course)
+       values ($1, 'fixture', '2026-11-21T08:00:00Z', '2026-11-21T08:00:00Z', true, 41, 44, 0, 0)`,
+        [id],
+      )
+    }
+    await client.query(
+      `insert into gps_device (name, reported_id, last_contact_at)
+     select $1, '99' || lpad(n::text, 6, '0'), '2026-11-21T09:00:00Z'::timestamptz
+     from generate_series(1, $2::integer) n`,
+      [q, gpsMapLimit],
+    )
+    const result = await readGpsMapDevices(owner, gpsMapSchema.parse({ q }))
+    expect(result.total).toBe(1)
+    expect(result.devices).toHaveLength(1)
+    expect(result.devices[0]).toMatchObject({
+      reportedId: '98000001',
+      position: { latitude: 41 },
+    })
+    const directory = await readGpsMapDevices(owner, all({ q }))
+    expect(directory.total).toBe(gpsMapLimit + 2)
+    expect(directory.devices).toHaveLength(gpsMapLimit)
   },
 )

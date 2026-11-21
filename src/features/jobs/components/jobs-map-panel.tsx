@@ -10,6 +10,8 @@ import {
   DialogTitle,
 } from '#/components/ui/dialog'
 import { cn } from '#/lib/utils'
+import { hasPermission } from '#/lib/authorization/permissions'
+import { GpsMapToggleLayer } from '#/features/gps/components/gps-map-toggle-layer'
 import { hasJobCoordinates } from '../jobs.rules'
 import { useJobMapSearch } from '../hooks/use-job-map-search'
 import { JobsMapOverlays, JobsMapLegend } from './jobs-map-overlays'
@@ -71,6 +73,10 @@ export function JobsMapPanel({
   const [expanded, setExpanded] = useState(false)
   const [showPlaces, setShowPlaces] = useState(false)
   const [showBuildings, setShowBuildings] = useState(false)
+  const [showGps, setShowGps] = useState(false)
+  // The server also requires these permissions; this only decides whether to offer the layer.
+  const canViewGps =
+    hasPermission(actor, 'manage.access') && hasPermission(actor, 'gps.read')
   const camera = useRef<MapCamera | null>(null)
   const focused = useRef<string | null>(null)
   const initialPin = useRef(search.pin)
@@ -138,6 +144,13 @@ export function JobsMapPanel({
                   }}
                 />
               </div>
+              {canViewGps ? (
+                <GpsMapToggleLayer
+                  actorId={actor.id}
+                  enabled={showGps}
+                  onEnabledChange={setShowGps}
+                />
+              ) : null}
               <JobsMapOverlays
                 location={search.pin ? null : location}
                 canCreate={canCreate}

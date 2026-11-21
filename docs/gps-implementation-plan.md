@@ -53,18 +53,20 @@ validation messages must follow the Georgian language requirements and
 | Message    | Device, connection, message type, device timestamp, server receipt timestamp, decoder version, decoding outcome, and validated telemetry.            |
 | Position   | Source message, device, coordinates, validity, speed, direction, altitude, and supported additional fields.                                          |
 
-- [ ] Preserve both device and server timestamps as UTC instants, with an explicit
-      device timestamp interpretation. Do not infer timezone from language or VPS time.
+- [x] Preserve position fix time and server receipt time as separate UTC
+      instants. The receiver interprets device time using its configured UTC offset.
 - [ ] Deduplicate retransmitted reports without discarding evidence of repeated
       delivery. A protocol sequence number alone is not globally unique across
       reconnects, wraparound, and devices.
 - [ ] Persist accepted messages before acknowledging them. Define recovery during
       database outages using a bounded durable backlog; do not silently rotate away
       unprocessed records or report a successful database save before commit.
-- [ ] Ensure delayed or out-of-order history cannot overwrite a newer current
-      position. Keep the latest contact, latest report, and latest valid fix distinct.
-- [ ] Use deterministic ordering, bounded queries, and appropriate device/time
-      indexes for lists, histories, and exports when introduced.
+- [x] Select the latest valid position by fix time so a delayed older position
+      does not replace a newer fix. Track the latest server contact separately.
+- [ ] Show the latest location report, including an invalid report, separately
+      from the latest contact and the latest valid fix.
+- [x] Use deterministic ordering and bounded queries for maps and location
+      history, with device/time indexes for position reads.
 
 ## 2. Device registration and naming from the website
 
@@ -80,8 +82,8 @@ validation messages must follow the Georgian language requirements and
       Website changes take effect without a container restart.
 - [ ] Provide a restricted discovery view for unknown devices with bounded
       retention. Do not silently create trusted devices or assign them to employees.
-- [ ] Keep device identifiers separate from authentication credentials. A numeric
-      identifier is not strong proof of device identity.
+- [x] Keep device identifiers separate from authentication credentials. JT808
+      authentication uses a per-device token derived from the receiver secret.
 
 ## 3. Additional telemetry and decoder support
 
@@ -98,7 +100,8 @@ validation messages must follow the Georgian language requirements and
 - [ ] Inspect real device extensions and implement supported battery, satellites,
       cellular signal, alarm flags, charging/power, mileage, and other reported data.
       Do not claim support for fields the device has not actually transmitted.
-- [ ] Distinguish missing/unknown values from zero, false, or an empty string.
+- [x] Show missing battery and numeric telemetry as unknown. Preserve valid
+      zero readings.
 - [ ] Preserve unsupported messages and extension items in restricted diagnostic
       storage, with decoder version and clear errors, so they can be reprocessed.
 - [ ] Separate raw diagnostic retention from normalized telemetry retention.
@@ -109,15 +112,18 @@ validation messages must follow the Georgian language requirements and
 
 ## 4. Protected GPS inspection area
 
-- `/manage/gps`: device list and map.
-- `/manage/gps/$deviceId`: device summary and recorded location history. Telemetry and message inspection are planned here.
+- `/manage/gps`: device map and searchable device panel.
+- `/manage/gps/$deviceId`: device summary, telemetry, latest connection
+  diagnostics, and recorded location history.
 
-- [ ] Add explicit permissions for location viewing, device management, and raw
-      diagnostics. Enforce them on every server operation as well as route guards.
-- [x] Build the searchable device list with TanStack Table, shared pagination,
-      debounced search, server filtering/sorting, and validated URL search parameters.
-- [ ] Show the device name, connection state, last contact, latest valid location,
-      fix freshness, supported telemetry, and safe decoding error information.
+- [x] Enforce `gps.read` and `gps.manage` as appropriate on current GPS routes
+      and server operations, including the Jobs Map GPS layer.
+- [x] Build the map and device panel with debounced server-side search and
+      validated URL search parameters. The paginated table was superseded by
+      the map and device panel.
+- [x] Show the device name, last contact, latest valid location, fix age on
+      the map, supported telemetry, and the latest recorded decoding error.
+- [ ] Show connection state independently of fix freshness and registry status.
 - [ ] Provide paginated message inspection with type, timestamps, decoding outcome,
       and decoded fields. Restrict raw packet inspection separately.
 - [x] Show the latest registration request, successful authentication, heartbeat,
@@ -134,11 +140,25 @@ validation messages must follow the Georgian language requirements and
 - [x] Reuse MapLibre for named markers on the current device result page and show
       the latest valid fix, its timestamp, and last contact. Poll in the first
       milestone before adding subscriptions and richer selection.
+- [x] Use a map beside searchable device cards (battery, fix age, history link).
+      Selecting a card or pin centers
+      the tracker and opens a popup with battery, speed, fix time, and a history
+      link. Tracker pins are circular with a battery dot and a distinct stale style.
+      The panel includes up to 200 matching devices, including disabled devices,
+      and refreshes every 15 seconds.
+- [x] Preserve the map viewport when search results change or return no matches.
+      Make popup controls reachable from a focused pin and restore pin focus on close.
+- [x] Add an optional GPS layer to the Jobs Map for users with `manage.access` and
+      `gps.read`. It reuses the same pins and popup and shows each tracker's latest
+      known location, labelled stale after 30 minutes. The layer shows up to 200
+      enabled devices with a valid fix and displays a count if more match.
+      The Jobs Map date filter still filters jobs only.
+- [x] Hide the Jobs Map GPS markers when a refresh fails, including on access denial.
 - [ ] Reuse the existing realtime infrastructure to notify authorized clients
       after database commits. Reconnects must refetch authoritative persisted state.
 - [ ] Distinguish server connection, recent reports, valid fix, and stale location.
       A connected tracker can still have an old position or a decoder error.
-- [ ] Prevent invalid fixes from replacing a valid current marker. Clearly label
+- [x] Prevent invalid fixes from replacing a valid current marker. Clearly label
       an old marker rather than presenting it as a fresh location.
 - [x] Add up to seven calendar days of history (Tbilisi time), a route map, and
       paginated report details. Break the route at invalid fixes or reporting gaps
@@ -223,31 +243,35 @@ types. Do not introduce separate competing task or measurement modules.
 
 ## 7. Permissions, retention, and production delivery
 
-- [ ] Apply scoped reads to positions, counts, maps, messages, history, and realtime
-      subscriptions. Raw packet access must remain more restricted than map access.
-- [ ] Audit privileged device/geofence changes and record automatic transitions
-      with their system cause and source evidence. Never audit credentials.
+- [x] Audit privileged device registry changes with the actor and before/after
+      values in the same transaction as the update.
+- [ ] Scope future message and realtime reads. Keep raw packet access more
+      restricted than map access.
+- [ ] Audit geofence configuration changes and record automatic transitions with
+      their system cause and source evidence.
 - [ ] Decide separate retention for positions, decoded telemetry, connections,
       geofence events, and raw diagnostics before adding cleanup jobs.
+- [x] Document and verify the manual GPS image rollout on the VPS as a
+      separate Compose project.
 - [ ] Add the GPS image and required operational files to the existing deployment
       workflow, preserving independent worker releases and stable private configuration.
 - [x] Connect the worker to PostgreSQL privately with appropriate credentials and
       bounded failure handling. Do not expose the database as a public GPS endpoint.
-- [ ] Test migrations, restart/reconnect recovery, database outages, backlog
-      recovery, and rollback compatibility without deleting history or volumes.
+- [x] Test GPS migrations against disposable PostgreSQL and verify the tracker
+      reconnects and sends positions after a VPS receiver recreation.
+- [ ] Test database outage and backlog recovery, and verify rollback
+      compatibility without deleting history or volumes.
 
 ## Delivery order and open decisions
 
-1. Confirm the heartbeat fix with a real packet and a live device session.
-2. Database persistence, website registration and naming, and latest-position
-   viewing are deployed and verified with the physical tracker.
-3. Add message inspection, additional telemetry, and live updates. Location history
-   and recent connection diagnostics are available. For verified device-reported
-   battery percentages, use a proportional battery fill, a percentage label,
-   green/yellow/red charge levels, and an explicit unknown state.
-4. Deliver geofence configuration, persisted entry/exit transitions, and automatic
+1. Check the matching live heartbeat reply and confirm which optional telemetry
+   fields the physical TK905-4G sends.
+2. Add message and connection history, restricted packet inspection, and
+   connection/freshness indicators with realtime updates.
+3. Deliver geofence configuration, persisted entry/exit transitions, and automatic
    presence updates on the jobs map, including measurements and other tasks.
-5. Verify the complete flow with physical devices and production delivery/recovery.
+4. Finish retention, backlog recovery and journal import, automate image delivery,
+   and verify the full flow and rollback with physical devices.
 
 Keep these choices explicit when implementing: permission grants; retention
 periods; reporting/staleness thresholds; area radius and boundary/confirmation

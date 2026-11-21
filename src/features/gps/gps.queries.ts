@@ -1,16 +1,28 @@
 import { queryOptions } from '@tanstack/react-query'
-import { getGpsHistory, getGpsWorkspace } from './gps.functions'
-import type { GpsHistorySearch, GpsSearch } from './gps.schemas'
+import { getGpsHistory, getGpsMapDevices } from './gps.functions'
+import type { GpsHistorySearch } from './gps.schemas'
 
 export const gpsKey = (actorId: string) => ['gps', actorId] as const
-export const gpsQuery = (actorId: string, search: GpsSearch) =>
+
+export const gpsMapQuery = (
+  actorId: string,
+  q: string,
+  includeDisabled = false,
+) =>
   queryOptions({
-    queryKey: [...gpsKey(actorId), search],
-    queryFn: () => getGpsWorkspace({ data: search }),
+    queryKey: [...gpsKey(actorId), 'map', q, includeDisabled],
+    queryFn: () => getGpsMapDevices({ data: { q, includeDisabled } }),
   })
-export type GpsDeviceRow = Awaited<
-  ReturnType<typeof getGpsWorkspace>
->['rows'][number]
+export type GpsMapDevice = Awaited<
+  ReturnType<typeof getGpsMapDevices>
+>['devices'][number]
+export type GpsDeviceRow = GpsMapDevice
+export type GpsLocatedDevice = GpsMapDevice & {
+  position: NonNullable<GpsMapDevice['position']>
+}
+export const hasGpsPosition = (
+  device: GpsMapDevice,
+): device is GpsLocatedDevice => device.position !== null
 
 export const gpsHistoryQuery = (
   actorId: string,
