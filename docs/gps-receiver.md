@@ -1,5 +1,8 @@
 # GPS receiver
 
+For the planned database, website, telemetry, tracking, and job-map geofencing
+work, see [GPS implementation plan](gps-implementation-plan.md).
+
 The GPS receiver is a standalone Node.js TCP worker in this repository. Run it in
 its own Docker container on the VPS. It does not start from TanStack routes or
 web application imports, and web releases do not own its listening port.
