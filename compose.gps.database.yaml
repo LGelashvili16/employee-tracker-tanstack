@@ -1,0 +1,8 @@
+services:
+  gps:
+    networks: [default, app_backend]
+
+networks:
+  app_backend:
+    external: true
+    name: ${GPS_DATABASE_NETWORK:?Set the existing application backend network}

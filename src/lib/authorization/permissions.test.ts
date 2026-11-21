@@ -133,8 +133,10 @@ describe('role and permission boundaries', () => {
         permission === 'jobs.claim',
       )
   })
-  it('grants administrators platform configuration, company reads, and vacation review', () => {
+  it('grants administrators platform configuration, company reads, vacation review, and GPS management', () => {
     const platformPermissions = [
+      'gps.read',
+      'gps.manage',
       'teams.manage',
       'attendance.record.manage',
       'attendance.correct.self',
@@ -164,7 +166,7 @@ describe('role and permission boundaries', () => {
       'audit.read',
     ] as const
     for (const permission of permissionSchema.options) {
-      expect(hasPermission(['admin'], permission)).toBe(
+      expect(hasPermission(['admin'], permission), permission).toBe(
         platformPermissions.some((platform) => platform === permission),
       )
     }

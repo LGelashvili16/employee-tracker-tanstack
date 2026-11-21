@@ -1,5 +1,8 @@
 # Deploy Team Adwings at beta.adwings.ge
 
+See the [current VPS layout and separate GPS release procedure](../../docs/vps-deployment.md)
+for the deployment paths, read-only inventory commands, and GPS image updates.
+
 Host Nginx keeps ports 80 and 443 and terminates HTTPS. It forwards only the
 beta virtual host to a Caddy switcher at `127.0.0.1:3006`. Caddy listens on
 loopback only and routes to the active blue or green container. A separate

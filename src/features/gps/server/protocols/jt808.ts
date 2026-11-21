@@ -152,9 +152,18 @@ export function createJt808(): ProtocolAdapter {
         generalReply(accepted ? 0 : 1)
         return { ...result, supported: true, authenticated: accepted }
       } else if (type === 0x0002) {
-        requirePacket(body.length === 0, 'invalid_heartbeat')
+        // The deployed legacy tracker produced 16-byte frames rejected here.
+        // Allow its one-byte body as opaque data and keep it in the raw journal.
+        requirePacket(
+          body.length === 0 || (version === undefined && body.length === 1),
+          'invalid_heartbeat',
+        )
         if (authenticatedId === deviceId) generalReply()
-        result.supported = true
+        return {
+          ...result,
+          supported: true,
+          authenticated: authenticatedId === deviceId,
+        }
       } else if (type === 0x0200) {
         requirePacket(body.length >= 28, 'invalid_location_length')
         const status = body.readUInt32BE(4)
@@ -181,7 +190,12 @@ export function createJt808(): ProtocolAdapter {
           course: body.readUInt16BE(20),
         })
         if (authenticatedId === deviceId) generalReply()
-        return { ...result, supported: true, position }
+        return {
+          ...result,
+          supported: true,
+          authenticated: authenticatedId === deviceId,
+          position,
+        }
       }
       return result
     },

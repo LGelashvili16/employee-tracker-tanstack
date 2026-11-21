@@ -7,14 +7,15 @@ The GPS receiver is a standalone Node.js TCP worker in this repository. Run it i
 its own Docker container on the VPS. It does not start from TanStack routes or
 web application imports, and web releases do not own its listening port.
 
-This implementation records and decodes traffic to identify the TK905-4G variant.
-Decoded positions are stored in the private diagnostic journal, not the company
-database or map yet. Nothing marks attendance or assigns employees. Live hardware
-compatibility still requires a successful connection and real device packets.
+The worker records and decodes traffic in a private diagnostic journal. Optional
+JT808 database mode also stores positions and uses the website device registry.
 
-## Start on the VPS
+## Start from a full checkout
 
-Run from the repository root. Stop `nc` or any other listener on TCP 5505 first.
+For the deployed VPS, use the [VPS layout and GPS release runbook](vps-deployment.md),
+which uses the persistent `.env.gps` and a prebuilt image. The commands below
+are for a first run from a full repository checkout. Ensure the chosen public
+TCP port is free before starting the service.
 
 ```bash
 cp docker/gps/gps.env.example docker/gps/gps.env
@@ -51,7 +52,57 @@ by this worker. The observed device connection attempts are TCP.
 
 The container runs as the non-root Node user with a read-only root filesystem,
 dropped capabilities, resource limits, and a private persistent `/data` volume.
-It contains compiled worker code and Zod, not the web application's dependencies.
+It contains compiled worker code and production dependencies.
+
+## PostgreSQL and the website registry
+
+1. Apply the app's migrations through the usual migration runner and deploy the
+   web build. As an administrator or owner, open `/manage/gps` and add the JT808
+   tracker using the numeric ID from its label or SMS. Matching normalizes
+   leading zeroes in the incoming packet and the registered ID.
+2. Give the receiver a private PostgreSQL connection. Use a dedicated database
+   login with `CONNECT` to the app database, `USAGE` on its schema, `SELECT` on
+   `gps_device`, `UPDATE (last_contact_at)` on `gps_device`, and `INSERT` plus
+   `SELECT (device_id, fingerprint)` on `gps_position`. Diagnostics also need
+   `SELECT`, `INSERT` and `UPDATE (received_at)` on `gps_device_diagnostic`.
+   The receiver does not need access to employee data or the device audit table.
+3. In the receiver's private configuration, set `GPS_DATABASE_URL` to the
+   PostgreSQL URL, leave the existing `GPS_AUTH_SECRET` stable, and set
+   `GPS_PROTOCOL=jt808` and `GPS_REPLY=true`. Keep the tracker and
+   `GPS_PUBLIC_PORT` on the existing public port (15505 on the test VPS).
+4. When PostgreSQL is on the existing Docker backend network, also set
+   `GPS_DATABASE_NETWORK` to that network's actual name. Use its database service
+   address and private port in the URL. Run the GPS project with the database
+   override so network attachment survives restarts:
+
+   ```bash
+   docker compose --env-file docker/gps/gps.env -f compose.gps.yaml -f compose.gps.database.yaml up -d --build gps
+   ```
+
+   In the VPS deployment directory, use its private `.env.gps` path, transfer
+   both Compose files, and use `--no-build` with the updated image already loaded.
+   If the database is reachable over a separate private network, the override
+   is unnecessary.
+
+The registry controls admission on each supported frame in database mode. An
+authenticated device's position is committed before the worker sends its reply.
+When the database is unavailable, the connection closes without a success reply
+so the tracker can retry. The rotating raw journal remains a diagnostic record.
+Automatic backlog recovery and import of earlier captures are future work.
+
+The map shows the latest valid fix for enabled devices in the current search
+result page, with a visible fix time and separate last-contact time. The page
+refreshes every 15 seconds while active. Select a device name to view its route
+and paginated reports for up to seven calendar days in Tbilisi time. History
+uses only reports saved in PostgreSQL. Additional telemetry and geofences are
+tracked in the implementation plan.
+
+The device detail page shows the most recent registration request, successful
+authentication, heartbeat, and decode error for that device. Decode errors are
+attributed only on authenticated connections. The panel refreshes every 15 seconds
+while open. Deploy the diagnostics migration before restarting the database-mode
+receiver with the new image. The panel starts filling with new traffic after
+deployment. Earlier journal entries stay in the private journal.
 
 ## Switching decoders
 
@@ -177,6 +228,7 @@ in live reception and replay.
   encrypted and subpackaged messages are retained but not acknowledged or
   reassembled. Standard TLV extensions are checked for truncation but not decoded;
   this initial JT808 decoder does not expose vendor-specific battery fields.
+
 - **Watch ASCII**: declared hex content length and optional four-digit index;
   `INIT`, `LK`, `TKQ`, `TKQ2`; standard `UD`, `UD2`, `AL`, `AL2`, `WT` location
   layout with decimal degrees, knots converted to km/h, and battery percentage.
@@ -185,6 +237,13 @@ in live reception and replay.
 - **H02 ASCII**: standard `*HQ` V1 location layout with degrees/minutes converted
   to decimal degrees, knots converted to km/h, and the V1 response with UTC
   `yyyyMMddHHmmss`. Other V-types and binary H02 are not guessed.
+
+Legacy JT808 heartbeat frames may include one extra body byte. The receiver
+accepts this shape after checksum and length validation and keeps the byte in
+the journal without assigning a meaning to it. To verify the TK905-4G in the
+field, watch for `0102` with `authenticated: true`, then supported `0002` frames
+and continued `0200` position reports. The private journal records intended
+`8001` replies, which can be correlated by connection and message serial.
 
 Allowlisting a numeric device ID is a diagnostic filter, not strong identity
 verification. Plain TCP protocols can be spoofed, and on-wire tokens can be

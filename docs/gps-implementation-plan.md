@@ -21,15 +21,27 @@ validation messages must follow the Georgian language requirements and
       rotating JSONL recordings, and offline replay.
 - [x] Physical TK905-4G confirmed to register with JT808 (`0100`), authenticate
       (`0102`, `authenticated=true`), and send valid positions (`0200`, `valid=true`).
-- [ ] Investigate the observed 16-byte packets rejected as `invalid_heartbeat`.
-      Preserve complete raw frames and compare their payloads with supported JT808
-      variants before changing the decoder. Do not simply accept every heartbeat
-      body length. Verify valid replies and stable connections with actual hardware.
+- [x] Add regression coverage for the legacy one-byte JT808 heartbeat inferred
+      from the observed 16-byte packets rejected as `invalid_heartbeat`. The legacy
+      decoder accepts exactly zero or one body byte after normal frame validation.
+      The extra byte stays uninterpreted and remains available in the raw journal.
+- [ ] Confirm the heartbeat fix on the TK905-4G. Replay a captured heartbeat,
+      verify the reply is `8001` for `0002`, and check that the device continues
+      reporting positions beyond an idle interval.
 
-PostgreSQL GPS persistence and website inspection routes do not exist yet. The
-current journal has bounded retention and is not a permanent tracking history.
+The first JT808 milestone adds PostgreSQL device and position storage and the
+protected `/manage/gps` directory. The hardware still needs to be verified in
+database mode. The current journal has bounded retention.
 
 ## 1. Permanent data storage
+
+- [x] Add the JT808 device registry, position history, and registry audit tables
+      with a generated migration. Verify against disposable PostgreSQL.
+- [x] For the initial position flow, commit authenticated reports before sending
+      success replies, deduplicate exact frames, and select the latest valid fix
+      by device time. Preserve server receipt time separately.
+- [ ] Add general message/connection persistence, durable backlog recovery, and
+      historical journal import.
 
 - [ ] Add feature-owned Drizzle schemas, constraints, indexes, reviewed migrations,
       and shared Zod contracts for the following records:
@@ -56,8 +68,8 @@ current journal has bounded retention and is not a permanent tracking history.
 
 ## 2. Device registration and naming from the website
 
-- [ ] Let authorized users register a tracker by protocol and reported identifier,
-      give it a recognizable name, rename it, and enable or disable it.
+- [x] Let authorized users register a JT808 tracker by reported identifier,
+      name and rename it, and enable or disable it from the website.
 - [ ] Keep a stable internal device ID so renaming or updating configuration never
       detaches historical data. Prevent duplicate identities with database constraints.
 - [ ] Preserve transmitted identifiers, including leading zeroes, and normalize
@@ -65,8 +77,8 @@ current journal has bounded retention and is not a permanent tracking history.
       the tracker's identity remains the same.
 - [ ] Configure expected reporting interval and timestamp interpretation per
       device where needed. Record configuration changes in the application audit log.
-- [ ] Replace the environment-only device allowlist with the database registry.
-      Website changes must take effect in the receiver without a container restart.
+- [x] Use the database registry for JT808 admission when database mode is enabled.
+      Website changes take effect without a container restart.
 - [ ] Provide a restricted discovery view for unknown devices with bounded
       retention. Do not silently create trusted devices or assign them to employees.
 - [ ] Keep device identifiers separate from authentication credentials. A numeric
@@ -90,34 +102,38 @@ current journal has bounded retention and is not a permanent tracking history.
 
 ## 4. Protected GPS inspection area
 
-Proposed URLs, subject to the existing route conventions at implementation time:
-
 - `/manage/gps`: device list and map.
-- `/manage/gps/$deviceId`: device details, telemetry, messages, and history.
+- `/manage/gps/$deviceId`: device summary and recorded location history. Telemetry and message inspection are planned here.
 
 - [ ] Add explicit permissions for location viewing, device management, and raw
       diagnostics. Enforce them on every server operation as well as route guards.
-- [ ] Build the searchable device list with TanStack Table, shared pagination,
+- [x] Build the searchable device list with TanStack Table, shared pagination,
       debounced search, server filtering/sorting, and validated URL search parameters.
 - [ ] Show the device name, connection state, last contact, latest valid location,
       fix freshness, supported telemetry, and safe decoding error information.
 - [ ] Provide paginated message inspection with type, timestamps, decoding outcome,
       and decoded fields. Restrict raw packet inspection separately.
+- [x] Show the latest registration request, successful authentication, heartbeat,
+      and decode error on the device details page. Store one timestamp per kind
+      and attribute decode errors only after authentication on the same connection.
 - [ ] Use existing Base UI/shadcn controls, badges, loading/error/empty states,
       Georgian copy, TanStack Form/Zod validation, and the app's feedback conventions.
 
 ## 5. Live map and position history
 
-- [ ] Reuse the existing MapLibre component for named device markers, selection,
-      and the latest valid position with its timestamp and freshness.
+- [x] Reuse MapLibre for named markers on the current device result page and show
+      the latest valid fix, its timestamp, and last contact. Poll in the first
+      milestone before adding subscriptions and richer selection.
 - [ ] Reuse the existing realtime infrastructure to notify authorized clients
       after database commits. Reconnects must refetch authoritative persisted state.
 - [ ] Distinguish server connection, recent reports, valid fix, and stale location.
       A connected tracker can still have an old position or a decoder error.
 - [ ] Prevent invalid fixes from replacing a valid current marker. Clearly label
       an old marker rather than presenting it as a fresh location.
-- [ ] Add bounded date-range history, route lines, and individual report details.
-      Show reporting gaps; do not invent points or imply uninterrupted observation.
+- [x] Add up to seven calendar days of history (Tbilisi time), a route map, and
+      paginated report details. Break the route at invalid fixes or reporting gaps
+      longer than five minutes. The map uses up to the newest 2,000 reports in the
+      selected range. All reports in that range are accessible in the table.
 
 ## 6. Automatic geofencing on the jobs map
 
@@ -210,10 +226,13 @@ types. Do not introduce separate competing task or measurement modules.
 
 ## Delivery order and open decisions
 
-1. Resolve the observed heartbeat variant and add regression fixtures.
+1. Confirm the heartbeat fix with a real packet and a live device session.
 2. Deliver database persistence, website registration/naming, and latest-position
    viewing as the first usable vertical slice.
-3. Add message inspection, additional telemetry, live updates, and location history.
+3. Add message inspection, additional telemetry, and live updates. Location history
+   and recent connection diagnostics are available. For verified device-reported
+   battery percentages, use a proportional battery fill, a percentage label,
+   green/yellow/red charge levels, and an explicit unknown state.
 4. Deliver geofence configuration, persisted entry/exit transitions, and automatic
    presence updates on the jobs map, including measurements and other tasks.
 5. Verify the complete flow with physical devices and production delivery/recovery.

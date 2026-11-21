@@ -11,6 +11,6 @@
     "rootDir": ".",
     "outDir": "dist/gps"
   },
-  "include": ["scripts/gps-*.ts", "src/features/gps/server/**/*.ts"],
+  "include": ["scripts/gps-*.ts"],
   "exclude": ["**/*.test.ts"]
 }

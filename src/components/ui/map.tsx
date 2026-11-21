@@ -54,6 +54,7 @@ export function Map({
   camera,
   showPlaces = false,
   showBuildings = true,
+  label = 'სამუშაოების რუკა',
 }: {
   children?: ReactNode
   className?: string
@@ -62,6 +63,7 @@ export function Map({
   camera?: RefObject<MapCamera | null>
   showPlaces?: boolean
   showBuildings?: boolean
+  label?: string
 }) {
   const container = useRef<HTMLDivElement>(null)
   const initial = useRef({ center, zoom })
@@ -90,7 +92,7 @@ export function Map({
       setRetrying(false)
       if (retryRequested.current) {
         retryRequested.current = false
-        toast.error('რუკა ვერ ჩაიტვირთა. გამოიყენეთ სამუშაოების სია.')
+        toast.error('რუკა ვერ ჩაიტვირთა. გამოიყენეთ ჩანაწერების სია.')
       }
     }
     const timeout = setTimeout(fail, 25_000)
@@ -123,7 +125,7 @@ export function Map({
           attributionControl: { compact: true },
           locale: {
             'AttributionControl.ToggleAttribution': 'რუკის წყაროები',
-            'Map.Title': 'სამუშაოების რუკა',
+            'Map.Title': label,
           },
         })
         const map = instance
@@ -136,7 +138,7 @@ export function Map({
           .getCanvas()
           .setAttribute(
             'aria-label',
-            'სამუშაოების რუკა. ჩანაწერები ასევე ხელმისაწვდომია სიაში.',
+            `${label}. ჩანაწერები ასევე ხელმისაწვდომია სიაში.`,
           )
         map.on('load', () => {
           clearTimeout(timeout)
@@ -178,7 +180,7 @@ export function Map({
       }
       instance?.remove()
     }
-  }, [attempt, camera])
+  }, [attempt, camera, label])
   useEffect(() => {
     if (context && sourceStyle.current)
       context.map.setStyle(sourceStyle.current)
@@ -211,8 +213,7 @@ export function Map({
             {failed ? 'რუკა ვერ ჩაიტვირთა' : 'რუკა იტვირთება'}
           </AlertTitle>
           <AlertDescription>
-            გადაამოწმეთ ინტერნეტი ან გამოიყენეთ სამუშაოების სია. მდებარეობა
-            კოორდინატებითაც შეგიძლიათ მიუთითოთ.
+            გადაამოწმეთ ინტერნეტი ან გამოიყენეთ ჩანაწერების სია.
           </AlertDescription>
           <Button
             variant="outline"
