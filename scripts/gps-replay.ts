@@ -24,7 +24,11 @@ async function replay() {
     .min(1)
     .max(20)
     .parse(process.argv.slice(2))
-  const config = readGpsConfig({ ...process.env, GPS_REPLY: 'false' })
+  const config = readGpsConfig({
+    ...process.env,
+    GPS_REPLY: 'false',
+    GPS_DATABASE_URL: '',
+  })
   const sessions = new Map<string, GpsSession>()
   for (const file of args) {
     const input = createReadStream(file)

@@ -112,6 +112,40 @@ describe('GPS stream and protocol strategies', () => {
     expect(createJt808().decode(location, context).replies).toEqual([])
   })
 
+  it('acknowledges a legacy one-byte heartbeat only after device authentication', () => {
+    const decoder = createJt808()
+    // Synthetic 16-byte frame matching the structure inferred from the VPS log.
+    const heartbeat = Buffer.from('7e00020001009590038494000500107e', 'hex')
+    expect(decoder.decode(heartbeat, context)).toMatchObject({
+      type: '0002',
+      supported: true,
+      replies: [],
+    })
+
+    const registrationReply = decoder.decode(registration, context).replies[0]
+    const token = unescapeJt808(registrationReply).subarray(15, -1)
+    decoder.decode(encodeJt808(0x0102, terminal, 4, token), context)
+
+    const result = decoder.decode(heartbeat, context)
+    expect(result.position).toBeUndefined()
+    const reply = unescapeJt808(result.replies[0])
+    expect(reply.readUInt16BE(0)).toBe(0x8001)
+    expect(reply.subarray(12, -1)).toEqual(Buffer.from([0, 5, 0, 2, 0]))
+
+    expect(() =>
+      decoder.decode(
+        encodeJt808(0x0002, terminal, 6, Buffer.alloc(2)),
+        context,
+      ),
+    ).toThrow('invalid_heartbeat')
+    expect(() =>
+      decoder.decode(
+        encodeJt808(0x0002, Buffer.alloc(10), 6, Buffer.alloc(1), 1),
+        context,
+      ),
+    ).toThrow('invalid_heartbeat')
+  })
+
   it('supports versioned 2019 headers and rejects unassembled fragments', () => {
     const longId = Buffer.from('00000000009590038494', 'hex')
     const decoder = createJt808()

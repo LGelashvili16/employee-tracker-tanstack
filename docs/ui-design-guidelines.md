@@ -1,6 +1,6 @@
 # Team Adwings UI and design guidelines
 
-Status: required project instructions. Version: 76. Last updated: 2026-11-17.
+Status: required project instructions. Version: 78. Last updated: 2026-11-21.
 
 Read this guide before designing, implementing, changing, or reviewing application UI. Apply it alongside `AGENTS.md`, feature rules, and the installed library versions. This is a living standard, not a claim that every existing screen already complies.
 
@@ -15,6 +15,8 @@ Typography, hierarchy, spacing and density, color and contrast, iconography, con
 - This guide does not authorize an unrelated application-wide redesign, dependency installation, or permission change. Improve shared primitives when the requested change calls for it, with verification proportional to their reach.
 
 ## Mandatory design quality
+
+Deliver an ultra-modern, visually polished interface from the first implementation. Use the existing components and tokens with deliberate grouping, consistent spacing, clear hierarchy, and well-resolved interaction states. Check the rendered UI at narrow and wide widths in both themes before handing it off.
 
 | Area                   | Required result                                                                                                       | Avoid                                                                                                |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -245,6 +247,7 @@ Before implementation, identify the user, their immediate task, the decision the
 - Distinguish first use, no records, no matches, insufficient access, and failure in empty states. Provide a useful permitted next step when one exists; do not invent actions the user cannot perform.
 - Use specific Georgian action labels. Avoid vague labels when context is ambiguous, generic motivational copy, and implementation terminology in product flows.
 - Use motion to explain state changes, not decorate every interaction. Follow existing short transitions, preserve layout stability, and respect reduced motion.
+- Preserve built-in shadcn/Base UI transitions, including right-side Sheet entrance and exit, unless the user explicitly requests a motion change. Keep the primitive mounted across open and close state changes and retain its content until the closing transition completes.
 - While an attendance session is running, its action button shows a violet-purple and soft white gradient with visible drifting white particles clipped inside its rounded surface. Keep the dark label and focus ring unobstructed, pause motion during submission, and use a static gradient for reduced motion. The effect follows the active session rather than scheduled hours. Retain the shared raised press feedback and a subtle hover lift.
 
 ## Visual restraint and evidence

@@ -1,0 +1,1 @@
+CREATE INDEX "gps_position_history" ON "gps_position" USING btree ("device_id","fix_at" DESC NULLS LAST,"received_at" DESC NULLS LAST,"id" DESC NULLS LAST);

@@ -23,6 +23,8 @@ export interface DecodeContext {
   allowedDeviceIds: readonly string[]
   reply: boolean
   authSecret: string
+  /** Database mode authorizes actual replies after decoding and committing. */
+  deferReplyAdmission?: boolean
 }
 
 export interface DecodedMessage {
@@ -65,9 +67,10 @@ export function canonicalDeviceId(id: string): string {
 export function mayReply(id: string, context: DecodeContext): boolean {
   return (
     context.reply &&
-    context.allowedDeviceIds.some(
-      (allowed) => canonicalDeviceId(allowed) === canonicalDeviceId(id),
-    )
+    (context.deferReplyAdmission === true ||
+      context.allowedDeviceIds.some(
+        (allowed) => canonicalDeviceId(allowed) === canonicalDeviceId(id),
+      ))
   )
 }
 

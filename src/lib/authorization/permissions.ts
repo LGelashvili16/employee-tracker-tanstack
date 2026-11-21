@@ -15,6 +15,8 @@ export const permissionSchema = z.enum(
     'teams.manage',
     'jobs.manage',
     'jobs.claim',
+    'gps.read',
+    'gps.manage',
     'announcements.manage',
     'complaints.review.all',
     'complaints.review.assigned',
@@ -101,6 +103,8 @@ export function currentAuthorization(value: {
 }
 
 const administrationPermissions = [
+  'gps.read',
+  'gps.manage',
   'teams.manage',
   'attendance.record.manage',
   'attendance.correct.self',

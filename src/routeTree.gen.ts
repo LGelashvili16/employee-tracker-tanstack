@@ -43,6 +43,7 @@ import { Route as AuthenticatedManageAnnouncementsRouteImport } from './routes/_
 import { Route as AuthenticatedManageAttendanceRouteRouteImport } from './routes/_authenticated/manage/attendance/route'
 import { Route as AuthenticatedManageComplaintsRouteImport } from './routes/_authenticated/manage/complaints'
 import { Route as AuthenticatedManageDevicesRouteImport } from './routes/_authenticated/manage/devices'
+import { Route as AuthenticatedManageGpsRouteImport } from './routes/_authenticated/manage/gps'
 import { Route as AuthenticatedManageLeaveRouteImport } from './routes/_authenticated/manage/leave'
 import { Route as AuthenticatedManageReportsRouteImport } from './routes/_authenticated/manage/reports'
 import { Route as AuthenticatedManageScheduleRouteImport } from './routes/_authenticated/manage/schedule'
@@ -63,6 +64,7 @@ import { Route as AuthenticatedManageAttendanceIndexRouteImport } from './routes
 import { Route as AuthenticatedManageAttendanceUserIdRouteImport } from './routes/_authenticated/manage/attendance/$userId'
 import { Route as AuthenticatedManageEmployeesIndexRouteImport } from './routes/_authenticated/manage/employees/index'
 import { Route as AuthenticatedManageEmployeesEmployeeIdRouteImport } from './routes/_authenticated/manage/employees/$employeeId'
+import { Route as AuthenticatedManageGpsDeviceIdRouteImport } from './routes/_authenticated/manage/gps_.$deviceId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -249,6 +251,11 @@ const AuthenticatedManageDevicesRoute =
     path: '/devices',
     getParentRoute: () => AuthenticatedManageRouteRoute,
   } as any)
+const AuthenticatedManageGpsRoute = AuthenticatedManageGpsRouteImport.update({
+  id: '/gps',
+  path: '/gps',
+  getParentRoute: () => AuthenticatedManageRouteRoute,
+} as any)
 const AuthenticatedManageLeaveRoute =
   AuthenticatedManageLeaveRouteImport.update({
     id: '/leave',
@@ -368,6 +375,12 @@ const AuthenticatedManageEmployeesEmployeeIdRoute =
     path: '/employees/$employeeId',
     getParentRoute: () => AuthenticatedManageRouteRoute,
   } as any)
+const AuthenticatedManageGpsDeviceIdRoute =
+  AuthenticatedManageGpsDeviceIdRouteImport.update({
+    id: '/gps_/$deviceId',
+    path: '/gps/$deviceId',
+    getParentRoute: () => AuthenticatedManageRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -400,6 +413,7 @@ export interface FileRoutesByFullPath {
   '/manage/announcements': typeof AuthenticatedManageAnnouncementsRoute
   '/manage/complaints': typeof AuthenticatedManageComplaintsRoute
   '/manage/devices': typeof AuthenticatedManageDevicesRoute
+  '/manage/gps': typeof AuthenticatedManageGpsRoute
   '/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/manage/reports': typeof AuthenticatedManageReportsRoute
   '/manage/schedule': typeof AuthenticatedManageScheduleRoute
@@ -421,6 +435,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings/vacation': typeof AuthenticatedAdminSettingsVacationRoute
   '/manage/attendance/$userId': typeof AuthenticatedManageAttendanceUserIdRoute
   '/manage/employees/$employeeId': typeof AuthenticatedManageEmployeesEmployeeIdRoute
+  '/manage/gps/$deviceId': typeof AuthenticatedManageGpsDeviceIdRoute
   '/manage/attendance/': typeof AuthenticatedManageAttendanceIndexRoute
   '/manage/employees/': typeof AuthenticatedManageEmployeesIndexRoute
 }
@@ -453,6 +468,7 @@ export interface FileRoutesByTo {
   '/manage/announcements': typeof AuthenticatedManageAnnouncementsRoute
   '/manage/complaints': typeof AuthenticatedManageComplaintsRoute
   '/manage/devices': typeof AuthenticatedManageDevicesRoute
+  '/manage/gps': typeof AuthenticatedManageGpsRoute
   '/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/manage/reports': typeof AuthenticatedManageReportsRoute
   '/manage/schedule': typeof AuthenticatedManageScheduleRoute
@@ -474,6 +490,7 @@ export interface FileRoutesByTo {
   '/admin/settings/vacation': typeof AuthenticatedAdminSettingsVacationRoute
   '/manage/attendance/$userId': typeof AuthenticatedManageAttendanceUserIdRoute
   '/manage/employees/$employeeId': typeof AuthenticatedManageEmployeesEmployeeIdRoute
+  '/manage/gps/$deviceId': typeof AuthenticatedManageGpsDeviceIdRoute
   '/manage/attendance': typeof AuthenticatedManageAttendanceIndexRoute
   '/manage/employees': typeof AuthenticatedManageEmployeesIndexRoute
 }
@@ -510,6 +527,7 @@ export interface FileRoutesById {
   '/_authenticated/manage/announcements': typeof AuthenticatedManageAnnouncementsRoute
   '/_authenticated/manage/complaints': typeof AuthenticatedManageComplaintsRoute
   '/_authenticated/manage/devices': typeof AuthenticatedManageDevicesRoute
+  '/_authenticated/manage/gps': typeof AuthenticatedManageGpsRoute
   '/_authenticated/manage/leave': typeof AuthenticatedManageLeaveRoute
   '/_authenticated/manage/reports': typeof AuthenticatedManageReportsRoute
   '/_authenticated/manage/schedule': typeof AuthenticatedManageScheduleRoute
@@ -531,6 +549,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/settings/vacation': typeof AuthenticatedAdminSettingsVacationRoute
   '/_authenticated/manage/attendance/$userId': typeof AuthenticatedManageAttendanceUserIdRoute
   '/_authenticated/manage/employees/$employeeId': typeof AuthenticatedManageEmployeesEmployeeIdRoute
+  '/_authenticated/manage/gps_/$deviceId': typeof AuthenticatedManageGpsDeviceIdRoute
   '/_authenticated/manage/attendance/': typeof AuthenticatedManageAttendanceIndexRoute
   '/_authenticated/manage/employees/': typeof AuthenticatedManageEmployeesIndexRoute
 }
@@ -567,6 +586,7 @@ export interface FileRouteTypes {
     | '/manage/announcements'
     | '/manage/complaints'
     | '/manage/devices'
+    | '/manage/gps'
     | '/manage/leave'
     | '/manage/reports'
     | '/manage/schedule'
@@ -588,6 +608,7 @@ export interface FileRouteTypes {
     | '/admin/settings/vacation'
     | '/manage/attendance/$userId'
     | '/manage/employees/$employeeId'
+    | '/manage/gps/$deviceId'
     | '/manage/attendance/'
     | '/manage/employees/'
   fileRoutesByTo: FileRoutesByTo
@@ -620,6 +641,7 @@ export interface FileRouteTypes {
     | '/manage/announcements'
     | '/manage/complaints'
     | '/manage/devices'
+    | '/manage/gps'
     | '/manage/leave'
     | '/manage/reports'
     | '/manage/schedule'
@@ -641,6 +663,7 @@ export interface FileRouteTypes {
     | '/admin/settings/vacation'
     | '/manage/attendance/$userId'
     | '/manage/employees/$employeeId'
+    | '/manage/gps/$deviceId'
     | '/manage/attendance'
     | '/manage/employees'
   id:
@@ -676,6 +699,7 @@ export interface FileRouteTypes {
     | '/_authenticated/manage/announcements'
     | '/_authenticated/manage/complaints'
     | '/_authenticated/manage/devices'
+    | '/_authenticated/manage/gps'
     | '/_authenticated/manage/leave'
     | '/_authenticated/manage/reports'
     | '/_authenticated/manage/schedule'
@@ -697,6 +721,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/settings/vacation'
     | '/_authenticated/manage/attendance/$userId'
     | '/_authenticated/manage/employees/$employeeId'
+    | '/_authenticated/manage/gps_/$deviceId'
     | '/_authenticated/manage/attendance/'
     | '/_authenticated/manage/employees/'
   fileRoutesById: FileRoutesById
@@ -950,6 +975,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedManageDevicesRouteImport
       parentRoute: typeof AuthenticatedManageRouteRoute
     }
+    '/_authenticated/manage/gps': {
+      id: '/_authenticated/manage/gps'
+      path: '/gps'
+      fullPath: '/manage/gps'
+      preLoaderRoute: typeof AuthenticatedManageGpsRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
     '/_authenticated/manage/leave': {
       id: '/_authenticated/manage/leave'
       path: '/leave'
@@ -1090,6 +1122,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedManageEmployeesEmployeeIdRouteImport
       parentRoute: typeof AuthenticatedManageRouteRoute
     }
+    '/_authenticated/manage/gps_/$deviceId': {
+      id: '/_authenticated/manage/gps_/$deviceId'
+      path: '/gps/$deviceId'
+      fullPath: '/manage/gps/$deviceId'
+      preLoaderRoute: typeof AuthenticatedManageGpsDeviceIdRouteImport
+      parentRoute: typeof AuthenticatedManageRouteRoute
+    }
   }
 }
 
@@ -1174,12 +1213,14 @@ interface AuthenticatedManageRouteRouteChildren {
   AuthenticatedManageAnnouncementsRoute: typeof AuthenticatedManageAnnouncementsRoute
   AuthenticatedManageComplaintsRoute: typeof AuthenticatedManageComplaintsRoute
   AuthenticatedManageDevicesRoute: typeof AuthenticatedManageDevicesRoute
+  AuthenticatedManageGpsRoute: typeof AuthenticatedManageGpsRoute
   AuthenticatedManageLeaveRoute: typeof AuthenticatedManageLeaveRoute
   AuthenticatedManageReportsRoute: typeof AuthenticatedManageReportsRoute
   AuthenticatedManageScheduleRoute: typeof AuthenticatedManageScheduleRoute
   AuthenticatedManageTeamsRoute: typeof AuthenticatedManageTeamsRoute
   AuthenticatedManageVacationsRoute: typeof AuthenticatedManageVacationsRoute
   AuthenticatedManageEmployeesEmployeeIdRoute: typeof AuthenticatedManageEmployeesEmployeeIdRoute
+  AuthenticatedManageGpsDeviceIdRoute: typeof AuthenticatedManageGpsDeviceIdRoute
   AuthenticatedManageEmployeesIndexRoute: typeof AuthenticatedManageEmployeesIndexRoute
 }
 
@@ -1191,6 +1232,7 @@ const AuthenticatedManageRouteRouteChildren: AuthenticatedManageRouteRouteChildr
       AuthenticatedManageAnnouncementsRoute,
     AuthenticatedManageComplaintsRoute: AuthenticatedManageComplaintsRoute,
     AuthenticatedManageDevicesRoute: AuthenticatedManageDevicesRoute,
+    AuthenticatedManageGpsRoute: AuthenticatedManageGpsRoute,
     AuthenticatedManageLeaveRoute: AuthenticatedManageLeaveRoute,
     AuthenticatedManageReportsRoute: AuthenticatedManageReportsRoute,
     AuthenticatedManageScheduleRoute: AuthenticatedManageScheduleRoute,
@@ -1198,6 +1240,7 @@ const AuthenticatedManageRouteRouteChildren: AuthenticatedManageRouteRouteChildr
     AuthenticatedManageVacationsRoute: AuthenticatedManageVacationsRoute,
     AuthenticatedManageEmployeesEmployeeIdRoute:
       AuthenticatedManageEmployeesEmployeeIdRoute,
+    AuthenticatedManageGpsDeviceIdRoute: AuthenticatedManageGpsDeviceIdRoute,
     AuthenticatedManageEmployeesIndexRoute:
       AuthenticatedManageEmployeesIndexRoute,
   }

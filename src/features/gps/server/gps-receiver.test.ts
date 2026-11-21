@@ -7,13 +7,15 @@ import {
   statSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { createHmac } from 'node:crypto'
 import { join } from 'node:path'
 import { connect } from 'node:net'
-import { once } from 'node:events'
+import { EventEmitter, once } from 'node:events'
 import { afterEach, expect, it, vi } from 'vitest'
 import { readGpsConfig } from './gps-config.ts'
 import { createFileJournal } from './gps-journal.server.ts'
 import { createGpsReceiver } from './gps-receiver.server.ts'
+import { encodeJt808 } from './protocols/jt808.ts'
 import type { JournalRecord } from './gps-journal.server.ts'
 
 const cleanup: Array<() => unknown> = []
@@ -117,4 +119,119 @@ it('fails closed on journal failure instead of acknowledging unrecorded bytes', 
   await once(client, 'close')
   expect(fatal).toHaveBeenCalledOnce()
   expect(receiver.server.listening).toBe(false)
+})
+
+it('withholds the registration reply until database admission succeeds', async () => {
+  vi.spyOn(console, 'info').mockImplementation(() => {})
+  const records: JournalRecord[] = []
+  const admission = new EventEmitter()
+  const started = once(admission, 'started')
+  const receiver = createGpsReceiver(
+    readGpsConfig({
+      GPS_DATABASE_URL: 'postgresql://fixture/fixture',
+      GPS_PROTOCOL: 'jt808',
+      GPS_REPLY: 'true',
+      GPS_AUTH_SECRET: 'test-secret-with-more-than-32-characters',
+    }),
+    {
+      write: (record) => {
+        records.push(record)
+      },
+    },
+    vi.fn(),
+    () => {
+      admission.emit('started')
+      return once(admission, 'admit').then(() => true)
+    },
+  )
+  receiver.server.listen(0, '127.0.0.1')
+  await once(receiver.server, 'listening')
+  cleanup.push(() => receiver.close())
+  const address = receiver.server.address()
+  if (!address || typeof address === 'string')
+    throw new Error('missing_test_port')
+  const client = connect(address.port, '127.0.0.1')
+  cleanup.push(() => client.destroy())
+  await once(client, 'connect')
+  const response = once(client, 'data')
+  client.write(
+    encodeJt808(
+      0x0100,
+      Buffer.from('009590038494', 'hex'),
+      1,
+      Buffer.alloc(33),
+    ),
+  )
+  await started
+  expect(records.map((record) => record.event)).toEqual([
+    'connect',
+    'receive',
+    'frame',
+  ])
+  admission.emit('admit')
+  expect(Buffer.isBuffer((await response)[0])).toBe(true)
+  expect(records.at(-1)?.event).toBe('send')
+})
+
+it('attributes decode errors only after authentication on that connection', async () => {
+  vi.spyOn(console, 'info').mockImplementation(() => {})
+  const recordError = vi.fn().mockResolvedValue(undefined)
+  const config = readGpsConfig({
+    GPS_DATABASE_URL: 'postgresql://fixture/fixture',
+    GPS_PROTOCOL: 'jt808',
+    GPS_REPLY: 'true',
+    GPS_AUTH_SECRET: 'test-secret-with-more-than-32-characters',
+  })
+  const receiver = createGpsReceiver(
+    config,
+    { write: vi.fn() },
+    vi.fn(),
+    async () => true,
+    recordError,
+  )
+  receiver.server.listen(0, '127.0.0.1')
+  await once(receiver.server, 'listening')
+  cleanup.push(() => receiver.close())
+  const address = receiver.server.address()
+  if (!address || typeof address === 'string')
+    throw new Error('missing_test_port')
+  const client = connect(address.port, '127.0.0.1')
+  cleanup.push(() => client.destroy())
+  await once(client, 'connect')
+  const id = '009590038494'
+  const frame = (type: number, serial: number, body: Buffer) =>
+    encodeJt808(type, Buffer.from(id, 'hex'), serial, body)
+  const token = createHmac('sha256', config.GPS_AUTH_SECRET)
+    .update(id)
+    .digest('hex')
+    .slice(0, 32)
+  const authenticated = once(client, 'data')
+  client.write(
+    Buffer.concat([
+      frame(0x0002, 1, Buffer.alloc(2)),
+      frame(0x0102, 2, Buffer.from(token)),
+    ]),
+  )
+  await authenticated
+  expect(recordError).not.toHaveBeenCalled()
+
+  const registered = once(client, 'data')
+  client.write(
+    Buffer.concat([
+      frame(0x0002, 3, Buffer.alloc(2)),
+      frame(0x0100, 4, Buffer.alloc(33)),
+    ]),
+  )
+  await registered
+  expect(recordError).toHaveBeenCalledExactlyOnceWith(id, expect.any(Date))
+
+  const authenticatedAgain = once(client, 'data')
+  client.write(
+    Buffer.concat([
+      frame(0x0002, 5, Buffer.alloc(2)),
+      frame(0x0102, 6, Buffer.from(token)),
+    ]),
+  )
+  await authenticatedAgain
+  expect(recordError).toHaveBeenCalledTimes(1)
 })

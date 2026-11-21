@@ -33,6 +33,8 @@ This is a single-company employee tracking, time and attendance, scheduling, and
 
 ## Required UI and design standard
 
+- Deliver an ultra-modern, visually polished UI from the first implementation. Treat layout, visual hierarchy, spacing, responsive behavior, and accessibility as acceptance criteria for the initial delivery. Inspect the rendered result before handing it off.
+- Preserve the built-in shadcn/Base UI animations and transitions unless the user explicitly requests a motion change. Keep primitives mounted through their open and close transitions, and fix component lifecycle issues before changing motion styles.
 - Before designing, implementing, changing, or reviewing any UI, read [Team Adwings UI and design guidelines](docs/ui-design-guidelines.md). This is the canonical, living design standard; local skills and external inspiration support it rather than replace it.
 - Typography, hierarchy, spacing and density, color and contrast, iconography, consistency and polish, and clarity are mandatory acceptance criteria. Reuse the existing tokens, Base UI/shadcn components, Tabler icons, and Georgian copy.
 - Use the shadcn Data Table pattern with TanStack Table and shared shadcn pagination controls. Growing lists require debounced search, server-side filtering/sorting/pagination, and validated URL search parameters.
@@ -41,6 +43,8 @@ This is a single-company employee tracking, time and attendance, scheduling, and
 - Update the linked guide when the user changes a UI standard. Existing inconsistent screens do not override it; apply it incrementally within the requested scope.
 
 ## Implementation Workflow
+
+- For VPS deployment work, read [the current VPS layout and GPS release runbook](docs/vps-deployment.md). The web release and GPS receiver use separate Compose projects. Confirm current host settings with the read-only checks in that runbook before relying on historical port or network values.
 
 - Remove application files made obsolete by a change after verifying they have no remaining imports, configuration references, dynamic references, or framework/task entry-point role. Clean up their exclusively unused dependencies too. Preserve unrelated user changes, migrations, operational scripts, tests, and reusable shared UI primitives; do not treat a missing static import alone as proof that a file is unused.
 

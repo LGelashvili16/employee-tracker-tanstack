@@ -21,6 +21,7 @@ import {
   IconShieldLock,
   IconBellCog,
   IconMapPin,
+  IconGps,
   IconPlugConnected,
   IconFileSearch,
   IconUserShield,
@@ -117,6 +118,12 @@ export const navigationItems = [
     icon: IconCalendarCog,
     label: 'სამუშაო განრიგი',
     permission: 'attendance.configure',
+  },
+  {
+    to: '/manage/gps',
+    icon: IconGps,
+    label: 'GPS მოწყობილობები',
+    permission: 'gps.read',
   },
   {
     to: '/manage/teams',

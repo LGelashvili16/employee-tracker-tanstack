@@ -115,6 +115,8 @@ Role grants are comma-separated validated identifiers provisioned only by truste
 | `/settings/profile`             | `account`          | ჩემი პროფილი                       | Authenticated account                                                                                  |
 | `/settings/security`            | `account`          | ანგარიშის უსაფრთხოება              | Authenticated account                                                                                  |
 | `/manage/schedule`              | `scheduling`       | სამუშაო განრიგი                    | `attendance.configure` plus the authenticated parent                                                   |
+| `/manage/gps`                   | `gps`              | GPS მოწყობილობები                  | `gps.read` plus management access. Registry updates also require `gps.manage`.                         |
+| `/manage/gps/$deviceId`         | `gps`              | მდებარეობის ისტორია                | `gps.read` plus management access. Device summary, route map, and recorded fixes.                      |
 | `/manage/employees`             | `access`           | თანამშრომლები                      | `employees.manage` plus the management parent                                                          |
 | `/manage/employees/$employeeId` | `access`           | თანამშრომლის ანგარიში              | `employees.manage` plus the management parent                                                          |
 | `/manage/leave`                 | `leave`            | შვებულებები                        | `leave.review` plus the authenticated parent                                                           |

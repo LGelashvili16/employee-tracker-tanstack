@@ -15,3 +15,4 @@ export * from './attendance/attendance-digest.schema'
 export * from './attendance/attendance-security.schema'
 
 export * from './teams/team.schema'
+export * from './gps/gps.schema'

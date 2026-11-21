@@ -22,6 +22,8 @@ export const permissionLabels: Record<Permission, string> = {
   'teams.manage': 'წარმოების გუნდების მართვა',
   'jobs.manage': 'სამუშაოების მართვა',
   'jobs.claim': 'სამუშაოს აღება',
+  'gps.read': 'GPS მოწყობილობებისა და მდებარეობების ნახვა',
+  'gps.manage': 'GPS მოწყობილობების მართვა',
   'employees.read': 'თანამშრომლების ნახვა',
   'employees.manage': 'თანამშრომლებისა და ანგარიშების მართვა',
   'leave.review': 'შვებულების განხილვა',

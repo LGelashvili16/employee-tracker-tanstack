@@ -288,6 +288,27 @@
       "when": 1794926393854,
       "tag": "0040_team_deletion_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795258152784,
+      "tag": "0041_gps_registry",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795263285272,
+      "tag": "0042_gps_position_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795265247603,
+      "tag": "0043_gps_device_diagnostics",
+      "breakpoints": true
     }
   ]
 }

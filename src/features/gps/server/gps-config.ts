@@ -27,6 +27,9 @@ export const gpsConfigSchema = z
           .max(100),
       ),
     GPS_AUTH_SECRET: z.string().max(256).default(''),
+    GPS_DATABASE_URL: z
+      .union([z.literal(''), z.url({ protocol: /^postgres(ql)?$/ })])
+      .default(''),
     GPS_UTC_OFFSET_MINUTES: integer(0, -720, 840),
     GPS_DATA_DIR: z.string().min(1).default('./.gps-data'),
     GPS_JOURNAL_BYTES: integer(10_485_760, 262_144, 104_857_600),
@@ -37,13 +40,25 @@ export const gpsConfigSchema = z
   .superRefine((config, ctx) => {
     if (
       config.GPS_REPLY &&
-      (!config.GPS_DEVICE_IDS.length || config.GPS_AUTH_SECRET.length < 32)
+      (config.GPS_AUTH_SECRET.length < 32 ||
+        (!config.GPS_DATABASE_URL && !config.GPS_DEVICE_IDS.length))
     ) {
       ctx.addIssue({
         code: 'custom',
         message:
-          'პასუხებისთვის მიუთითეთ მოწყობილობის იდენტიფიკატორი და მინიმუმ 32 სიმბოლოიანი საიდუმლო',
+          'პასუხებისთვის მიუთითეთ მინიმუმ 32 სიმბოლოიანი საიდუმლო და მოწყობილობების სია ან მონაცემთა ბაზა.',
         path: ['GPS_REPLY'],
+      })
+    }
+    if (
+      config.GPS_DATABASE_URL &&
+      (!config.GPS_REPLY || config.GPS_PROTOCOL !== 'jt808')
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'მონაცემთა ბაზისთვის ჩართეთ JT808 პროტოკოლი და პასუხების გაგზავნა.',
+        path: ['GPS_DATABASE_URL'],
       })
     }
   })

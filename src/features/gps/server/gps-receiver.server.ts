@@ -4,7 +4,8 @@ import { GpsSession } from './gps-session.ts'
 import type { Socket } from 'node:net'
 import type { GpsConfig } from './gps-config.ts'
 import type { GpsJournal } from './gps-journal.server.ts'
-import type { DecodeContext } from './protocols/protocol.ts'
+import { mayReply } from './protocols/protocol.ts'
+import type { DecodeContext, DecodedMessage } from './protocols/protocol.ts'
 
 export function createDecodeContext(
   config: GpsConfig,
@@ -23,6 +24,12 @@ export function createGpsReceiver(
   config: GpsConfig,
   journal: GpsJournal,
   fatal: () => void,
+  ingest?: (
+    message: DecodedMessage,
+    frameHex: string,
+    receivedAt: Date,
+  ) => Promise<boolean>,
+  saveDecodeError?: (deviceId: string, receivedAt: Date) => Promise<void>,
 ) {
   const sockets = new Set<Socket>()
   let healthy = true
@@ -47,6 +54,7 @@ export function createGpsReceiver(
     sockets.add(socket)
     const connection = randomUUID()
     const session = new GpsSession(config.GPS_PROTOCOL)
+    let authenticatedDeviceId: string | undefined
     let receivedBytes = 0
     let reason = 'peer_closed'
     const record = (
@@ -102,7 +110,8 @@ export function createGpsReceiver(
     socket.on('error', () => {
       reason = 'socket_error'
     })
-    socket.on('data', (chunk: Buffer) => {
+    let processing = false
+    const receive = async (chunk: Buffer) => {
       if (!healthy) return
       if (Date.now() - windowStart >= 60_000) {
         windowStart = Date.now()
@@ -130,6 +139,7 @@ export function createGpsReceiver(
         // Bound individual parser calls even when the OS coalesces many frames.
         for (let offset = 0; offset < chunk.length; offset += 4096) {
           const context = createDecodeContext(config)
+          context.deferReplyAdmission = ingest !== undefined
           for (const result of session.push(
             chunk.subarray(offset, offset + 4096),
             context,
@@ -146,6 +156,22 @@ export function createGpsReceiver(
             )
               return
             if (decoded) {
+              let allowed = mayReply(decoded.deviceId, {
+                ...context,
+                reply: true,
+                deferReplyAdmission: false,
+              })
+              if (ingest) {
+                try {
+                  allowed = await ingest(decoded, frame.hex, context.receivedAt)
+                } catch {
+                  reason = 'database_unavailable'
+                  record('rejected', { reason })
+                  socket.destroy()
+                  return
+                }
+                if (socket.destroyed) return
+              }
               console.info(
                 JSON.stringify({
                   event: 'gps_frame',
@@ -153,17 +179,28 @@ export function createGpsReceiver(
                   type: decoded.type,
                   supported: decoded.supported,
                   authenticated: decoded.authenticated,
-                  allowed: config.GPS_DEVICE_IDS.some(
-                    (id) =>
-                      id.replace(/^0+/, '') ===
-                      decoded.deviceId.replace(/^0+/, ''),
-                  ),
+                  allowed,
                   position: Boolean(decoded.position),
                   valid: decoded.position?.valid,
                 }),
               )
+              if (ingest && !allowed && decoded.supported) {
+                reason = 'device_not_admitted'
+                socket.destroy()
+                return
+              }
+              if (ingest && !allowed) continue
+              if (decoded.protocol === 'jt808') {
+                if (decoded.supported && decoded.type === '0100') {
+                  authenticatedDeviceId = undefined
+                } else if (decoded.supported && decoded.type === '0102') {
+                  authenticatedDeviceId = decoded.authenticated
+                    ? decoded.deviceId
+                    : undefined
+                }
+              }
             }
-            if (!decoded)
+            if (!decoded) {
               console.info(
                 JSON.stringify({
                   event: 'gps_decode_error',
@@ -171,6 +208,24 @@ export function createGpsReceiver(
                   error: result.error,
                 }),
               )
+              // Attribute malformed data to the authenticated connection only.
+              if (authenticatedDeviceId && saveDecodeError) {
+                try {
+                  await saveDecodeError(
+                    authenticatedDeviceId,
+                    context.receivedAt,
+                  )
+                } catch {
+                  // Diagnostics must not interrupt an otherwise working session.
+                  console.warn(
+                    JSON.stringify({
+                      event: 'gps_diagnostic_write_failed',
+                      connection,
+                    }),
+                  )
+                }
+              }
+            }
             for (const reply of replies) {
               if (socket.writableLength > 65_536) {
                 reason = 'reply_buffer_limit'
@@ -189,8 +244,20 @@ export function createGpsReceiver(
         record('rejected', { reason })
         socket.destroy()
       }
+    }
+    const resume = () => {
+      if (!processing && !socket.writableNeedDrain && !socket.destroyed)
+        socket.resume()
+    }
+    socket.on('data', (chunk: Buffer) => {
+      socket.pause()
+      processing = true
+      void receive(chunk).finally(() => {
+        processing = false
+        resume()
+      })
     })
-    socket.on('drain', () => socket.resume())
+    socket.on('drain', resume)
     socket.on('close', () => {
       clearTimeout(lifetime)
       sockets.delete(socket)
