@@ -29,7 +29,11 @@ export function createGpsReceiver(
     frameHex: string,
     receivedAt: Date,
   ) => Promise<boolean>,
-  saveDecodeError?: (deviceId: string, receivedAt: Date) => Promise<void>,
+  saveDecodeError?: (
+    deviceId: string,
+    receivedAt: Date,
+    code?: string,
+  ) => Promise<void>,
 ) {
   const sockets = new Set<Socket>()
   let healthy = true
@@ -214,6 +218,7 @@ export function createGpsReceiver(
                   await saveDecodeError(
                     authenticatedDeviceId,
                     context.receivedAt,
+                    result.error,
                   )
                 } catch {
                   // Diagnostics must not interrupt an otherwise working session.

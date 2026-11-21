@@ -1,0 +1,3 @@
+ALTER TABLE "gps_position" ADD COLUMN "battery_percent" integer;--> statement-breakpoint
+CREATE INDEX "gps_position_latest_battery" ON "gps_position" USING btree ("device_id","fix_at" DESC NULLS LAST,"received_at" DESC NULLS LAST,"id" DESC NULLS LAST) WHERE "gps_position"."battery_percent" is not null;--> statement-breakpoint
+ALTER TABLE "gps_position" ADD CONSTRAINT "gps_position_battery_percent" CHECK ("gps_position"."battery_percent" between 0 and 100);

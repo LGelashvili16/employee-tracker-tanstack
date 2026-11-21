@@ -5,13 +5,13 @@ import { enforcePolicy } from '#/lib/authorization/guards.server'
 import {
   gpsDeviceParams,
   gpsHistoryInput,
+  gpsMapSchema,
   gpsSaveSchema,
-  gpsSearchSchema,
 } from './gps.schemas'
 import {
   readGpsDiagnostics,
   readGpsHistory,
-  readGpsWorkspace,
+  readGpsMapDevices,
   saveGpsDevice,
 } from './server/gps-management.service.server'
 
@@ -31,12 +31,12 @@ export const getGpsHistory = createServerFn({ method: 'GET' })
     return enforcePolicy(() => readGpsHistory(context.actor, data))
   })
 
-export const getGpsWorkspace = createServerFn({ method: 'GET' })
+export const getGpsMapDevices = createServerFn({ method: 'GET' })
   .middleware([permissionsMiddleware('manage.access', 'gps.read')])
-  .validator(gpsSearchSchema)
+  .validator(gpsMapSchema)
   .handler(({ context, data }) => {
     setResponseHeader('Cache-Control', 'private, no-store')
-    return enforcePolicy(() => readGpsWorkspace(context.actor, data))
+    return enforcePolicy(() => readGpsMapDevices(context.actor, data))
   })
 
 export const updateGpsDevice = createServerFn({ method: 'POST' })

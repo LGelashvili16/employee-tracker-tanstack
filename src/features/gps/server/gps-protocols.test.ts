@@ -278,6 +278,47 @@ describe('GPS stream and protocol strategies', () => {
     )
   })
 
+  it.each([
+    ['eb05000300a83f', 63],
+    ['eb05000300a800', 0],
+    ['eb05000300a865', undefined],
+    ['eb04000300a8', undefined],
+    ['eb06000300a83f00', undefined],
+    ['eb060004002d0e74', undefined],
+  ])(
+    'decodes a bounded JT808 battery percentage from %s',
+    (extension, expected) => {
+      const body = unescapeJt808(location).subarray(12, 40)
+      const frame = encodeJt808(
+        0x0200,
+        terminal,
+        0,
+        Buffer.concat([body, Buffer.from(extension, 'hex')]),
+      )
+      expect(
+        createJt808().decode(frame, context).position?.batteryPercent,
+      ).toBe(expected)
+    },
+  )
+
+  it('reads mileage, cellular signal, and satellites only from correctly sized items', () => {
+    const body = unescapeJt808(location).subarray(12, 40)
+    const frame = encodeJt808(
+      0x0200,
+      terminal,
+      0,
+      Buffer.concat([
+        body,
+        Buffer.from('0104000004d230010031010c3001633101ff01020000', 'hex'),
+      ]),
+    )
+    expect(createJt808().decode(frame, context).position).toMatchObject({
+      odometerKm: 123.4,
+      cellularSignal: 0,
+      satellites: 12,
+    })
+  })
+
   it('rejects malformed JT808 body lengths, BCD and extension lengths', () => {
     const invalidId = Buffer.from('0095a0038494', 'hex')
     expect(() =>

@@ -223,7 +223,11 @@ it('attributes decode errors only after authentication on that connection', asyn
     ]),
   )
   await registered
-  expect(recordError).toHaveBeenCalledExactlyOnceWith(id, expect.any(Date))
+  expect(recordError).toHaveBeenCalledExactlyOnceWith(
+    id,
+    expect.any(Date),
+    'invalid_heartbeat',
+  )
 
   const authenticatedAgain = once(client, 'data')
   client.write(

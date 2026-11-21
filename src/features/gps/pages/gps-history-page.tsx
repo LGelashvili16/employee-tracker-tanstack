@@ -9,7 +9,7 @@ import { IconArrowLeft, IconGps, IconRoute } from '@tabler/icons-react'
 import { DataPagination } from '#/components/common/data-pagination'
 import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Badge } from '#/components/ui/badge'
-import { buttonVariants } from '#/components/ui/button'
+import { Button, buttonVariants } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import {
   Empty,
@@ -29,9 +29,10 @@ import {
 import { formatGeorgianDateTime } from '#/lib/date-format'
 import { GpsHistoryMap } from '../components/gps-history-map'
 import { GpsDeviceDiagnostics } from '../components/gps-device-diagnostics'
+import { GpsBatteryLevel } from '../components/gps-battery-level'
 import { GpsHistoryRange } from '../components/gps-history-range'
 import { gpsHistoryQuery } from '../gps.queries'
-import { gpsPageSize, gpsTimeZone } from '../gps.schemas'
+import { gpsHistorySearch, gpsPageSize, gpsTimeZone } from '../gps.schemas'
 import type { GpsHistory } from '../gps.queries'
 import type { GpsHistorySearch } from '../gps.schemas'
 
@@ -156,6 +157,7 @@ export function GpsHistoryPage({
 }) {
   const query = useQuery(gpsHistoryQuery(actorId, deviceId, search))
   const history = query.data
+  const { to: today } = gpsHistorySearch.parse({})
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -176,7 +178,6 @@ export function GpsHistoryPage({
             {history?.device.name ?? 'მდებარეობის ისტორია'}
           </h1>
         </div>
-        <GpsHistoryRange value={search} onChange={onRangeChange} />
       </div>
 
       {query.isPending ? (
@@ -195,7 +196,7 @@ export function GpsHistoryPage({
         <>
           <Card>
             <CardContent>
-              <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-3">
+              <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="grid content-start gap-1.5">
                   <dt className="text-sm text-muted-foreground">
                     GPS მოწყობილობის იდენტიფიკატორი
@@ -230,10 +231,97 @@ export function GpsHistoryPage({
                     </dd>
                   )}
                 </div>
+                <div className="grid content-start gap-1.5">
+                  <dt className="text-sm text-muted-foreground">ბატარეა</dt>
+                  <dd>
+                    <GpsBatteryLevel
+                      percent={history.battery?.percent ?? null}
+                    />
+                  </dd>
+                  {history.battery && (
+                    <dd className="text-xs tabular-nums text-muted-foreground">
+                      <time dateTime={history.battery.fixAt.toISOString()}>
+                        {displayTime(history.battery.fixAt)}
+                      </time>
+                    </dd>
+                  )}
+                </div>
+              </dl>
+              <dl className="mt-4 grid grid-cols-2 gap-3 border-t pt-4 xl:grid-cols-4">
+                {[
+                  {
+                    label: 'სიჩქარე',
+                    value: history.latestFix?.speedKmh,
+                    unit: 'კმ/სთ',
+                  },
+                  {
+                    label: 'თანამგზავრები',
+                    value: history.latestFix?.satellites,
+                    unit: '',
+                  },
+                  {
+                    label: 'მობილური სიგნალი',
+                    value: history.latestFix?.cellularSignal,
+                    unit: '',
+                  },
+                  {
+                    label: 'გარბენი',
+                    value: history.latestFix?.odometerKm,
+                    unit: 'კმ',
+                  },
+                ].map(({ label, value, unit }) => (
+                  <div
+                    key={label}
+                    className="grid content-start gap-1 rounded-lg border bg-muted/25 px-3 py-2.5"
+                  >
+                    <dt className="text-xs text-muted-foreground">{label}</dt>
+                    <dd className="font-medium tabular-nums">
+                      {value == null
+                        ? 'უცნობია'
+                        : `${value.toLocaleString('ka-GE')}${unit ? ` ${unit}` : ''}`}
+                    </dd>
+                  </div>
+                ))}
               </dl>
             </CardContent>
           </Card>
-          <GpsDeviceDiagnostics actorId={actorId} deviceId={deviceId} />
+          <GpsDeviceDiagnostics
+            actorId={actorId}
+            deviceId={deviceId}
+            deviceName={history.device.name}
+          />
+          <section
+            aria-label="მდებარეობის ისტორიის პერიოდი"
+            className="flex flex-wrap items-center justify-between gap-3"
+          >
+            <h2 className="text-base font-semibold">მდებარეობის ისტორია</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { days: 1, label: 'დღეს' },
+                { days: 3, label: 'ბოლო 3 დღე' },
+                { days: 7, label: 'ბოლო 7 დღე' },
+              ].map(({ days, label }) => {
+                const from = new Date(
+                  Date.parse(today) - (days - 1) * 86_400_000,
+                )
+                  .toISOString()
+                  .slice(0, 10)
+                const selected = search.from === from && search.to === today
+                return (
+                  <Button
+                    key={days}
+                    variant={selected ? 'secondary' : 'outline'}
+                    depth="raised"
+                    aria-pressed={selected}
+                    onClick={() => onRangeChange({ from, to: today })}
+                  >
+                    {label}
+                  </Button>
+                )
+              })}
+              <GpsHistoryRange value={search} onChange={onRangeChange} />
+            </div>
+          </section>
           {history.total === 0 ? (
             <Empty className="rounded-xl border bg-card">
               <EmptyHeader>

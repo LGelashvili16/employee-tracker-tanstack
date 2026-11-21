@@ -1,25 +1,32 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import { format } from 'date-fns'
 import { ka } from 'date-fns/locale'
 import { GpsPage } from './gps-page'
 import { GpsHistoryPage } from './gps-history-page'
+import { GpsMapToggleLayer } from '../components/gps-map-toggle-layer'
+import { GpsMapView } from '../components/gps-map-view'
 import { gpsSearchSchema } from '../gps.schemas'
 import type { ComponentProps, ReactNode } from 'react'
 
-const { getHistory, getWorkspace, saveDevice } = vi.hoisted(() => ({
+const { getHistory, getMapDevices, saveDevice } = vi.hoisted(() => ({
   getHistory: vi.fn(),
-  getWorkspace: vi.fn(),
+  getMapDevices: vi.fn(),
   saveDevice: vi.fn(),
 }))
 vi.mock('../gps.functions', () => ({
   getGpsDiagnostics: async () => [
     { kind: 'heartbeat', receivedAt: tracker.lastContactAt },
+    {
+      kind: 'decode_error',
+      receivedAt: tracker.lastContactAt,
+      errorCode: 'invalid_checksum',
+    },
   ],
   getGpsHistory: getHistory,
-  getGpsWorkspace: getWorkspace,
+  getGpsMapDevices: getMapDevices,
   updateGpsDevice: saveDevice,
 }))
 vi.mock('../components/gps-history-map', () => ({
@@ -47,6 +54,15 @@ vi.mock('#/components/ui/map', () => ({
   Map: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   MapMarker: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   MapControls: () => null,
+  useMap: () => ({
+    map: { easeTo: vi.fn(), fitBounds: vi.fn(), getZoom: () => 10 },
+    library: {
+      LngLatBounds: class {
+        extend() {}
+      },
+    },
+    loaded: false,
+  }),
 }))
 
 const tracker = {
@@ -85,45 +101,123 @@ it.each([
 ])(
   'shows a placeholder when the successful GPS query has no results (%s)',
   async (q, heading) => {
-    getWorkspace.mockResolvedValue({ rows: [], total: 0 })
+    getMapDevices.mockResolvedValue({ devices: [], total: 0 })
     showPage(false, q)
     expect(await screen.findByRole('heading', { name: heading })).toBeVisible()
-    expect(screen.queryByRole('table')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
   },
 )
 
 it('shows the load error when the query fails', async () => {
-  getWorkspace.mockRejectedValue(new Error('Database unavailable'))
+  getMapDevices.mockRejectedValue(new Error('Database unavailable'))
   showPage(false)
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'მოწყობილობები ვერ ჩაიტვირთა.',
   )
-  expect(
-    screen.queryByRole('heading', {
-      name: 'GPS მოწყობილობები ჯერ არ არის დამატებული.',
-    }),
-  ).toBeNull()
 })
 
-it('shows the latest fix on the map and in the table for a read-only viewer', async () => {
-  getWorkspace.mockResolvedValue({ rows: [tracker], total: 1 })
+it('selects a tracker from its card and opens its popup on the map', async () => {
+  getMapDevices.mockResolvedValue({
+    devices: [
+      { ...tracker, batteryPercent: 63 },
+      { ...tracker, id: 'no-fix', name: 'უპოზიციო', position: null },
+    ],
+    total: 2,
+  })
+  const user = userEvent.setup()
   showPage(false)
   const map = await screen.findByRole('region', {
-    name: 'ამ გვერდზე ნაჩვენები მოწყობილობების მდებარეობები',
+    name: 'GPS მოწყობილობების მდებარეობები',
   })
-  expect(within(map).getByText(tracker.name)).toBeVisible()
-  expect(screen.getByRole('link', { name: tracker.name })).toHaveAttribute(
-    'href',
-    `/manage/gps/${tracker.id}`,
-  )
-  expect(screen.getByText('41.71853, 44.74087')).toBeVisible()
+  expect(
+    within(map).getByRole('button', { name: /სატესტო ტრეკერი, ბოლო/ }),
+  ).toHaveAttribute('aria-expanded', 'false')
+  const list = within(screen.getByRole('list'))
+  expect(list.getByRole('button', { name: /უპოზიციო/ })).toBeDisabled()
   expect(
     screen.queryByRole('button', { name: 'მოწყობილობის დამატება' }),
   ).toBeNull()
   expect(screen.queryByRole('button', { name: /რედაქტირება/ })).toBeNull()
+  await user.click(list.getByRole('button', { name: /სატესტო ტრეკერი/ }))
+  const popup = within(map).getByRole('group', {
+    name: 'სატესტო ტრეკერი: დეტალები',
+  })
+  expect(within(popup).getByText('63%')).toBeVisible()
+  expect(
+    within(popup).getByRole('link', { name: 'მოწყობილობის ისტორია' }),
+  ).toHaveAttribute('href', `/manage/gps/${tracker.id}`)
+  await user.click(within(popup).getByRole('button', { name: 'დახურვა' }))
+  expect(within(map).queryByRole('group')).toBeNull()
+  const pin = within(map).getByRole('button', { name: /სატესტო ტრეკერი, ბოლო/ })
+  expect(pin).toHaveFocus()
+  await user.keyboard('{Enter}')
+  await user.tab()
+  expect(within(map).getByRole('button', { name: 'დახურვა' })).toHaveFocus()
+  await user.tab()
+  expect(
+    within(map).getByRole('link', { name: 'მოწყობილობის ისტორია' }),
+  ).toHaveFocus()
+  await user.keyboard('{Escape}')
+  expect(pin).toHaveFocus()
+  expect(within(map).queryByRole('group')).toBeNull()
 })
 
+it('keeps the map mounted while searching, including when the search returns no matches', async () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  getMapDevices.mockResolvedValueOnce({ devices: [tracker], total: 1 })
+  let finishSearch: (result: { devices: []; total: number }) => void = () => {}
+  getMapDevices.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finishSearch = resolve
+      }),
+  )
+  const workspace = (q: string) => (
+    <QueryClientProvider client={client}>
+      <GpsMapView actorId="gps-test" q={q} />
+    </QueryClientProvider>
+  )
+  const view = render(workspace(''))
+  const pin = await screen.findByRole('button', {
+    name: /სატესტო ტრეკერი, ბოლო/,
+  })
+  const map = screen.getByRole('region', {
+    name: 'GPS მოწყობილობების მდებარეობები',
+  })
+  view.rerender(workspace('სხვა'))
+  expect(pin).toBeVisible()
+  expect(screen.getByRole('complementary')).toHaveAttribute('aria-busy', 'true')
+  await act(() => {
+    finishSearch({ devices: [], total: 0 })
+  })
+  expect(await screen.findByText('ძიების შედეგები ვერ მოიძებნა.')).toBeVisible()
+  expect(
+    screen.getByRole('region', { name: 'GPS მოწყობილობების მდებარეობები' }),
+  ).toBe(map)
+  expect(pin).not.toBeInTheDocument()
+})
+
+it('indicates truncated Jobs GPS results and hides cached pins after a failed refresh', async () => {
+  const client = new QueryClient()
+  getMapDevices.mockResolvedValueOnce({ devices: [tracker], total: 210 })
+  render(
+    <QueryClientProvider client={client}>
+      <GpsMapToggleLayer actorId="gps-test" enabled onEnabledChange={vi.fn()} />
+    </QueryClientProvider>,
+  )
+  const pin = await screen.findByRole('button', {
+    name: /სატესტო ტრეკერი, ბოლო/,
+  })
+  expect(screen.getByText('ნაჩვენებია 1 / 210 მოწყობილობა.')).toBeVisible()
+  getMapDevices.mockRejectedValueOnce(new Error('Denied'))
+  await act(() => client.refetchQueries())
+  expect(
+    await screen.findByText('GPS მდებარეობები ვერ ჩაიტვირთა.'),
+  ).toBeVisible()
+  expect(pin).not.toBeInTheDocument()
+})
 it('shows recorded history and submits a two-day calendar selection', async () => {
   const fix = {
     ...tracker.position,
@@ -136,6 +230,7 @@ it('shows recorded history and submits a two-day calendar selection', async () =
   getHistory.mockResolvedValue({
     device: tracker,
     latestFix: fix,
+    battery: { percent: 63, fixAt: fix.fixAt },
     rows: [fix],
     track: [fix],
     trackLimit: 2000,
@@ -163,7 +258,21 @@ it('shows recorded history and submits a two-day calendar selection', async () =
   })
   expect(within(table).getByText('ვალიდური')).toBeVisible()
   expect(within(table).getByText('41.718530, 44.740870')).toBeVisible()
+  expect(screen.getByText('63%')).toBeVisible()
   expect(await screen.findByText('ბოლო საკონტროლო სიგნალი')).toBeVisible()
+  await user.click(
+    await screen.findByRole('button', { name: 'შეცდომის ნახვა' }),
+  )
+  const errorSheet = await screen.findByRole('dialog', {
+    name: 'ბოლო დეკოდირების შეცდომა',
+  })
+  expect(
+    within(errorSheet).getByText('პაკეტის საკონტროლო ჯამი არ ემთხვევა.'),
+  ).toBeVisible()
+  await user.keyboard('{Escape}')
+  await user.click(screen.getByRole('button', { name: 'ბოლო 7 დღე' }))
+  const [period] = onRangeChange.mock.calls[0]
+  expect(Date.parse(period.to) - Date.parse(period.from)).toBe(6 * 86_400_000)
   expect(screen.getByRole('link', { name: 'გვერდი 2' })).toHaveAttribute(
     'href',
     `/manage/gps/${tracker.id}?page=2`,
@@ -188,9 +297,9 @@ it('shows recorded history and submits a two-day calendar selection', async () =
 })
 
 it('registers a named tracker with its leading zeroes and refreshes the directory', async () => {
-  getWorkspace.mockResolvedValue({ rows: [], total: 0 })
+  getMapDevices.mockResolvedValue({ devices: [], total: 0 })
   saveDevice.mockImplementation(async () => {
-    getWorkspace.mockResolvedValue({ rows: [tracker], total: 1 })
+    getMapDevices.mockResolvedValue({ devices: [tracker], total: 1 })
     return true
   })
   const user = userEvent.setup()
@@ -212,7 +321,9 @@ it('registers a named tracker with its leading zeroes and refreshes the director
     tracker.reportedId,
   )
   await user.click(within(editor).getByRole('button', { name: 'შენახვა' }))
-  expect(await screen.findByRole('cell', { name: tracker.name })).toBeVisible()
+  expect(
+    await screen.findByRole('button', { name: `${tracker.name}: რედაქტირება` }),
+  ).toBeVisible()
   expect(saveDevice).toHaveBeenCalledWith({
     data: {
       id: null,

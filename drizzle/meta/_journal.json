@@ -309,6 +309,20 @@
       "when": 1795265247603,
       "tag": "0043_gps_device_diagnostics",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1795276928982,
+      "tag": "0044_gps_position_battery",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1795279230702,
+      "tag": "0045_gps_telemetry_diagnostics",
+      "breakpoints": true
     }
   ]
 }

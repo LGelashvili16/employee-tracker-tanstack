@@ -168,12 +168,47 @@ export function createJt808(): ProtocolAdapter {
         requirePacket(body.length >= 28, 'invalid_location_length')
         const status = body.readUInt32BE(4)
         const time = bcd(body.subarray(22, 28))
-        // Extension items are TLV encoded. Reject truncation even though this
-        // initial decoder only consumes the standard position fields.
+        let batteryPercent: number | undefined
+        let satellites: number | undefined
+        let cellularSignal: number | undefined
+        let odometerKm: number | undefined
         for (let offset = 28; offset < body.length;) {
           requirePacket(offset + 2 <= body.length, 'invalid_extension')
-          offset += 2 + body[offset + 1]
-          requirePacket(offset <= body.length, 'invalid_extension')
+          const start = offset + 2
+          const end = start + body[offset + 1]
+          requirePacket(end <= body.length, 'invalid_extension')
+          const kind = body[offset]
+          const length = end - start
+          if (kind === 0x01 && length === 4) {
+            odometerKm = body.readUInt32BE(start) / 10
+          } else if (
+            kind === 0x30 &&
+            length === 1 &&
+            body[start] < 255 &&
+            body[start] !== 99
+          ) {
+            cellularSignal = body[start]
+          } else if (kind === 0x31 && length === 1 && body[start] < 255) {
+            satellites = body[start]
+          } else if (kind === 0xeb) {
+            // The TK905 BSJ extension prefixes each item with a two-byte length
+            // that includes the two-byte subcommand. Other EB layouts stay opaque.
+            let candidate: number | undefined
+            let item = start
+            while (item + 4 <= end) {
+              const itemLength = body.readUInt16BE(item)
+              const next = item + 2 + itemLength
+              if (itemLength < 2 || next > end) break
+              if (itemLength === 3 && body.readUInt16BE(item + 2) === 0x00a8) {
+                const value = body[item + 4]
+                if (value <= 100) candidate = value
+              }
+              item = next
+            }
+            if (item === end && candidate !== undefined)
+              batteryPercent = candidate
+          }
+          offset = end
         }
         const position = positionSchema.parse({
           timestamp: deviceTime(
@@ -188,6 +223,10 @@ export function createJt808(): ProtocolAdapter {
           altitude: body.readUInt16BE(16),
           speedKmh: body.readUInt16BE(18) / 10,
           course: body.readUInt16BE(20),
+          batteryPercent,
+          satellites,
+          cellularSignal,
+          odometerKm,
         })
         if (authenticatedId === deviceId) generalReply()
         return {

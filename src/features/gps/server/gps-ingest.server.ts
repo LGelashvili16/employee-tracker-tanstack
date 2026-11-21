@@ -16,19 +16,20 @@ function saveDiagnostic(
   deviceId: string,
   kind: DiagnosticKind,
   receivedAt: Date,
+  errorCode: string | null = null,
 ) {
   return db
     .insert(gpsDeviceDiagnostic)
-    .values({ deviceId, kind, receivedAt })
+    .values({ deviceId, kind, receivedAt, errorCode })
     .onConflictDoUpdate({
       target: [gpsDeviceDiagnostic.deviceId, gpsDeviceDiagnostic.kind],
-      set: { receivedAt },
+      set: { receivedAt, errorCode },
       setWhere: sql`${gpsDeviceDiagnostic.receivedAt} < excluded.received_at`,
     })
 }
 
 export function createGpsDecodeErrorRecorder(db: NodePgDatabase) {
-  return (deviceId: string, receivedAt: Date) =>
+  return (deviceId: string, receivedAt: Date, code?: string) =>
     db.transaction(async (tx) => {
       const devices = await tx
         .select({ id: gpsDevice.id })
@@ -41,8 +42,21 @@ export function createGpsDecodeErrorRecorder(db: NodePgDatabase) {
         )
         .for('update')
       const device = devices.at(0)
-      if (device)
-        await saveDiagnostic(tx, device.id, 'decode_error', receivedAt)
+      if (device) {
+        const known = [
+          'invalid_checksum',
+          'invalid_extension',
+          'invalid_heartbeat',
+          'invalid_body_length',
+        ]
+        await saveDiagnostic(
+          tx,
+          device.id,
+          'decode_error',
+          receivedAt,
+          code && known.includes(code) ? code : null,
+        )
+      }
     })
 }
 
@@ -85,6 +99,10 @@ export function createGpsIngest(db: NodePgDatabase) {
               speedKmh: position.speedKmh,
               course: position.course,
               altitude: position.altitude,
+              batteryPercent: position.batteryPercent,
+              satellites: position.satellites,
+              cellularSignal: position.cellularSignal,
+              odometerKm: position.odometerKm,
             })
             .onConflictDoNothing({
               target: [gpsPosition.deviceId, gpsPosition.fingerprint],

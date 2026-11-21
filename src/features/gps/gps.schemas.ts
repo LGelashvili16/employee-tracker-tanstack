@@ -5,12 +5,14 @@ export const gpsSearchText = z
   .string()
   .trim()
   .max(80, 'ძიება უნდა შეიცავდეს მაქსიმუმ 80 სიმბოლოს.')
+export const gpsMapLimit = 200
 export const gpsSearchSchema = z.object({
   q: gpsSearchText.catch('').default(''),
-  page: z.coerce.number().int().min(1).max(10000).catch(1).default(1),
-  sort: z.enum(['name', 'recent']).catch('name').default('name'),
 })
 export type GpsSearch = z.output<typeof gpsSearchSchema>
+export const gpsMapSchema = gpsSearchSchema.extend({
+  includeDisabled: z.boolean().default(false),
+})
 
 export const gpsDeviceParams = z.object({
   deviceId: z.uuid({ error: 'მოწყობილობის იდენტიფიკატორი არასწორია.' }),

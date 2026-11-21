@@ -1,5 +1,15 @@
 import '@tanstack/react-start/server-only'
-import { and, asc, count, eq, ilike, or, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  eq,
+  exists,
+  ilike,
+  isNotNull,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { db } from '#/db'
 import {
   gpsDevice,
@@ -8,8 +18,12 @@ import {
   gpsPosition,
 } from '#/db/schema/gps/gps.schema'
 import { assertPermissions } from '#/lib/authorization/access'
-import { gpsPageSize, gpsTimeZone } from '../gps.schemas'
-import type { gpsHistoryInput, gpsSaveSchema, GpsSearch } from '../gps.schemas'
+import { gpsMapLimit, gpsPageSize, gpsTimeZone } from '../gps.schemas'
+import type {
+  gpsHistoryInput,
+  gpsMapSchema,
+  gpsSaveSchema,
+} from '../gps.schemas'
 import type { Actor } from '#/lib/authorization/actor'
 import type { z } from 'zod'
 
@@ -27,6 +41,7 @@ export function readGpsDiagnostics(actor: Actor, deviceId: string) {
     .select({
       kind: gpsDeviceDiagnostic.kind,
       receivedAt: gpsDeviceDiagnostic.receivedAt,
+      errorCode: gpsDeviceDiagnostic.errorCode,
     })
     .from(gpsDeviceDiagnostic)
     .where(eq(gpsDeviceDiagnostic.deviceId, deviceId))
@@ -65,9 +80,24 @@ export async function readGpsHistory(
       if (!device) return null
 
       const latest = await tx
-        .select(trackFields)
+        .select({
+          ...trackFields,
+          speedKmh: gpsPosition.speedKmh,
+          satellites: gpsPosition.satellites,
+          cellularSignal: gpsPosition.cellularSignal,
+          odometerKm: gpsPosition.odometerKm,
+        })
         .from(gpsPosition)
         .where(and(deviceFilter, gpsPosition.valid))
+        .orderBy(...positionOrder)
+        .limit(1)
+      const batteryReports = await tx
+        .select({
+          percent: gpsPosition.batteryPercent,
+          fixAt: gpsPosition.fixAt,
+        })
+        .from(gpsPosition)
+        .where(and(deviceFilter, isNotNull(gpsPosition.batteryPercent)))
         .orderBy(...positionOrder)
         .limit(1)
       const [{ total }] = await tx
@@ -101,6 +131,7 @@ export async function readGpsHistory(
       return {
         device,
         latestFix: latest.at(0) ?? null,
+        battery: batteryReports.at(0) ?? null,
         rows,
         page,
         total,
@@ -112,13 +143,17 @@ export async function readGpsHistory(
   )
 }
 
-export async function readGpsWorkspace(actor: Actor, search: GpsSearch) {
-  assertPermissions(actor, ['manage.access', 'gps.read'])
-  const pattern = `%${search.q.replace(/[\\%_]/g, '\\$&')}%`
-  const filter = search.q
-    ? or(ilike(gpsDevice.name, pattern), ilike(gpsDevice.reportedId, pattern))
-    : undefined
-  const latest = db
+function searchFilter(q: string) {
+  if (!q) return undefined
+  const pattern = `%${q.replace(/[\\%_]/g, '\\$&')}%`
+  return or(
+    ilike(gpsDevice.name, pattern),
+    ilike(gpsDevice.reportedId, pattern),
+  )
+}
+
+function latestFix() {
+  return db
     .select({
       latitude: gpsPosition.latitude,
       longitude: gpsPosition.longitude,
@@ -130,7 +165,48 @@ export async function readGpsWorkspace(actor: Actor, search: GpsSearch) {
     .orderBy(...positionOrder)
     .limit(1)
     .as('latest_fix')
-  const [rows, totals] = await Promise.all([
+}
+
+function latestBattery() {
+  return db
+    .select({ percent: gpsPosition.batteryPercent })
+    .from(gpsPosition)
+    .where(
+      and(
+        eq(gpsPosition.deviceId, gpsDevice.id),
+        isNotNull(gpsPosition.batteryPercent),
+      ),
+    )
+    .orderBy(...positionOrder)
+    .limit(1)
+    .as('latest_battery')
+}
+
+/** Trackers with their latest valid fix, for map layers and the device directory. Bounded by gpsMapLimit. */
+export async function readGpsMapDevices(
+  actor: Actor,
+  input: z.output<typeof gpsMapSchema>,
+) {
+  assertPermissions(actor, ['manage.access', 'gps.read'])
+  const filter = and(
+    input.includeDisabled
+      ? undefined
+      : and(
+          eq(gpsDevice.enabled, true),
+          exists(
+            db
+              .select({ id: gpsPosition.id })
+              .from(gpsPosition)
+              .where(
+                and(eq(gpsPosition.deviceId, gpsDevice.id), gpsPosition.valid),
+              ),
+          ),
+        ),
+    searchFilter(input.q),
+  )
+  const latest = latestFix()
+  const battery = latestBattery()
+  const [devices, totals] = await Promise.all([
     db
       .select({
         id: gpsDevice.id,
@@ -139,6 +215,7 @@ export async function readGpsWorkspace(actor: Actor, search: GpsSearch) {
         enabled: gpsDevice.enabled,
         version: gpsDevice.version,
         lastContactAt: gpsDevice.lastContactAt,
+        batteryPercent: battery.percent,
         position: {
           latitude: latest.latitude,
           longitude: latest.longitude,
@@ -148,18 +225,16 @@ export async function readGpsWorkspace(actor: Actor, search: GpsSearch) {
       })
       .from(gpsDevice)
       .leftJoinLateral(latest, sql`true`)
+      .leftJoinLateral(battery, sql`true`)
       .where(filter)
       .orderBy(
-        search.sort === 'recent'
-          ? sql`${gpsDevice.lastContactAt} desc nulls last`
-          : asc(gpsDevice.name),
+        sql`${gpsDevice.lastContactAt} desc nulls last`,
         asc(gpsDevice.id),
       )
-      .limit(gpsPageSize)
-      .offset((search.page - 1) * gpsPageSize),
+      .limit(gpsMapLimit),
     db.select({ total: count() }).from(gpsDevice).where(filter),
   ])
-  return { rows, total: totals[0].total }
+  return { devices, total: totals[0].total }
 }
 
 export async function saveGpsDevice(
