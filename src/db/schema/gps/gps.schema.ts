@@ -59,6 +59,10 @@ export const gpsPosition = pgTable(
     speedKmh: doublePrecision('speed_kmh').notNull(),
     course: doublePrecision('course').notNull(),
     altitude: doublePrecision('altitude'),
+    batteryPercent: integer('battery_percent'),
+    satellites: integer('satellites'),
+    cellularSignal: integer('cellular_signal'),
+    odometerKm: doublePrecision('odometer_km'),
   },
   (t) => [
     unique('gps_position_frame').on(t.deviceId, t.fingerprint),
@@ -71,6 +75,22 @@ export const gpsPosition = pgTable(
     index('gps_position_latest_valid')
       .on(t.deviceId, t.fixAt.desc(), t.receivedAt.desc(), t.id.desc())
       .where(sql`${t.valid}`),
+    index('gps_position_latest_battery')
+      .on(t.deviceId, t.fixAt.desc(), t.receivedAt.desc(), t.id.desc())
+      .where(sql`${t.batteryPercent} is not null`),
+    check(
+      'gps_position_battery_percent',
+      sql`${t.batteryPercent} between 0 and 100`,
+    ),
+    check('gps_position_satellites', sql`${t.satellites} between 0 and 254`),
+    check(
+      'gps_position_cellular_signal',
+      sql`${t.cellularSignal} between 0 and 254`,
+    ),
+    check(
+      'gps_position_odometer',
+      sql`${t.odometerKm} between 0 and 429496729.5`,
+    ),
     check(
       'gps_position_coordinates',
       sql`${t.latitude} between -90 and 90 and ${t.longitude} between -180 and 180`,
@@ -107,6 +127,7 @@ export const gpsDeviceDiagnostic = pgTable(
       .notNull()
       .references(() => gpsDevice.id, { onDelete: 'restrict' }),
     kind: gpsDiagnosticKind('kind').notNull(),
+    errorCode: text('error_code'),
     receivedAt: timestamp('received_at', { withTimezone: true }).notNull(),
   },
   (t) => [primaryKey({ columns: [t.deviceId, t.kind] })],

@@ -25,13 +25,13 @@ validation messages must follow the Georgian language requirements and
       from the observed 16-byte packets rejected as `invalid_heartbeat`. The legacy
       decoder accepts exactly zero or one body byte after normal frame validation.
       The extra byte stays uninterpreted and remains available in the raw journal.
-- [ ] Confirm the heartbeat fix on the TK905-4G. Replay a captured heartbeat,
-      verify the reply is `8001` for `0002`, and check that the device continues
-      reporting positions beyond an idle interval.
+- [x] Confirm that the physical TK905-4G sends authenticated `0002` heartbeats
+      that the production receiver accepts, with valid positions afterward and
+      on reconnect.
+- [ ] Verify the matching `8001` success reply in the live private journal.
 
-The first JT808 milestone adds PostgreSQL device and position storage and the
-protected `/manage/gps` directory. The hardware still needs to be verified in
-database mode. The current journal has bounded retention.
+- [x] Verify the physical TK905-4G in production PostgreSQL mode. The device
+      authenticated, and valid fixes appeared on the map and in location history.
 
 ## 1. Permanent data storage
 
@@ -70,11 +70,10 @@ database mode. The current journal has bounded retention.
 
 - [x] Let authorized users register a JT808 tracker by reported identifier,
       name and rename it, and enable or disable it from the website.
-- [ ] Keep a stable internal device ID so renaming or updating configuration never
+- [x] Keep a stable internal device ID so renaming or updating configuration never
       detaches historical data. Prevent duplicate identities with database constraints.
-- [ ] Preserve transmitted identifiers, including leading zeroes, and normalize
-      only according to the protocol. A SIM change must not create a new device when
-      the tracker's identity remains the same.
+- [x] Match the registered identifier and the wire identifier without leading-zero
+      padding. Preserve both forms in their respective registry and journal records.
 - [ ] Configure expected reporting interval and timestamp interpretation per
       device where needed. Record configuration changes in the application audit log.
 - [x] Use the database registry for JT808 admission when database mode is enabled.
@@ -85,6 +84,14 @@ database mode. The current journal has bounded retention.
       identifier is not strong proof of device identity.
 
 ## 3. Additional telemetry and decoder support
+
+- [x] Decode the TK905-4G JT808 battery percentage where the BSJ extension reports
+      it, persist it with the source position, and show the latest reading with
+      its timestamp and a color-coded battery fill.
+- [ ] Verify the percentage against a fresh report from the physical TK905-4G.
+- [x] Decode, store, and display standard JT808 satellite count, cellular signal,
+      and odometer data when the position report carries those fields.
+- [ ] Verify which optional fields the deployed TK905-4G firmware transmits.
 
 - [ ] Keep frequently queried common fields structured and protocol-specific data
       in a validated JSONB object associated with its source message.
@@ -116,6 +123,9 @@ database mode. The current journal has bounded retention.
 - [x] Show the latest registration request, successful authentication, heartbeat,
       and decode error on the device details page. Store one timestamp per kind
       and attribute decode errors only after authentication on the same connection.
+- [x] Show the battery in the device directory and the latest position telemetry
+      in the device summary. Open the latest recorded decode error in a sheet from
+      either page, with the reason when available.
 - [ ] Use existing Base UI/shadcn controls, badges, loading/error/empty states,
       Georgian copy, TanStack Form/Zod validation, and the app's feedback conventions.
 
@@ -134,6 +144,8 @@ database mode. The current journal has bounded retention.
       paginated report details. Break the route at invalid fixes or reporting gaps
       longer than five minutes. The map uses up to the newest 2,000 reports in the
       selected range. All reports in that range are accessible in the table.
+- [x] Add Today, Last 3 Days, and Last 7 Days shortcuts alongside the custom
+      date range. Apply the same range to the route and position table.
 
 ## 6. Automatic geofencing on the jobs map
 
@@ -219,7 +231,7 @@ types. Do not introduce separate competing task or measurement modules.
       geofence events, and raw diagnostics before adding cleanup jobs.
 - [ ] Add the GPS image and required operational files to the existing deployment
       workflow, preserving independent worker releases and stable private configuration.
-- [ ] Connect the worker to PostgreSQL privately with appropriate credentials and
+- [x] Connect the worker to PostgreSQL privately with appropriate credentials and
       bounded failure handling. Do not expose the database as a public GPS endpoint.
 - [ ] Test migrations, restart/reconnect recovery, database outages, backlog
       recovery, and rollback compatibility without deleting history or volumes.
@@ -227,8 +239,8 @@ types. Do not introduce separate competing task or measurement modules.
 ## Delivery order and open decisions
 
 1. Confirm the heartbeat fix with a real packet and a live device session.
-2. Deliver database persistence, website registration/naming, and latest-position
-   viewing as the first usable vertical slice.
+2. Database persistence, website registration and naming, and latest-position
+   viewing are deployed and verified with the physical tracker.
 3. Add message inspection, additional telemetry, and live updates. Location history
    and recent connection diagnostics are available. For verified device-reported
    battery percentages, use a proportional battery fill, a percentage label,

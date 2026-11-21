@@ -40,6 +40,8 @@ import {
 import { DataPagination } from '#/components/common/data-pagination'
 import { formatGeorgianDateTime } from '#/lib/date-format'
 import { GpsDeviceEditor } from '../components/gps-device-editor'
+import { GpsBatteryLevel } from '../components/gps-battery-level'
+import { GpsErrorSheet } from '../components/gps-error-sheet'
 import { gpsQuery } from '../gps.queries'
 import { gpsPageSize, gpsSearchText } from '../gps.schemas'
 import type { GpsDeviceRow } from '../gps.queries'
@@ -186,6 +188,28 @@ export function GpsPage({
             </div>
           ) : (
             'მდებარეობა არ დაფიქსირებულა'
+          ),
+      }),
+      column.display({
+        id: 'battery',
+        header: 'ბატარეა',
+        cell: ({ row }) => (
+          <GpsBatteryLevel percent={row.original.batteryPercent ?? null} />
+        ),
+      }),
+      column.display({
+        id: 'diagnostics',
+        header: 'დიაგნოსტიკა',
+        cell: ({ row }) =>
+          row.original.error ? (
+            <GpsErrorSheet
+              deviceName={row.original.name}
+              error={row.original.error}
+            />
+          ) : (
+            <span className="text-muted-foreground">
+              შეცდომა არ დაფიქსირებულა
+            </span>
           ),
       }),
       ...(canManage

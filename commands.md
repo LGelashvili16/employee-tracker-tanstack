@@ -173,3 +173,11 @@ pnpm exec tsc --noEmit           # Check TypeScript types
 ```
 
 See the [production setup guide](docker/deploy/production-setup-7-step-guide.md) for initial deployment and the [Docker guide](docker/README.md#backups) for testing a restore into a separate database.
+
+## 4. Rebuild and deploy the GPS receiver
+
+Follow the [GPS release procedure](docs/vps-deployment.md#release-the-web-app-and-gps-receiver)
+to build from a clean Windows worktree, upload the image and both Compose files,
+test PostgreSQL, and recreate the GPS service as `team-adwings-deploy`.
+See [when to rebuild the GPS image](docs/vps-deployment.md#when-to-rebuild-the-gps-image)
+before preparing an upload.

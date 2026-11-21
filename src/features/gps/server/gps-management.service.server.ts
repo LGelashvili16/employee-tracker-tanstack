@@ -1,5 +1,5 @@
 import '@tanstack/react-start/server-only'
-import { and, asc, count, eq, ilike, or, sql } from 'drizzle-orm'
+import { and, asc, count, eq, ilike, isNotNull, or, sql } from 'drizzle-orm'
 import { db } from '#/db'
 import {
   gpsDevice,
@@ -27,6 +27,7 @@ export function readGpsDiagnostics(actor: Actor, deviceId: string) {
     .select({
       kind: gpsDeviceDiagnostic.kind,
       receivedAt: gpsDeviceDiagnostic.receivedAt,
+      errorCode: gpsDeviceDiagnostic.errorCode,
     })
     .from(gpsDeviceDiagnostic)
     .where(eq(gpsDeviceDiagnostic.deviceId, deviceId))
@@ -65,9 +66,24 @@ export async function readGpsHistory(
       if (!device) return null
 
       const latest = await tx
-        .select(trackFields)
+        .select({
+          ...trackFields,
+          speedKmh: gpsPosition.speedKmh,
+          satellites: gpsPosition.satellites,
+          cellularSignal: gpsPosition.cellularSignal,
+          odometerKm: gpsPosition.odometerKm,
+        })
         .from(gpsPosition)
         .where(and(deviceFilter, gpsPosition.valid))
+        .orderBy(...positionOrder)
+        .limit(1)
+      const batteryReports = await tx
+        .select({
+          percent: gpsPosition.batteryPercent,
+          fixAt: gpsPosition.fixAt,
+        })
+        .from(gpsPosition)
+        .where(and(deviceFilter, isNotNull(gpsPosition.batteryPercent)))
         .orderBy(...positionOrder)
         .limit(1)
       const [{ total }] = await tx
@@ -101,6 +117,7 @@ export async function readGpsHistory(
       return {
         device,
         latestFix: latest.at(0) ?? null,
+        battery: batteryReports.at(0) ?? null,
         rows,
         page,
         total,
@@ -130,6 +147,18 @@ export async function readGpsWorkspace(actor: Actor, search: GpsSearch) {
     .orderBy(...positionOrder)
     .limit(1)
     .as('latest_fix')
+  const battery = db
+    .select({ percent: gpsPosition.batteryPercent })
+    .from(gpsPosition)
+    .where(
+      and(
+        eq(gpsPosition.deviceId, gpsDevice.id),
+        isNotNull(gpsPosition.batteryPercent),
+      ),
+    )
+    .orderBy(...positionOrder)
+    .limit(1)
+    .as('latest_battery')
   const [rows, totals] = await Promise.all([
     db
       .select({
@@ -139,6 +168,11 @@ export async function readGpsWorkspace(actor: Actor, search: GpsSearch) {
         enabled: gpsDevice.enabled,
         version: gpsDevice.version,
         lastContactAt: gpsDevice.lastContactAt,
+        batteryPercent: battery.percent,
+        error: {
+          receivedAt: gpsDeviceDiagnostic.receivedAt,
+          errorCode: gpsDeviceDiagnostic.errorCode,
+        },
         position: {
           latitude: latest.latitude,
           longitude: latest.longitude,
@@ -148,6 +182,14 @@ export async function readGpsWorkspace(actor: Actor, search: GpsSearch) {
       })
       .from(gpsDevice)
       .leftJoinLateral(latest, sql`true`)
+      .leftJoinLateral(battery, sql`true`)
+      .leftJoin(
+        gpsDeviceDiagnostic,
+        and(
+          eq(gpsDeviceDiagnostic.deviceId, gpsDevice.id),
+          eq(gpsDeviceDiagnostic.kind, 'decode_error'),
+        ),
+      )
       .where(filter)
       .orderBy(
         search.sort === 'recent'

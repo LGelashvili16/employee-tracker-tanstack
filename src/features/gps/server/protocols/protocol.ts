@@ -13,6 +13,9 @@ export const positionSchema = z.object({
   course: z.number().min(0).max(360),
   altitude: z.number().optional(),
   batteryPercent: z.number().min(0).max(100).optional(),
+  satellites: z.number().int().min(0).max(254).optional(),
+  cellularSignal: z.number().int().min(0).max(254).optional(),
+  odometerKm: z.number().min(0).max(429496729.5).optional(),
 })
 export type Position = z.infer<typeof positionSchema>
 

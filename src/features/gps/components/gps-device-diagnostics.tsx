@@ -6,13 +6,13 @@ import {
   IconShieldCheck,
 } from '@tabler/icons-react'
 import { Alert, AlertDescription } from '#/components/ui/alert'
-import { Badge } from '#/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Skeleton } from '#/components/ui/skeleton'
 import { formatGeorgianDateTime } from '#/lib/date-format'
 import { getGpsDiagnostics } from '../gps.functions'
 import { gpsKey } from '../gps.queries'
 import { gpsTimeZone } from '../gps.schemas'
+import { GpsErrorSheet } from './gps-error-sheet'
 
 const activity = [
   {
@@ -36,9 +36,11 @@ const activity = [
 export function GpsDeviceDiagnostics({
   actorId,
   deviceId,
+  deviceName,
 }: {
   actorId: string
   deviceId: string
+  deviceName: string
 }) {
   const query = useQuery({
     queryKey: [...gpsKey(actorId), 'diagnostics', deviceId],
@@ -67,9 +69,8 @@ export function GpsDeviceDiagnostics({
         ) : (
           <dl className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {activity.map(({ kind, label, icon: Icon }) => {
-              const receivedAt = query.data.find(
-                (event) => event.kind === kind,
-              )?.receivedAt
+              const event = query.data.find((item) => item.kind === kind)
+              const receivedAt = event?.receivedAt
               const value = receivedAt && (
                 <time dateTime={receivedAt.toISOString()}>
                   {formatGeorgianDateTime(
@@ -92,14 +93,13 @@ export function GpsDeviceDiagnostics({
                     {label}
                   </dt>
                   <dd className="text-sm tabular-nums text-muted-foreground">
-                    {value ? (
-                      kind === 'decode_error' ? (
-                        <Badge variant="destructive">{value}</Badge>
-                      ) : (
-                        value
-                      )
+                    {kind === 'decode_error' && event ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {value}
+                        <GpsErrorSheet deviceName={deviceName} error={event} />
+                      </div>
                     ) : (
-                      'არ დაფიქსირებულა'
+                      (value ?? 'არ დაფიქსირებულა')
                     )}
                   </dd>
                 </div>

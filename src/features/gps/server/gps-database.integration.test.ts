@@ -41,6 +41,12 @@ beforeAll(async () => {
   await client.query(
     readFileSync('drizzle/0043_gps_device_diagnostics.sql', 'utf8'),
   )
+  await client.query(
+    readFileSync('drizzle/0044_gps_position_battery.sql', 'utf8'),
+  )
+  await client.query(
+    readFileSync('drizzle/0045_gps_telemetry_diagnostics.sql', 'utf8'),
+  )
 })
 
 afterAll(async () => {
@@ -73,6 +79,10 @@ it.skipIf(!url)(
       speedKmh: 10,
       course: 5,
       altitude: 430,
+      batteryPercent: 63,
+      satellites: 12,
+      cellularSignal: 0,
+      odometerKm: 123.4,
     }
     const receivedAt = new Date('2026-11-21T09:01:00.000Z')
     const send = (hex: string, position: Position, authenticated = true) =>
@@ -104,6 +114,7 @@ it.skipIf(!url)(
       timestamp: '2026-11-21T09:00:30.000Z',
       valid: false,
       latitude: 42,
+      batteryPercent: undefined,
     })
     expect(
       (await client.query('select count(*)::int as count from gps_position'))
@@ -114,6 +125,25 @@ it.skipIf(!url)(
     expect(row.position).toMatchObject({
       latitude: newest.latitude,
       fixAt: new Date(newest.timestamp),
+    })
+    const { readGpsHistory } = await import('./gps-management.service.server')
+    const history = await readGpsHistory(
+      owner,
+      gpsHistoryInput.parse({
+        deviceId: row.id,
+        from: '2026-11-20',
+        to: '2026-11-20',
+        page: 1,
+      }),
+    )
+    expect(history?.battery).toEqual({
+      percent: 63,
+      fixAt: new Date(newest.timestamp),
+    })
+    expect(history?.latestFix).toMatchObject({
+      satellites: 12,
+      cellularSignal: 0,
+      odometerKm: 123.4,
     })
     expect(
       await saveGpsDevice(owner, {
@@ -279,13 +309,18 @@ it.skipIf(!url)(
     await send('0002', latest, true)
     await send('0002', early, true)
     await send('0002', errorTime, false)
-    await saveError(`00${id}`, errorTime)
+    await saveError(`00${id}`, errorTime, 'invalid_checksum')
+    await saveError(`00${id}`, early, 'invalid_heartbeat')
     expect(await readGpsDiagnostics(owner, device.id)).toEqual(
       expect.arrayContaining([
-        { kind: 'registration', receivedAt: early },
-        { kind: 'authentication', receivedAt: early },
-        { kind: 'heartbeat', receivedAt: latest },
-        { kind: 'decode_error', receivedAt: errorTime },
+        { kind: 'registration', receivedAt: early, errorCode: null },
+        { kind: 'authentication', receivedAt: early, errorCode: null },
+        { kind: 'heartbeat', receivedAt: latest, errorCode: null },
+        {
+          kind: 'decode_error',
+          receivedAt: errorTime,
+          errorCode: 'invalid_checksum',
+        },
       ]),
     )
     expect(await readGpsDiagnostics(owner, device.id)).toHaveLength(4)

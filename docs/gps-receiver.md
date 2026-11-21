@@ -64,7 +64,8 @@ It contains compiled worker code and production dependencies.
    login with `CONNECT` to the app database, `USAGE` on its schema, `SELECT` on
    `gps_device`, `UPDATE (last_contact_at)` on `gps_device`, and `INSERT` plus
    `SELECT (device_id, fingerprint)` on `gps_position`. Diagnostics also need
-   `SELECT`, `INSERT` and `UPDATE (received_at)` on `gps_device_diagnostic`.
+   `SELECT`, `INSERT` and `UPDATE (received_at, error_code)` on
+   `gps_device_diagnostic`.
    The receiver does not need access to employee data or the device audit table.
 3. In the receiver's private configuration, set `GPS_DATABASE_URL` to the
    PostgreSQL URL, leave the existing `GPS_AUTH_SECRET` stable, and set
@@ -226,8 +227,17 @@ in live reception and replay.
   `0200 -> 8001`. Authentication uses a per-device HMAC-derived token. Heartbeat
   and position acknowledgments require authentication on that connection. Unknown,
   encrypted and subpackaged messages are retained but not acknowledged or
-  reassembled. Standard TLV extensions are checked for truncation but not decoded;
-  this initial JT808 decoder does not expose vendor-specific battery fields.
+  reassembled. TK905-4G battery percentages from the BSJ `0xEB/0x00A8`
+  extension are saved with authenticated position reports and displayed with
+  the report timestamp. Missing or out-of-range percentages stay unknown.
+  See the [Traccar TK905-4G implementation notes](https://github.com/traccar/traccar/issues/5234).
+  Apply migration `0044_gps_position_battery.sql` before updating the GPS image.
+  Standard position extensions also expose the odometer in kilometers
+  (`0x01`), the device's reported cellular signal value (`0x30`), and
+  satellite count (`0x31`) when included. Migration
+  `0045_gps_telemetry_diagnostics.sql` adds these fields and the latest
+  decode error reason. Signal is displayed as the raw value reported by the
+  tracker.
 
 - **Watch ASCII**: declared hex content length and optional four-digit index;
   `INIT`, `LK`, `TKQ`, `TKQ2`; standard `UD`, `UD2`, `AL`, `AL2`, `WT` location
@@ -244,6 +254,72 @@ the journal without assigning a meaning to it. To verify the TK905-4G in the
 field, watch for `0102` with `authenticated: true`, then supported `0002` frames
 and continued `0200` position reports. The private journal records intended
 `8001` replies, which can be correlated by connection and message serial.
+
+### Verify a live heartbeat on the VPS
+
+Keep the tracker powered on, connected to mobile data, and enabled in the
+website registry. Leave sleep mode off. Let it sit stationary while watching
+the receiver. A heartbeat is a JT808 keepalive (`0002`), so the tracker can
+confirm contact without reporting a new position. Position reports (`0200`)
+also show contact. Heartbeat timing depends on the firmware, so a test window
+with only position reports leaves the heartbeat check pending.
+
+```bash
+docker logs --since 5m -f team-adwings-gps-gps-1
+```
+
+Look for `type:"0002"`, `supported:true`, `authenticated:true`, and
+`allowed:true`. Confirm the last heartbeat under Connection Diagnostics
+advances, then move the tracker and confirm another valid `0200` arrives.
+Press Ctrl+C to stop following the logs.
+
+To check the recorded success reply, run this on the VPS. It reads the active
+private journal and prints only timestamps and a count for the selected
+tracker. Run it soon after the heartbeat so the records are still in the
+active journal.
+
+```bash
+docker exec -i team-adwings-gps-gps-1 node --input-type=module - 9590089273 <<'JS'
+import { readFileSync } from 'node:fs'
+import { unescapeJt808 } from './src/features/gps/server/protocols/jt808.js'
+import { canonicalDeviceId } from './src/features/gps/server/protocols/protocol.js'
+
+const target = canonicalDeviceId(process.argv[2])
+const pending = new Map()
+const lines = readFileSync('/data/journal.jsonl', 'utf8').split('\n')
+lines.pop() // A concurrent write may leave the last line incomplete.
+let matches = 0
+
+for (const line of lines) {
+  const record = JSON.parse(line)
+  if (record.event === 'frame') {
+    pending.delete(record.connection)
+    const { decoded } = record
+    if (decoded?.protocol !== 'jt808' || decoded.type !== '0002' ||
+        !decoded.authenticated || canonicalDeviceId(decoded.deviceId) !== target) continue
+    const bytes = unescapeJt808(Buffer.from(record.hex, 'hex'))
+    const header = bytes.readUInt16BE(2) & 0x4000 ? 17 : 12
+    pending.set(record.connection, { serial: bytes.readUInt16BE(header - 2), at: record.receivedAt })
+  } else if (record.event === 'send' && pending.has(record.connection)) {
+    const heartbeat = pending.get(record.connection)
+    pending.delete(record.connection)
+    const bytes = unescapeJt808(Buffer.from(record.hex, 'hex'))
+    const header = bytes.readUInt16BE(2) & 0x4000 ? 17 : 12
+    if (bytes.length === header + 6 && bytes.readUInt16BE(0) === 0x8001 &&
+        bytes.readUInt16BE(header) === heartbeat.serial &&
+        bytes.readUInt16BE(header + 2) === 0x0002 && bytes[header + 4] === 0) {
+      matches++
+      console.log({ heartbeatAt: heartbeat.at, replyRecordedAt: record.receivedAt })
+    }
+  }
+}
+console.log({ matchingSuccessReplies: matches })
+JS
+```
+
+A matching journal entry confirms that the receiver recorded the intended
+success reply. Continued reports on the live connection help verify the
+tracker kept communicating after it.
 
 Allowlisting a numeric device ID is a diagnostic filter, not strong identity
 verification. Plain TCP protocols can be spoofed, and on-wire tokens can be

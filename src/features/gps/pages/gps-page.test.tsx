@@ -17,6 +17,11 @@ const { getHistory, getWorkspace, saveDevice } = vi.hoisted(() => ({
 vi.mock('../gps.functions', () => ({
   getGpsDiagnostics: async () => [
     { kind: 'heartbeat', receivedAt: tracker.lastContactAt },
+    {
+      kind: 'decode_error',
+      receivedAt: tracker.lastContactAt,
+      errorCode: 'invalid_checksum',
+    },
   ],
   getGpsHistory: getHistory,
   getGpsWorkspace: getWorkspace,
@@ -136,6 +141,7 @@ it('shows recorded history and submits a two-day calendar selection', async () =
   getHistory.mockResolvedValue({
     device: tracker,
     latestFix: fix,
+    battery: { percent: 63, fixAt: fix.fixAt },
     rows: [fix],
     track: [fix],
     trackLimit: 2000,
@@ -163,7 +169,21 @@ it('shows recorded history and submits a two-day calendar selection', async () =
   })
   expect(within(table).getByText('ვალიდური')).toBeVisible()
   expect(within(table).getByText('41.718530, 44.740870')).toBeVisible()
+  expect(screen.getByText('63%')).toBeVisible()
   expect(await screen.findByText('ბოლო საკონტროლო სიგნალი')).toBeVisible()
+  await user.click(
+    await screen.findByRole('button', { name: 'შეცდომის ნახვა' }),
+  )
+  const errorSheet = await screen.findByRole('dialog', {
+    name: 'ბოლო დეკოდირების შეცდომა',
+  })
+  expect(
+    within(errorSheet).getByText('პაკეტის საკონტროლო ჯამი არ ემთხვევა.'),
+  ).toBeVisible()
+  await user.keyboard('{Escape}')
+  await user.click(screen.getByRole('button', { name: 'ბოლო 7 დღე' }))
+  const [period] = onRangeChange.mock.calls[0]
+  expect(Date.parse(period.to) - Date.parse(period.from)).toBe(6 * 86_400_000)
   expect(screen.getByRole('link', { name: 'გვერდი 2' })).toHaveAttribute(
     'href',
     `/manage/gps/${tracker.id}?page=2`,
